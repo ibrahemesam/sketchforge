@@ -5,6 +5,14 @@ use crate::geom::Rect;
 /// Snap distance in screen pixels.
 pub const SNAP_PX: f64 = 6.0;
 
+/// Draw.io-style grid spacing in world units.
+pub const GRID_STEP: f64 = crate::render::scene::GRID_STEP;
+
+/// Round a coordinate to the nearest grid line.
+pub fn grid(v: f64) -> f64 {
+    (v / GRID_STEP).round() * GRID_STEP
+}
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Guide {
     /// Vertical line at world x spanning y0..y1.

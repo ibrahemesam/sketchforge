@@ -26,6 +26,7 @@ wgpu = "30"
 winit = "0.30"
 lyon = "1"
 ttf-parser = "0.25"
+unicode-bidi = "0.3"
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["float_roundtrip"] }
 image = { version = "0.25", default-features = false, features = ["png", "jpeg", "gif", "webp"] }
@@ -55,6 +56,13 @@ opt-level = 2
 resvg = "0.48"
 rmcp = { version = "3.5.1", default-features = false, features = ["transport-child-process"] }
 reqwest = { version = "0.13", default-features = false }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+# File drag-and-drop is missing from winit's Wayland backend, so the app talks
+# `wl_data_device` on winit's own connection. Both sides use libwayland.
+wayland-client = "0.31"
+wayland-backend = { version = "0.3", features = ["client_system"] }
+raw-window-handle = "0.6"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 muda = { version = "0.21", default-features = false }

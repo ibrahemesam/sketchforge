@@ -267,6 +267,100 @@ fn frames_adopt_children_and_clip_hit_testing() {
 }
 
 #[test]
+fn double_click_frame_title_renames_it() {
+    let mut e = ed();
+    let id = e.add_node(
+        Node::new(
+            NodeId(0),
+            NodeKind::Frame { clip: true },
+            Rect::new(100.0, 100.0, 300.0, 200.0),
+        ),
+        None,
+    );
+    let label = e.frame_labels()[0].1;
+    down(&mut e, label.x + 10.0, label.y + 8.0, 0.0);
+    up(&mut e, label.x + 10.0, label.y + 8.0, 10.0);
+    down(&mut e, label.x + 10.0, label.y + 8.0, 300.0);
+    assert_eq!(e.text_edit.as_ref().map(|t| t.id), Some(id));
+    e.handle(InputEvent::Text("Auth flow".into()));
+    e.end_text_edit();
+    assert_eq!(e.doc.get(id).unwrap().name, "Auth flow");
+    assert!(e.frame_labels()[0].1.w >= "Auth flow".len() as f64 * 3.0);
+}
+
+#[test]
+fn double_click_shape_adds_centered_label() {
+    let mut e = ed();
+    let id = e.add_node(
+        Node::new(
+            NodeId(0),
+            NodeKind::Rect,
+            Rect::new(100.0, 100.0, 200.0, 100.0),
+        ),
+        None,
+    );
+    down(&mut e, 200.0, 150.0, 0.0);
+    up(&mut e, 200.0, 150.0, 10.0);
+    down(&mut e, 200.0, 150.0, 300.0);
+    assert_eq!(e.text_edit.as_ref().map(|t| t.id), Some(id));
+    e.handle(InputEvent::Text("Hello".into()));
+    e.end_text_edit();
+    assert_eq!(e.doc.get(id).unwrap().label, "Hello");
+    let n = e.doc.get(id).unwrap();
+    let l = text::layout_node(n).unwrap();
+    let o = text::text_origin(n, &l);
+    let glyph_mid = l.glyphs.iter().map(|g| g.x).sum::<f64>() / l.glyphs.len() as f64;
+    assert!(
+        (o.x + glyph_mid - 100.0).abs() < 8.0,
+        "label is roughly centered"
+    );
+    assert!((o.y + l.height * 0.5 - 50.0).abs() < 1.0);
+}
+
+#[test]
+fn labels_contrast_with_dark_fills() {
+    let mut n = Node::new(NodeId(0), NodeKind::Rect, Rect::new(0.0, 0.0, 100.0, 100.0));
+    n.style.set_fill(Some(Color::rgb(0x20, 0x20, 0x20)));
+    n.label = "Dark".into();
+    let l = text::layout_node(&n).unwrap();
+    assert_eq!(l.glyphs[0].color, Color::WHITE);
+
+    n.style.set_fill(Some(Color::rgb(0xf0, 0xf0, 0xf0)));
+    let l = text::layout_node(&n).unwrap();
+    assert_eq!(l.glyphs[0].color, Color::INK);
+}
+
+#[test]
+fn frame_drags_its_children_by_its_title() {
+    let mut e = ed();
+    let frame = Node::new(
+        NodeId(0),
+        NodeKind::Frame { clip: false },
+        Rect::new(100.0, 100.0, 400.0, 300.0),
+    );
+    let c = e.add_node(frame, None);
+    let child = e.add_node(
+        Node::new(NodeId(0), NodeKind::Rect, Rect::new(20.0, 20.0, 50.0, 50.0)),
+        Some(c),
+    );
+    assert_eq!(e.doc.world_rect(child).unwrap().min(), v2(120.0, 120.0));
+    let label = e.frame_labels()[0].1;
+    drag(
+        &mut e,
+        (label.x + 5.0, label.y + 5.0),
+        (label.x + 55.0, label.y + 75.0),
+        0.0,
+    );
+    assert_eq!(e.doc.world_rect(c).unwrap().min(), v2(150.0, 170.0));
+    assert_eq!(
+        e.doc.world_rect(child).unwrap().min(),
+        v2(170.0, 190.0),
+        "child follows the frame"
+    );
+    e.doc.validate().unwrap();
+}
+
+#[test]
 fn text_tool_types_edits_and_removes_empty() {
     let mut e = ed();
     press(&mut e, 't');
@@ -283,7 +377,7 @@ fn text_tool_types_edits_and_removes_empty() {
     key(&mut e, Key::Enter, Modifiers::NONE);
     e.handle(InputEvent::Text("world".into()));
     key(&mut e, Key::Backspace, Modifiers::NONE);
-    key(&mut e, Key::Escape, Modifiers::NONE);
+    e.end_text_edit();
     assert_eq!(e.tool, Tool::Select);
     let NodeKind::Text { text, .. } = &e.doc.get(id).unwrap().kind else {
         panic!()
@@ -300,19 +394,25 @@ fn text_tool_types_edits_and_removes_empty() {
         "creating + typing is one undo step"
     );
 
-    // Double-click to edit again; caret lands where clicked.
-    // Click away from the resize handles (which win within 7px).
+    // Double-click to edit again; all text is selected.
     let (px, py) = (r.x + 4.0, r.y + text::line_height(16.0) * 0.5);
     down(&mut e, px, py, 1000.0);
     up(&mut e, px, py, 1010.0);
     down(&mut e, px, py, 1100.0);
-    assert_eq!(e.text_edit.as_ref().unwrap().caret, 0);
+    let te = e.text_edit.as_ref().unwrap();
+    assert_eq!(te.anchor, Some(0));
+    assert!(te.caret > 0);
     e.handle(InputEvent::Text(">".into()));
+    // Typing replaced the whole selection, but Escape discards it.
+    let NodeKind::Text { text, .. } = &e.doc.get(id).unwrap().kind else {
+        panic!()
+    };
+    assert_eq!(text, ">");
     key(&mut e, Key::Escape, Modifiers::NONE);
     let NodeKind::Text { text, .. } = &e.doc.get(id).unwrap().kind else {
         panic!()
     };
-    assert!(text.starts_with(">Hello"));
+    assert_eq!(text, "Hellor\nworl");
 
     // Empty text boxes disappear without leaving history.
     let before = e.history.undo_len();
@@ -403,6 +503,21 @@ fn move_snaps_to_edges_and_pixels() {
     assert_eq!(r.y, r.y.round(), "pixel snapped");
     assert!(e.guides.is_empty());
     let _ = a;
+}
+
+#[test]
+fn move_snaps_to_the_grid() {
+    let mut e = ed();
+    let id = e.add_node(
+        Node::new(
+            NodeId(0),
+            NodeKind::Rect,
+            Rect::new(103.0, 97.0, 60.0, 40.0),
+        ),
+        None,
+    );
+    drag(&mut e, (130.0, 115.0), (148.4, 132.8), 0.0);
+    assert_eq!(rect_of(&e, id).min(), v2(120.0, 110.0));
 }
 
 #[test]

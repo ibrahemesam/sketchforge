@@ -541,6 +541,9 @@ fn node_info(ed: &mut Editor, a: &Args) -> ToolResult {
     if let Some(t) = n.kind.text() {
         v["text"] = json!(t);
     }
+    if n.supports_label() {
+        v["label"] = json!(n.label);
+    }
     if let Some(ab) = artboard_of(doc, id) {
         v["artboardId"] = json!(node_key(ed, page, ab));
     }
@@ -2501,14 +2504,17 @@ fn set_text_content(ed: &mut Editor, a: &Args) -> ToolResult {
         },
         |tx, id, t| {
             let node = tx.node_mut(id).unwrap();
-            let old_len = node.kind.text().map(|s| s.chars().count()).ok_or_else(|| {
-                format!(
-                    "{} is a {}, not a text layer",
-                    node.name,
-                    node.kind.type_name()
-                )
-            })?;
-            *node.kind.text_mut().unwrap() = t.clone();
+            let old_len = node
+                .edited_text()
+                .map(|s| s.chars().count())
+                .ok_or_else(|| {
+                    format!(
+                        "{} is a {}, not a text layer",
+                        node.name,
+                        node.kind.type_name()
+                    )
+                })?;
+            *node.edited_text_mut().unwrap() = t.clone();
             let len = t.chars().count();
             for s in &mut node.text_style.spans {
                 if s.start == 0 && s.end >= old_len {

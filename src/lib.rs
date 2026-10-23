@@ -15,6 +15,7 @@ pub mod library;
 pub mod macos;
 pub mod mcp;
 pub mod model;
+pub mod options;
 pub mod project;
 pub mod render;
 pub mod session;
@@ -22,6 +23,8 @@ pub mod text;
 pub mod theme;
 pub mod ui;
 pub mod vector;
+#[cfg(target_os = "linux")]
+pub mod wayland_dnd;
 
 /// `$SKETCH_RS_<name>`, else `$PAPER_RS_<name>`, its name before the rename from paper-rs.
 pub fn env_var(name: &str) -> Option<std::ffi::OsString> {

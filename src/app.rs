@@ -49,6 +49,11 @@ pub struct App {
         std::sync::mpsc::Receiver<crate::mcp::Call>,
         crate::mcp::server::Running,
     )>,
+    /// Files dropped by the current drag, so a multi-file drop fans out instead of stacking.
+    drop_count: usize,
+    /// Native Wayland file drops; winit's Wayland backend never reports them.
+    #[cfg(target_os = "linux")]
+    wayland_dnd: Option<crate::wayland_dnd::WaylandDnd>,
 }
 
 /// Events delivered to the winit loop from other sources.
@@ -75,12 +80,17 @@ impl App {
         let ctx = egui::Context::default();
         theme::set_accent(theme::system_accent());
         ui::setup_style(&ctx);
+        let options = crate::options::Options::load(&store.root);
+        theme::set_preference(&ctx, options.theme);
         let library = crate::library::Library::load(&crate::library::Library::path_in(&store.root));
         let mut app = App {
             gfx: None,
             ed: Editor::default(),
             session: Session::new(store),
-            st: UiState::default(),
+            st: UiState {
+                options,
+                ..UiState::default()
+            },
             ctx,
             start: Instant::now(),
             canvas: egui::Rect::NOTHING,
@@ -90,6 +100,9 @@ impl App {
             #[cfg(target_os = "macos")]
             menu: None,
             mcp: None,
+            drop_count: 0,
+            #[cfg(target_os = "linux")]
+            wayland_dnd: None,
         };
         app.st.library.library = library;
         app.ed.clipboard_io = crate::io::clipboard::System::new()
@@ -287,6 +300,55 @@ impl App {
             return;
         };
         self.import_file(&p);
+    }
+
+    /// Bring a dropped file in: image/SVG/Excalidraw onto the page, a document
+    /// as a new project, image on the home screen starts a project.
+    fn drop_file(&mut self, p: PathBuf) {
+        let ext = p
+            .extension()
+            .map(|e| e.to_string_lossy().to_lowercase())
+            .unwrap_or_default();
+        let is_image = matches!(ext.as_str(), "png" | "jpg" | "jpeg" | "gif" | "webp");
+        let is_importable =
+            is_image || matches!(ext.as_str(), "svg" | "excalidraw" | "excalidrawlib");
+        if is_importable && self.st.home.is_some() {
+            // Dropped on the projects screen: start a project named after the file,
+            // then bring the file into it.
+            if is_image {
+                let name = p
+                    .file_stem()
+                    .map(|s| s.to_string_lossy().to_string())
+                    .unwrap_or_else(|| "Untitled".into());
+                if let Err(e) = self.session.create(&mut self.ed, &name) {
+                    self.error(format!("Could not create a project: {e}"));
+                } else {
+                    self.st.home = None;
+                    self.st.project_name = self.session.project_name();
+                    self.st.save_state.clear();
+                    let at = self.ed.camera.screen_to_world(self.ed.viewport * 0.5)
+                        + v2(24.0, 24.0) * self.drop_count as f64;
+                    self.drop_count += 1;
+                    self.place_image_file(&p, at);
+                }
+            } else {
+                self.import_file(&p);
+            }
+        } else if is_importable && self.st.home.is_none() {
+            let at = self.ed.camera.screen_to_world(self.ed.pointer)
+                + v2(24.0, 24.0) * self.drop_count as f64;
+            self.drop_count += 1;
+            self.import_into_page(&p, Some(at));
+        } else if file::is_document(&p) && self.confirm_discard() {
+            match file::load(&p) {
+                Ok((doc, cam)) => {
+                    self.ed.load(doc, cam, Some(p));
+                    self.st.home = None;
+                    self.st.project_name.clear();
+                }
+                Err(e) => self.error(format!("Could not open {}: {e}", p.display())),
+            }
+        }
     }
 
     fn import_file(&mut self, p: &std::path::Path) {
@@ -710,6 +772,12 @@ impl App {
                 self.error(format!("Could not save the library: {e}"));
             }
         }
+        if self.st.options_dirty {
+            self.st.options_dirty = false;
+            if let Err(e) = self.st.options.save(&self.session.store.root) {
+                self.error(format!("Could not save options: {e}"));
+            }
+        }
         self.sync_menu();
         // Repaint only when egui wants it: immediately (an animation is running or state just
         // changed), after a delay (tooltip, caret blink), or never (idle; input wakes us).
@@ -836,6 +904,14 @@ impl ApplicationHandler<UserEvent> for App {
             .with_title("Sketch")
             .with_inner_size(winit::dpi::LogicalSize::new(1440.0, 900.0))
             .with_min_inner_size(winit::dpi::LogicalSize::new(720.0, 480.0));
+        // The app id ties the window to the desktop entry in packaging/linux. On Wayland it is
+        // the only way a desktop shell can match the window to that entry, and it is where KDE
+        // takes the taskbar and Alt+Tab icon from. On X11 it sets the window class instead.
+        #[cfg(target_os = "linux")]
+        let attrs = {
+            use winit::platform::wayland::WindowAttributesExtWayland;
+            attrs.with_name("sketch-rs", "sketch-rs")
+        };
         // SKETCH_RS_OPAQUE=1 turns off vibrancy (and window transparency) on macOS.
         #[cfg(target_os = "macos")]
         let translucent = crate::env_var("OPAQUE").is_none();
@@ -910,6 +986,8 @@ impl ApplicationHandler<UserEvent> for App {
             Some(device.limits().max_texture_dimension_2d as usize),
         );
         window.request_redraw();
+        #[cfg(target_os = "linux")]
+        let wayland_dnd = crate::wayland_dnd::WaylandDnd::new(&window);
         self.gfx = Some(Gfx {
             window,
             surface,
@@ -920,6 +998,10 @@ impl ApplicationHandler<UserEvent> for App {
             egui,
             adapter_info,
         });
+        #[cfg(target_os = "linux")]
+        {
+            self.wayland_dnd = wayland_dnd;
+        }
     }
 
     fn window_event(&mut self, event_loop: &ActiveEventLoop, _id: WindowId, event: WindowEvent) {
@@ -1161,31 +1243,17 @@ impl ApplicationHandler<UserEvent> for App {
                 }
                 redraw = true;
             }
+            WindowEvent::HoveredFile(_) => {
+                // A new drag starts; the next drop's first file goes at the cursor.
+                self.drop_count = 0;
+                redraw = true;
+            }
+            WindowEvent::HoveredFileCancelled => {
+                self.drop_count = 0;
+                redraw = true;
+            }
             WindowEvent::DroppedFile(p) => {
-                let ext = p
-                    .extension()
-                    .map(|e| e.to_string_lossy().to_lowercase())
-                    .unwrap_or_default();
-                if matches!(
-                    ext.as_str(),
-                    "png"
-                        | "jpg"
-                        | "jpeg"
-                        | "gif"
-                        | "webp"
-                        | "svg"
-                        | "excalidraw"
-                        | "excalidrawlib"
-                ) && self.st.home.is_none()
-                {
-                    let at = self.ed.camera.screen_to_world(self.ed.pointer);
-                    self.import_into_page(&p, Some(at));
-                } else if file::is_document(&p) && self.confirm_discard() {
-                    match file::load(&p) {
-                        Ok((doc, cam)) => self.ed.load(doc, cam, Some(p)),
-                        Err(e) => self.error(format!("Could not open {}: {e}", p.display())),
-                    }
-                }
+                self.drop_file(p);
                 redraw = true;
             }
             _ => {}
@@ -1213,9 +1281,33 @@ impl ApplicationHandler<UserEvent> for App {
         if self.session.project.is_some() {
             self.save_project(true);
         }
+        // Drop the window and the egui state here, while the event loop is still alive. On
+        // Wayland, egui's clipboard runs a helper thread that reads the display socket when it
+        // shuts down, and the socket is gone once the event loop returns.
+        #[cfg(target_os = "linux")]
+        {
+            // The data device borrows winit's display; drop it before the window.
+            self.wayland_dnd = None;
+        }
+        self.gfx = None;
     }
 
     fn about_to_wait(&mut self, event_loop: &ActiveEventLoop) {
+        // winit's Wayland backend does not report file drops; the data device
+        // collected them on the shared connection instead.
+        #[cfg(target_os = "linux")]
+        if let Some(drop) = self.wayland_dnd.as_mut().and_then(|d| d.poll()) {
+            self.ed.pointer = self.to_canvas(v2(drop.x, drop.y));
+            self.drop_count = 0;
+            let mut dropped = false;
+            for path in drop.paths {
+                self.drop_file(path);
+                dropped = true;
+            }
+            if dropped && let Some(g) = &self.gfx {
+                g.window.request_redraw();
+            }
+        }
         // winit runs the first redraw before this, so Sparkle loads once the window is up.
         // Later calls do nothing.
         #[cfg(target_os = "macos")]
@@ -1420,7 +1512,34 @@ fn start_mcp(
     }
 }
 
+/// Detect display server: prefer native Wayland when available, otherwise fall back
+/// to X11/XWayland. No environment overrides required.
+fn configure_display_backend() {
+    #[cfg(target_os = "linux")]
+    {
+        let has = |k: &str| std::env::var_os(k).is_some_and(|v| !v.is_empty());
+        let wayland = has("WAYLAND_DISPLAY") || has("WAYLAND_SOCKET");
+        let session = std::env::var("XDG_SESSION_TYPE")
+            .ok()
+            .map(|s| s.to_ascii_lowercase());
+        if wayland && session.as_deref() == Some("x11") {
+            // Unusual hybrid, prefer X11 if forced; otherwise keep wayland vars.
+            return;
+        }
+        // When running under Wayland (including Wayland+XWayland), keep WAYLAND*
+        // vars so winit uses the native Wayland backend.
+        if wayland {
+            log::info!("using native Wayland backend");
+            return;
+        }
+        if has("DISPLAY") {
+            log::info!("using X11 backend");
+        }
+    }
+}
+
 pub fn run(start: Start) -> Result<(), String> {
+    configure_display_backend();
     let store = Store::open(Store::default_root())
         .map_err(|e| format!("cannot create the projects folder: {e}"))?;
     let event_loop = EventLoop::<UserEvent>::with_user_event()

@@ -12,10 +12,26 @@ use lyon::tessellation::{FillRule, LineCap};
 use std::collections::HashMap;
 use std::sync::Arc;
 
-pub const CANVAS_BG: Color = Color::rgb(0xee, 0xee, 0xf0);
-pub const GRID_DOT: Color = Color::rgb(0xcf, 0xcf, 0xd6);
+pub const CANVAS_BG_LIGHT: Color = Color::rgb(0xee, 0xee, 0xf0);
+pub const CANVAS_BG_DARK: Color = Color::rgb(0x1e, 0x1e, 0x20);
+pub const GRID_DOT_LIGHT: Color = Color::rgb(0xcf, 0xcf, 0xd6);
+pub const GRID_DOT_DARK: Color = Color::rgb(0x3a, 0x3a, 0x3c);
+/// Draw.io-style grid: square lines every 10 world units, with a stronger line every 5.
+pub const GRID_STEP: f64 = 10.0;
 pub const ACCENT: Color = Color::rgb(0x2f, 0x6f, 0xf3);
 pub const GUIDE: Color = Color::rgb(0xf2, 0x2f, 0x7a);
+
+pub fn canvas_bg(dark: bool) -> Color {
+    if dark {
+        CANVAS_BG_DARK
+    } else {
+        CANVAS_BG_LIGHT
+    }
+}
+
+pub fn grid_dot(dark: bool) -> Color {
+    if dark { GRID_DOT_DARK } else { GRID_DOT_LIGHT }
+}
 
 pub fn rgba(c: Color) -> [f32; 4] {
     c.to_f32(1.0)
@@ -48,28 +64,31 @@ impl View<'_> {
     }
 }
 
-/// Dot grid whose spacing adapts to the zoom so it never gets too dense or sparse.
-pub fn grid(mb: &mut MeshBuilder, v: &View) {
+/// Square grid lines, like draw.io. Spacing adapts to the zoom so lines never get too dense.
+pub fn grid(mb: &mut MeshBuilder, v: &View, dark: bool) {
     let z = v.camera.zoom;
-    let mut spacing = 20.0;
-    while spacing * z < 14.0 {
+    let mut spacing = GRID_STEP;
+    while spacing * z < 8.0 {
         spacing *= 5.0;
-    }
-    while spacing * z > 70.0 {
-        spacing /= 5.0;
     }
     let vis = v.camera.visible_world(v.viewport);
     let x0 = (vis.x / spacing).floor() as i64;
     let y0 = (vis.y / spacing).floor() as i64;
     let x1 = (vis.right() / spacing).ceil() as i64;
     let y1 = (vis.bottom() / spacing).ceil() as i64;
-    let color = rgba(GRID_DOT);
-    let r = 0.9;
+    let base = grid_dot(dark);
+    let minor = rgba(Color::rgba(base.r, base.g, base.b, 150));
+    let major = rgba(base);
+    let (w, h) = (v.viewport.x, v.viewport.y);
+    for xi in x0..=x1 {
+        let s = v.to_screen(v2(xi as f64 * spacing, 0.0));
+        let c = if xi % 5 == 0 { major } else { minor };
+        mb.rect(Rect::new(s.x.round(), v.offset.y, 1.0, h), c);
+    }
     for yi in y0..=y1 {
-        for xi in x0..=x1 {
-            let s = v.to_screen(v2(xi as f64 * spacing, yi as f64 * spacing));
-            mb.rect(Rect::new(s.x - r, s.y - r, 2.0 * r, 2.0 * r), color);
-        }
+        let s = v.to_screen(v2(0.0, yi as f64 * spacing));
+        let c = if yi % 5 == 0 { major } else { minor };
+        mb.rect(Rect::new(v.offset.x, s.y.round(), w, 1.0), c);
     }
 }
 
@@ -339,7 +358,7 @@ pub fn overlay(mb: &mut MeshBuilder, ed: &Editor, offset: V2) {
         if let (Some(n), Some(wr)) = (ed.doc.get(te.id), ed.doc.world_rect(te.id))
             && let Some(l) = text::layout_node(n)
         {
-            let o = v.to_screen(wr.min() + text::text_offset(n));
+            let o = v.to_screen(wr.min() + text::text_origin(n, &l));
             if let Some(a) = te.anchor.filter(|a| *a != te.caret) {
                 for (x, top, w, h) in l.selection_rects(a, te.caret) {
                     mb.rect(
@@ -586,7 +605,13 @@ fn fmt_num(x: f64) -> String {
 }
 
 /// Full interactive canvas: background grid, document, overlay.
-pub fn canvas(ed: &Editor, cache: &mut SceneCache, offset: V2, show_grid: bool) -> CanvasFrame {
+pub fn canvas(
+    ed: &Editor,
+    cache: &mut SceneCache,
+    offset: V2,
+    show_grid: bool,
+    dark: bool,
+) -> CanvasFrame {
     let v = View {
         doc: &ed.doc,
         camera: ed.camera,
@@ -595,9 +620,9 @@ pub fn canvas(ed: &Editor, cache: &mut SceneCache, offset: V2, show_grid: bool) 
     };
     let mut under = MeshBuilder::default();
     under.set_clip(Some(v.canvas_rect()));
-    under.rect(v.canvas_rect(), rgba(CANVAS_BG));
+    under.rect(v.canvas_rect(), rgba(canvas_bg(dark)));
     if show_grid {
-        grid(&mut under, &v);
+        grid(&mut under, &v, dark);
     }
     let vis = ed.camera.visible_world(ed.viewport);
     let bucket = zoom_bucket(ed.camera.zoom);

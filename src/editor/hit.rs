@@ -76,12 +76,13 @@ pub fn hit_test(doc: &Document, p: V2, zoom: f64) -> Option<NodeId> {
     })
 }
 
-/// Screen-space rectangle of a top-level frame's name label.
+/// Screen-space rectangle of a top-level frame's title label, centered above the frame.
 pub fn frame_label_rect(frame_screen: &Rect, name_width_px: f64) -> Rect {
+    let w = name_width_px.max(24.0) + 4.0;
     Rect::new(
-        frame_screen.x,
+        frame_screen.x + (frame_screen.w - w) * 0.5,
         frame_screen.y - 20.0,
-        name_width_px.max(24.0) + 4.0,
+        w,
         18.0,
     )
 }

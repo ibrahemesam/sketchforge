@@ -428,6 +428,7 @@ impl Editor {
             id,
             caret: 0,
             anchor: None,
+            original: String::new(),
         });
         self.tool = Tool::Select;
     }

@@ -16,6 +16,10 @@ symlinks in `.claude/skills/`.
 
 ## This repo
 
+Agent memory and running notes live in `.opencode/MEMORY.md`. Read it at the
+start of a session and update it when the environment, decisions, or
+verification state changes.
+
 This repo is Sketch, a native Rust infinite canvas built on wgpu, winit and
 egui, plus its download page in `site/`, a single prerendered SvelteKit page
 built for Vercel. The README covers building, running and testing the app, and

@@ -1,7 +1,7 @@
 //! Text editing: caret and selection, typing with style-span bookkeeping, and per-range rich
 //! text styling (bold, italic, underline, strikethrough, size, color).
 
-use super::{Editor, Key, TextEdit};
+use super::{Editor, Gesture, Key, TextEdit};
 use crate::model::{Color, NodeId, NodeKind, TextSpan};
 use crate::text;
 
@@ -9,7 +9,7 @@ impl Editor {
     fn text_len(&self, id: NodeId) -> usize {
         self.doc
             .get(id)
-            .and_then(|n| n.kind.text())
+            .and_then(|n| n.edited_text())
             .map_or(0, |t| t.chars().count())
     }
 
@@ -29,27 +29,26 @@ impl Editor {
         let n_new = s.chars().count();
         let mut caret = te.caret;
         if let Some(n) = self.tx().node_mut(te.id)
-            && let Some(text) = n.kind.text_mut()
+            && let Some((text, style)) = n.edited_text_and_style_mut()
         {
             // Replacement text takes the style of the first replaced character.
             let mut inherit: Option<TextSpan> = None;
             if let Some((a, b)) = sel {
-                inherit = n
-                    .text_style
+                inherit = style
                     .spans
                     .iter()
                     .find(|sp| sp.start <= a && sp.end > a)
                     .cloned();
                 let (ba, bb) = (byte_at(text, a), byte_at(text, b));
                 text.replace_range(ba..bb, "");
-                n.text_style.on_delete(a, b);
+                style.on_delete(a, b);
                 caret = a;
             }
             let byte = byte_at(text, caret);
             text.insert_str(byte, s);
-            n.text_style.on_insert(caret, n_new);
+            style.on_insert(caret, n_new);
             if let Some(sp) = inherit {
-                n.text_style.apply_range(caret, caret + n_new, |t| {
+                style.apply_range(caret, caret + n_new, |t| {
                     *t = TextSpan {
                         start: t.start,
                         end: t.end,
@@ -63,6 +62,7 @@ impl Editor {
             id: te.id,
             caret,
             anchor: None,
+            original: te.original.clone(),
         });
         self.mark_overrides(&[te.id], "text");
         self.fit_text(te.id);
@@ -76,16 +76,17 @@ impl Editor {
             return;
         }
         if let Some(n) = self.tx().node_mut(te.id)
-            && let Some(text) = n.kind.text_mut()
+            && let Some((text, style)) = n.edited_text_and_style_mut()
         {
             let (ba, bb) = (byte_at(text, a), byte_at(text, b));
             text.replace_range(ba..bb, "");
-            n.text_style.on_delete(a, b);
+            style.on_delete(a, b);
         }
         self.text_edit = Some(TextEdit {
             id: te.id,
             caret: a,
             anchor: None,
+            original: te.original.clone(),
         });
         self.mark_overrides(&[te.id], "text");
         self.fit_text(te.id);
@@ -132,7 +133,27 @@ impl Editor {
         let len = self.text_len(te.id);
         let cmd = self.mods.command();
         match key {
-            Key::Escape => self.end_text_edit(),
+            Key::Escape => {
+                let original = te.original.clone();
+                if let Some(n) = self.tx().node_mut(te.id)
+                    && let Some((text, _)) = n.edited_text_and_style_mut()
+                {
+                    *text = original.clone();
+                }
+                self.fit_text(te.id);
+                if original.is_empty() {
+                    // Don't let end_text_edit remove it if we're discarding a brand new empty text.
+                    self.tx().remove(te.id);
+                    self.selection.clear();
+                    self.text_edit = None;
+                    if matches!(self.gesture, Gesture::TextSelect { .. }) {
+                        self.gesture = Gesture::None;
+                    }
+                    self.commit();
+                } else {
+                    self.end_text_edit();
+                }
+            }
             Key::Enter if cmd => self.end_text_edit(),
             Key::Enter => self.insert_text("\n"),
             Key::Backspace => match self.text_selection() {
@@ -216,6 +237,7 @@ impl Editor {
             let len = self.text_len(*id);
             let mut tx = self.tx();
             let n = tx.node_mut(*id).unwrap();
+            let text_kind = n.kind.text().is_some();
             // Whole-layer changes go to the base style where possible.
             let mut probe = TextSpan::default();
             f(&mut probe);
@@ -226,7 +248,11 @@ impl Editor {
                 n.text_style.italic = i;
             }
             if let Some(c) = probe.color {
-                n.style.set_fill(Some(c));
+                if text_kind {
+                    n.style.set_fill(Some(c));
+                } else {
+                    n.label_color = Some(c);
+                }
             }
             if let Some(z) = probe.size
                 && let NodeKind::Text { font_size, .. } | NodeKind::Sticky { font_size, .. } =
@@ -269,18 +295,21 @@ impl Editor {
             .map(|t| t.id)
             .or_else(|| self.selection.first().copied())?;
         let n = self.doc.get(id)?;
-        let font_size = &n.kind.font_size()?;
+        let font_size = n.kind.font_size().unwrap_or(text::LABEL_FONT_SIZE);
         let at = match (self.text_selection(), &self.text_edit) {
             (Some((a, _)), _) => a,
             (None, Some(te)) => te.caret.saturating_sub(1),
             _ => 0,
         };
-        let color = n
-            .style
-            .fills
-            .last()
-            .map_or(Color::INK, |p| p.preview_color());
-        Some(n.text_style.char_style(at, *font_size, color))
+        let color = if n.kind.text().is_some() {
+            n.style
+                .fills
+                .last()
+                .map_or(Color::INK, |p| p.preview_color())
+        } else {
+            text::label_color(n)
+        };
+        Some(n.text_style.char_style(at, font_size, color))
     }
 
     pub fn toggle_bold(&mut self) {

@@ -65,6 +65,26 @@ impl Color {
             (self.a as f64 / 255.0 * opacity) as f32,
         ]
     }
+    /// Relative luminance as defined by WCAG 2.x (0 = black, 1 = white).
+    pub fn luminance(self) -> f64 {
+        fn channel(c: u8) -> f64 {
+            let s = c as f64 / 255.0;
+            if s <= 0.04045 {
+                s / 12.92
+            } else {
+                ((s + 0.055) / 1.055).powf(2.4)
+            }
+        }
+        0.2126 * channel(self.r) + 0.7152 * channel(self.g) + 0.0722 * channel(self.b)
+    }
+    /// Black or white, whichever reads better on top of this color.
+    pub fn contrasting_text(self) -> Color {
+        if self.luminance() < 0.45 {
+            Color::WHITE
+        } else {
+            Color::INK
+        }
+    }
 }
 
 impl Serialize for Color {
@@ -396,6 +416,12 @@ pub struct Node {
     /// Instance link (instance roots and every node inside an instance).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub instance: Option<InstanceLink>,
+    /// Text drawn centered inside the shape. Empty for shapes without a label.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub label: String,
+    /// Explicit label color; None picks black or white from the shape fill.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub label_color: Option<Color>,
 }
 
 /// One anchor of a vector path, with optional bezier handles (node-local, absolute).
@@ -472,6 +498,59 @@ impl Node {
             layout_child: LayoutChild::default(),
             component: false,
             instance: None,
+            label: String::new(),
+            label_color: None,
+        }
+    }
+
+    /// Whether the node can carry a centered shape label (draw.io style).
+    pub fn supports_label(&self) -> bool {
+        !matches!(
+            self.kind,
+            NodeKind::Frame { .. }
+                | NodeKind::Text { .. }
+                | NodeKind::Sticky { .. }
+                | NodeKind::Group
+                | NodeKind::Stroke { .. }
+                | NodeKind::Connector { .. }
+        )
+    }
+
+    /// Text that double-clicking the node edits: its own text, a frame title, or a shape label.
+    pub fn edited_text(&self) -> Option<&String> {
+        if self.is_frame() {
+            Some(&self.name)
+        } else if self.kind.text().is_some() {
+            self.kind.text()
+        } else if self.supports_label() {
+            Some(&self.label)
+        } else {
+            None
+        }
+    }
+
+    pub fn edited_text_mut(&mut self) -> Option<&mut String> {
+        if self.is_frame() {
+            Some(&mut self.name)
+        } else if self.kind.text().is_some() {
+            self.kind.text_mut()
+        } else if self.supports_label() {
+            Some(&mut self.label)
+        } else {
+            None
+        }
+    }
+
+    /// Editable text together with the text style that belongs to it.
+    pub fn edited_text_and_style_mut(&mut self) -> Option<(&mut String, &mut TextStyle)> {
+        if self.is_frame() {
+            Some((&mut self.name, &mut self.text_style))
+        } else if self.kind.text().is_some() {
+            Some((self.kind.text_mut()?, &mut self.text_style))
+        } else if self.supports_label() {
+            Some((&mut self.label, &mut self.text_style))
+        } else {
+            None
         }
     }
 

@@ -228,115 +228,117 @@ pub fn node_draw(n: &Node, wr: Rect, opacity: f64) -> NodeDraw {
     let mut ops = Vec::new();
     if let Some(r) = n.style.rough {
         ops = super::rough::node_ops(n, wr, opacity, &r);
-        return NodeDraw {
-            ops,
-            blend: n.style.blend,
-        };
-    }
-    match &n.kind {
-        NodeKind::Group => {}
-        NodeKind::Text { .. } => text_ops(n, wr, opacity, &mut ops),
-        NodeKind::Connector { .. } => connector_ops(n, wr, opacity, &mut ops, false),
-        NodeKind::Sticky { .. } => {
-            let c = n
-                .style
-                .fills
-                .last()
-                .map_or(Color::rgb(0xff, 0xdf, 0x6b), |p| p.preview_color());
-            let rad = [n.style.corner_radius.max(2.0); 4];
-            // Soft drop shadow, then the note and its text.
-            for (i, a) in [(3.0, 0.05), (1.5, 0.07)] {
+    } else {
+        match &n.kind {
+            NodeKind::Group => {}
+            NodeKind::Text { .. } => text_ops(n, wr, opacity, &mut ops),
+            NodeKind::Connector { .. } => connector_ops(n, wr, opacity, &mut ops, false),
+            NodeKind::Sticky { .. } => {
+                let c = n
+                    .style
+                    .fills
+                    .last()
+                    .map_or(Color::rgb(0xff, 0xdf, 0x6b), |p| p.preview_color());
+                let rad = [n.style.corner_radius.max(2.0); 4];
+                // Soft drop shadow, then the note and its text.
+                for (i, a) in [(3.0, 0.05), (1.5, 0.07)] {
+                    ops.push(DrawOp::Fill {
+                        path: vector::rounded_rect(wr.translate(v2(0.0, i)).inflate(i * 0.5), rad),
+                        paint: PaintSpec::Solid(rgba(
+                            Color::rgba(0, 0, 0, (a * 255.0) as u8),
+                            opacity,
+                        )),
+                        even_odd: false,
+                    });
+                }
                 ops.push(DrawOp::Fill {
-                    path: vector::rounded_rect(wr.translate(v2(0.0, i)).inflate(i * 0.5), rad),
-                    paint: PaintSpec::Solid(rgba(Color::rgba(0, 0, 0, (a * 255.0) as u8), opacity)),
-                    even_odd: false,
-                });
-            }
-            ops.push(DrawOp::Fill {
-                path: vector::rounded_rect(wr, rad),
-                paint: PaintSpec::Solid(rgba(c, opacity)),
-                even_odd: false,
-            });
-            if let Some(sc) = n.style.stroke
-                && n.style.stroke_width > 0.0
-            {
-                ops.push(DrawOp::Stroke {
                     path: vector::rounded_rect(wr, rad),
-                    color: rgba(sc, opacity),
-                    width: n.style.stroke_width,
-                    cap: n.style.cap,
-                    join: n.style.join,
-                    dash: n.style.dash.clone(),
-                });
-            }
-            text_ops(n, wr, opacity, &mut ops);
-        }
-        NodeKind::Line { .. } => {
-            if let (Some(c), Some(path)) = (n.style.stroke, shape_path(n, wr)) {
-                ops.push(DrawOp::Stroke {
-                    path,
-                    color: rgba(c, opacity),
-                    width: n.style.stroke_width.max(0.0),
-                    cap: if n.style.cap == Cap::Butt {
-                        Cap::Round
-                    } else {
-                        n.style.cap
-                    },
-                    join: n.style.join,
-                    dash: n.style.dash.clone(),
-                });
-            }
-        }
-        NodeKind::Stroke { .. } => {
-            let c = n
-                .style
-                .fills
-                .last()
-                .map_or(Color::INK, |p| p.preview_color());
-            if let Some(path) = shape_path(n, wr) {
-                ops.push(DrawOp::Fill {
-                    path,
                     paint: PaintSpec::Solid(rgba(c, opacity)),
                     even_odd: false,
                 });
-            }
-        }
-        _ => {
-            let Some(path) = shape_path(n, wr) else {
-                return NodeDraw::default();
-            };
-            let even_odd = matches!(
-                n.kind,
-                NodeKind::Path {
-                    fill_rule: FillRule::EvenOdd,
-                    ..
+                if let Some(sc) = n.style.stroke
+                    && n.style.stroke_width > 0.0
+                {
+                    ops.push(DrawOp::Stroke {
+                        path: vector::rounded_rect(wr, rad),
+                        color: rgba(sc, opacity),
+                        width: n.style.stroke_width,
+                        cap: n.style.cap,
+                        join: n.style.join,
+                        dash: n.style.dash.clone(),
+                    });
                 }
-            );
-            if is_area(n) {
-                for p in &n.style.fills {
-                    if let Some(paint) = paint_spec(p, wr, opacity) {
-                        ops.push(DrawOp::Fill {
-                            path: path.clone(),
-                            paint,
-                            even_odd,
+                text_ops(n, wr, opacity, &mut ops);
+            }
+            NodeKind::Line { .. } => {
+                if let (Some(c), Some(path)) = (n.style.stroke, shape_path(n, wr)) {
+                    ops.push(DrawOp::Stroke {
+                        path,
+                        color: rgba(c, opacity),
+                        width: n.style.stroke_width.max(0.0),
+                        cap: if n.style.cap == Cap::Butt {
+                            Cap::Round
+                        } else {
+                            n.style.cap
+                        },
+                        join: n.style.join,
+                        dash: n.style.dash.clone(),
+                    });
+                }
+            }
+            NodeKind::Stroke { .. } => {
+                let c = n
+                    .style
+                    .fills
+                    .last()
+                    .map_or(Color::INK, |p| p.preview_color());
+                if let Some(path) = shape_path(n, wr) {
+                    ops.push(DrawOp::Fill {
+                        path,
+                        paint: PaintSpec::Solid(rgba(c, opacity)),
+                        even_odd: false,
+                    });
+                }
+            }
+            _ => {
+                if let Some(path) = shape_path(n, wr) {
+                    let even_odd = matches!(
+                        n.kind,
+                        NodeKind::Path {
+                            fill_rule: FillRule::EvenOdd,
+                            ..
+                        }
+                    );
+                    if is_area(n) {
+                        for p in &n.style.fills {
+                            if let Some(paint) = paint_spec(p, wr, opacity) {
+                                ops.push(DrawOp::Fill {
+                                    path: path.clone(),
+                                    paint,
+                                    even_odd,
+                                });
+                            }
+                        }
+                    }
+                    if let Some(c) = n.style.stroke
+                        && n.style.stroke_width > 0.0
+                        && let Some(sp) = stroke_path(n, wr)
+                    {
+                        ops.push(DrawOp::Stroke {
+                            path: sp,
+                            color: rgba(c, opacity),
+                            width: n.style.stroke_width,
+                            cap: n.style.cap,
+                            join: n.style.join,
+                            dash: n.style.dash.clone(),
                         });
                     }
                 }
             }
-            if let Some(c) = n.style.stroke
-                && n.style.stroke_width > 0.0
-                && let Some(sp) = stroke_path(n, wr)
-            {
-                ops.push(DrawOp::Stroke {
-                    path: sp,
-                    color: rgba(c, opacity),
-                    width: n.style.stroke_width,
-                    cap: n.style.cap,
-                    join: n.style.join,
-                    dash: n.style.dash.clone(),
-                });
-            }
         }
+    }
+    if n.supports_label() && !n.label.is_empty() {
+        text_ops(n, wr, opacity, &mut ops);
     }
     NodeDraw {
         ops,
@@ -413,7 +415,7 @@ fn text_ops(n: &Node, wr: Rect, opacity: f64, ops: &mut Vec<DrawOp>) {
     let Some(l) = text::layout_node(n) else {
         return;
     };
-    let o = wr.min() + text::text_offset(n);
+    let o = wr.min() + text::text_origin(n, &l);
     let mut i = 0;
     while i < l.glyphs.len() {
         let g0 = l.glyphs[i];

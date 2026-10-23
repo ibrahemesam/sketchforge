@@ -3300,7 +3300,10 @@ dependencies = [
  "tokio",
  "tokio-util",
  "ttf-parser",
+ "unicode-bidi",
  "usvg",
+ "wayland-backend",
+ "wayland-client",
  "wgpu",
  "winit",
 ]

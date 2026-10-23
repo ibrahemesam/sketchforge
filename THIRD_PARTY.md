@@ -2,7 +2,8 @@
 
 Sketch is MIT OR Apache-2.0. It ports a few algorithms from MIT-licensed projects (listed
 below with their copyright notices and license text) and bundles the Inter font (SIL OFL 1.1,
-`assets/fonts/OFL.txt`). Figma and Paper are proprietary: only their *behavior* was studied
+`assets/fonts/OFL.txt`) and Noto Sans Arabic (SIL OFL 1.1,
+`assets/fonts/NotoSansArabic-NOTICE.txt`). Figma and Paper are proprietary: only their *behavior* was studied
 (`analysis/FIGMA_NOTES.md`, `analysis/PAPER_ARCHITECTURE.md`), and no code, shaders, icons or
 assets from them are used.
 

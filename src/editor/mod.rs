@@ -132,6 +132,8 @@ pub struct TextEdit {
     pub caret: usize,
     /// Other end of the selection (None = no selection).
     pub anchor: Option<usize>,
+    /// Text at the moment editing started (for Escape to discard changes).
+    pub original: String,
 }
 
 #[derive(Debug)]
@@ -545,7 +547,9 @@ impl Editor {
             for c in self.doc.children(p) {
                 push(*c);
             }
-            if let Some(p) = p {
+            // A group's bounds are derived from its children, so snapping a child to
+            // its own parent feeds the drag back into the next frame.
+            if let Some(p) = p.filter(|p| !self.doc.get(*p).is_some_and(|n| n.is_group())) {
                 push(p);
             }
         }
@@ -715,8 +719,10 @@ impl Editor {
                 self.erase_at(world);
             }
             Tool::Text => {
+                // Only a real text node (or sticky) opens its text; clicking a shape
+                // with the text tool still drops a new text node on top of it.
                 if let Some(id) = hit::hit_test(&self.doc, world, self.camera.zoom)
-                    .filter(|id| self.doc.get(*id).unwrap().kind.text().is_some())
+                    .filter(|id| self.doc.get(*id).is_some_and(|n| n.kind.text().is_some()))
                 {
                     self.start_text_edit(id, Some(world));
                     return;
@@ -748,6 +754,7 @@ impl Editor {
                     id,
                     caret: 0,
                     anchor: None,
+                    original: String::new(),
                 });
                 self.tool = Tool::Select;
             }
@@ -884,6 +891,19 @@ impl Editor {
             }
         }
         if let Some(id) = self.label_at(pos) {
+            if double {
+                self.start_text_edit(id, None);
+                if let Some(te) = self.text_edit.as_mut().filter(|te| te.id == id) {
+                    let len = self
+                        .doc
+                        .get(id)
+                        .and_then(|n| n.edited_text())
+                        .map_or(0, |t| t.chars().count());
+                    te.anchor = Some(0);
+                    te.caret = len;
+                }
+                return;
+            }
             if !self.selection.contains(&id) {
                 self.select(if self.mods.shift {
                     [self.selection.clone(), vec![id]].concat()
@@ -915,18 +935,28 @@ impl Editor {
             self.start_marquee(world, None);
             return;
         };
-        // Top-level frames with content act as canvas regions: their body starts a marquee.
+        // Top-level frames: clicking empty space selects the frame itself.
         let node = self.doc.get(target).unwrap();
-        if node.is_frame()
-            && node.parent.is_none()
-            && !node.children.is_empty()
-            && !self.selection.contains(&target)
-        {
-            self.start_marquee(world, Some(target));
+        if double && node.edited_text().is_some() {
+            self.start_text_edit(target, Some(world));
+            if let Some(te) = self.text_edit.as_mut().filter(|te| te.id == target) {
+                let len = self
+                    .doc
+                    .get(target)
+                    .and_then(|n| n.edited_text())
+                    .map_or(0, |t| t.chars().count());
+                te.anchor = Some(0);
+                te.caret = len;
+            }
             return;
         }
-        if double && node.kind.text().is_some() {
-            self.start_text_edit(target, Some(world));
+        if node.is_frame() && node.parent.is_none() && !self.selection.contains(&target) {
+            self.select(vec![target]);
+            self.gesture = Gesture::Press {
+                start_screen: pos,
+                start: world,
+                click_select: None,
+            };
             return;
         }
         if double && matches!(node.kind, NodeKind::Path { .. }) && self.selection == [target] {
@@ -1148,10 +1178,10 @@ impl Editor {
                         }));
                     }
                     if sx == 0.0 && gx == 0.0 {
-                        moved.x = moved.x.round();
+                        moved.x = snap::grid(moved.x);
                     }
                     if sy == 0.0 && gy == 0.0 {
-                        moved.y = moved.y.round();
+                        moved.y = snap::grid(moved.y);
                     }
                 }
                 let d = moved.min() - bounds0.min();
@@ -1331,7 +1361,7 @@ impl Editor {
                     && let Some(l) = text::layout_node(n)
                     && let Some(te) = &mut self.text_edit
                 {
-                    te.caret = l.hit(world - wr.min() - text::text_offset(n));
+                    te.caret = l.hit(world - wr.min() - text::text_origin(n, &l));
                 }
                 self.gesture = Gesture::TextSelect { id };
             }
@@ -1488,7 +1518,7 @@ impl Editor {
                         }
                     }
                 }
-                if tool == Tool::Frame {
+                if matches!(tool, Tool::Frame) {
                     self.adopt_into_new_frame(id);
                 }
                 self.commit();
@@ -1683,18 +1713,20 @@ impl Editor {
     }
 
     pub fn start_text_edit(&mut self, id: NodeId, at_world: Option<V2>) {
-        let Some(n) = self.doc.get(id) else { return };
-        let Some(t) = n.kind.text() else {
+        let Some(original) = self.doc.get(id).and_then(|n| n.edited_text()).cloned() else {
             return;
         };
-        let len = t.chars().count();
-        let caret = match (at_world, text::layout_node(n)) {
-            (Some(p), Some(l)) => {
-                let local = p - self.doc.world_rect(id).unwrap().min() - text::text_offset(n);
-                l.hit(local)
-            }
-            _ => len,
-        };
+        let len = original.chars().count();
+        let caret = match at_world {
+            Some(p) => self.doc.get(id).and_then(|n| {
+                let l = text::layout_node(n)?;
+                let wr = self.doc.world_rect(id)?;
+                let local = p - wr.min() - text::text_origin(n, &l);
+                Some(l.hit(local))
+            }),
+            None => None,
+        }
+        .unwrap_or(len);
         if let Some(te) = self.text_edit.as_mut().filter(|te| te.id == id) {
             // Clicking inside the text being edited: place the caret (Shift extends) and
             // start a drag selection.
@@ -1714,6 +1746,7 @@ impl Editor {
             id,
             caret,
             anchor: if at_world.is_none() { Some(0) } else { None },
+            original,
         });
     }
 
@@ -1722,7 +1755,7 @@ impl Editor {
         let Some(te) = self.text_edit.clone() else {
             return;
         };
-        let Some(text) = self.doc.get(te.id).and_then(|n| n.kind.text()) else {
+        let Some(text) = self.doc.get(te.id).and_then(|n| n.edited_text()) else {
             return;
         };
         let chars: Vec<char> = text.chars().collect();
@@ -1826,10 +1859,7 @@ impl Editor {
                         Some(NodeKind::Path { .. })
                     ) {
                         self.start_path_edit(id);
-                    } else if matches!(
-                        self.doc.get(id).map(|n| &n.kind),
-                        Some(NodeKind::Text { .. })
-                    ) {
+                    } else if self.doc.get(id).is_some_and(|n| n.edited_text().is_some()) {
                         self.start_text_edit(id, None);
                     } else if self.doc.get(id).is_some_and(|n| !n.children.is_empty()) {
                         self.selection = self.doc.get(id).unwrap().children.clone();

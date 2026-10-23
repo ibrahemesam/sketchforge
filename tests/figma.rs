@@ -65,6 +65,8 @@ fn groups_follow_children_and_capture_clicks() {
     click(&mut e, v2(120.0, 120.0), 1000.0);
     click(&mut e, v2(120.0, 120.0), 1100.0);
     assert_eq!(e.selection, vec![a]);
+    // Double-click on a shape also starts label editing; leave it before dragging.
+    key(&mut e, Key::Escape, Modifiers::NONE);
     // Dragging the child grows the group live.
     ev_drag(&mut e, v2(120.0, 120.0), v2(120.0, 320.0), 3000.0, true);
     assert_eq!(wr(&e, g).bottom(), 320.0 + 30.0);
@@ -756,7 +758,7 @@ fn m3_figma_core_screenshot() {
     // Ring: the hole shows the canvas.
     assert!(close(
         at(v2(1225.0, 335.0)),
-        sketch_rs::render::scene::CANVAS_BG,
+        sketch_rs::render::scene::CANVAS_BG_LIGHT,
         6
     ));
     // Radial gradient star: center is yellow, tips are orange.
