@@ -289,6 +289,61 @@ fn double_click_frame_title_renames_it() {
 }
 
 #[test]
+fn frame_title_caret_tracks_the_zoomed_screen_text() {
+    let mut e = ed();
+    e.camera.zoom = 2.0;
+    let id = e.add_node(
+        Node::new(
+            NodeId(0),
+            NodeKind::Frame { clip: true },
+            Rect::new(100.0, 100.0, 300.0, 200.0),
+        ),
+        None,
+    );
+    e.doc.nodes.get_mut(&id).unwrap().name = "Auth flow".into();
+    let label = e.frame_labels()[0].1;
+    down(&mut e, label.x + 6.0, label.y + 8.0, 0.0);
+    up(&mut e, label.x + 6.0, label.y + 8.0, 10.0);
+    down(&mut e, label.x + 6.0, label.y + 8.0, 300.0);
+    assert_eq!(e.text_edit.as_ref().map(|t| t.id), Some(id));
+
+    // A title is drawn at a fixed 12 px, so clicking a character boundary in
+    // screen space must land on that boundary even while the canvas is zoomed.
+    let (l, o) = e.frame_title(id).unwrap();
+    let (x, _, _) = l.caret(4);
+    down(&mut e, o.x + x, o.y + 6.0, 600.0);
+    assert_eq!(e.text_edit.as_ref().unwrap().caret, 4);
+    up(&mut e, o.x + x, o.y + 6.0, 610.0);
+
+    let (x0, _, _) = l.caret(1);
+    let (x1, _, _) = l.caret(3);
+    drag(&mut e, (o.x + x0, o.y + 6.0), (o.x + x1, o.y + 6.0), 700.0);
+    let te = e.text_edit.as_ref().unwrap();
+    assert_eq!(te.anchor, Some(1));
+    assert_eq!(te.caret, 3);
+}
+
+#[test]
+fn clicking_a_child_selects_it_even_when_its_frame_is_selected() {
+    let mut e = ed();
+    press(&mut e, 'r');
+    drag(&mut e, (120.0, 120.0), (160.0, 160.0), 0.0);
+    let child = e.selection[0];
+    press(&mut e, 'f');
+    drag(&mut e, (100.0, 100.0), (400.0, 300.0), 500.0);
+    let frame = e.selection[0];
+    assert_eq!(e.selection, vec![frame]);
+
+    down(&mut e, 140.0, 140.0, 1000.0);
+    up(&mut e, 140.0, 140.0, 1010.0);
+    assert_eq!(
+        e.selection,
+        vec![child],
+        "a child is selectable without deselecting its frame first"
+    );
+}
+
+#[test]
 fn double_click_shape_adds_centered_label() {
     let mut e = ed();
     let id = e.add_node(

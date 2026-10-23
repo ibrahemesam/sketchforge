@@ -120,6 +120,7 @@ Changes remain uncommitted on `agent/drawio-features`.
 - Worktree convention in `AGENTS.md` is normally
   `../paper-rs-worktrees/<task>`, but this task intentionally edits in place.
 - `.artifacts/` is gitignored; keep generated evidence there.
+- Frame titles are fixed-size screen-space labels; editing places caret/selection in screen space, and clicking inside a selected frame selects children (frames don't capture child clicks). Group/instance roots still promote selection on press.
 
 ## Next steps
 

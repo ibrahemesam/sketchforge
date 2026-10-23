@@ -324,16 +324,35 @@ pub fn overlay(mb: &mut MeshBuilder, ed: &Editor, offset: V2) {
         } else {
             [0.42, 0.42, 0.46, 1.0]
         };
+        if ed.text_edit.as_ref().is_some_and(|te| te.id == id)
+            && let Some((_, o)) = ed.frame_title(id)
+        {
+            // Keep the whole title visible while it is being edited, so the caret
+            // and the selection line up with the text.
+            draw_text(
+                mb,
+                &n.name,
+                text::FRAME_TITLE_SIZE,
+                None,
+                TextAlign::Left,
+                o + offset,
+                1.0,
+                color,
+            );
+            continue;
+        }
         let r = r.translate(offset);
         let mut name = n.name.clone();
         let max_w = r.w;
-        while !name.is_empty() && text::layout(&name, 12.0, None, TextAlign::Left).width > max_w {
+        while !name.is_empty()
+            && text::layout(&name, text::FRAME_TITLE_SIZE, None, TextAlign::Left).width > max_w
+        {
             name.pop();
         }
         draw_text(
             mb,
             &name,
-            12.0,
+            text::FRAME_TITLE_SIZE,
             None,
             TextAlign::Left,
             v2(r.x, r.y + 2.0),
@@ -355,10 +374,19 @@ pub fn overlay(mb: &mut MeshBuilder, ed: &Editor, offset: V2) {
     }
 
     if let Some(te) = &ed.text_edit {
-        if let (Some(n), Some(wr)) = (ed.doc.get(te.id), ed.doc.world_rect(te.id))
-            && let Some(l) = text::layout_node(n)
-        {
-            let o = v.to_screen(wr.min() + text::text_origin(n, &l));
+        // Frame titles are drawn in screen space at a fixed size; text nodes scale
+        // with the canvas. Place the caret in whichever space matches the text.
+        let target = ed.doc.get(te.id).and_then(|n| {
+            if n.is_frame() {
+                ed.frame_title(te.id).map(|(l, o)| (l, o + offset, 1.0))
+            } else {
+                let l = text::layout_node(n)?;
+                let wr = ed.doc.world_rect(te.id)?;
+                let o = v.to_screen(wr.min() + text::text_origin(n, &l));
+                Some((l, o, z))
+            }
+        });
+        if let Some((l, o, z)) = target {
             if let Some(a) = te.anchor.filter(|a| *a != te.caret) {
                 for (x, top, w, h) in l.selection_rects(a, te.caret) {
                     mb.rect(

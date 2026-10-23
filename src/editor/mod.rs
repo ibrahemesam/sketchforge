@@ -588,10 +588,44 @@ impl Editor {
                     return None;
                 }
                 let sr = self.camera.world_rect_to_screen(&self.doc.world_rect(*id)?);
-                let w = text::layout(&n.name, 12.0, None, TextAlign::Left).width;
+                let w = text::layout(&n.name, text::FRAME_TITLE_SIZE, None, TextAlign::Left).width;
                 Some((*id, hit::frame_label_rect(&sr, w.min(sr.w.max(24.0)))))
             })
             .collect()
+    }
+
+    /// Screen-space layout of a frame's title and the top-left where it is drawn.
+    /// Titles are drawn at a fixed 12 px so they stay readable at any zoom, so the
+    /// caret and selection overlay have to be placed in screen space too.
+    pub fn frame_title(&self, id: NodeId) -> Option<(text::TextLayout, V2)> {
+        let n = self.doc.get(id)?;
+        if !n.is_frame() {
+            return None;
+        }
+        let sr = self.camera.world_rect_to_screen(&self.doc.world_rect(id)?);
+        let l = text::layout(&n.name, text::FRAME_TITLE_SIZE, None, TextAlign::Left);
+        let r = hit::frame_label_rect(&sr, l.width.min(sr.w.max(24.0)));
+        Some((l, v2(r.x, r.y + 2.0)))
+    }
+
+    /// Char index in a node's editable text nearest to world point `p`.
+    fn text_caret_at(&self, id: NodeId, p: V2) -> usize {
+        let Some(n) = self.doc.get(id) else {
+            return 0;
+        };
+        let Some(l) = text::layout_node(n) else {
+            return 0;
+        };
+        if n.is_frame() {
+            let Some((title, origin)) = self.frame_title(id) else {
+                return 0;
+            };
+            return title.hit(self.camera.world_to_screen(p) - origin);
+        }
+        let Some(wr) = self.doc.world_rect(id) else {
+            return 0;
+        };
+        l.hit(p - wr.min() - text::text_origin(n, &l))
     }
 
     fn label_at(&self, p: V2) -> Option<NodeId> {
@@ -891,6 +925,11 @@ impl Editor {
             }
         }
         if let Some(id) = self.label_at(pos) {
+            // Clicking a title that is being edited moves the caret.
+            if self.text_edit.as_ref().is_some_and(|te| te.id == id) {
+                self.start_text_edit(id, Some(world));
+                return;
+            }
             if double {
                 self.start_text_edit(id, None);
                 if let Some(te) = self.text_edit.as_mut().filter(|te| te.id == id) {
@@ -967,13 +1006,13 @@ impl Editor {
         if !self.mods.command() {
             target = self.click_target(target, double);
         }
-        // If an ancestor is already selected, keep dragging the ancestor.
+        // If a selected group or instance is an ancestor, keep dragging it. Frames
+        // are containers, not selection scopes: clicking a child selects the child.
         if !double
-            && let Some(a) = self
-                .doc
-                .ancestors(target)
-                .into_iter()
-                .find(|a| self.selection.contains(a))
+            && let Some(a) = self.doc.ancestors(target).into_iter().find(|a| {
+                self.selection.contains(a)
+                    && (self.doc.get(*a).is_some_and(|n| n.is_group()) || self.is_instance_root(*a))
+            })
         {
             target = a;
         }
@@ -1357,11 +1396,9 @@ impl Editor {
                 self.gesture = Gesture::Laser;
             }
             Gesture::TextSelect { id } => {
-                if let (Some(n), Some(wr)) = (self.doc.get(id), self.doc.world_rect(id))
-                    && let Some(l) = text::layout_node(n)
-                    && let Some(te) = &mut self.text_edit
-                {
-                    te.caret = l.hit(world - wr.min() - text::text_origin(n, &l));
+                let caret = self.text_caret_at(id, world);
+                if let Some(te) = &mut self.text_edit {
+                    te.caret = caret;
                 }
                 self.gesture = Gesture::TextSelect { id };
             }
@@ -1717,16 +1754,7 @@ impl Editor {
             return;
         };
         let len = original.chars().count();
-        let caret = match at_world {
-            Some(p) => self.doc.get(id).and_then(|n| {
-                let l = text::layout_node(n)?;
-                let wr = self.doc.world_rect(id)?;
-                let local = p - wr.min() - text::text_origin(n, &l);
-                Some(l.hit(local))
-            }),
-            None => None,
-        }
-        .unwrap_or(len);
+        let caret = at_world.map(|p| self.text_caret_at(id, p)).unwrap_or(len);
         if let Some(te) = self.text_edit.as_mut().filter(|te| te.id == id) {
             // Clicking inside the text being edited: place the caret (Shift extends) and
             // start a drag selection.
