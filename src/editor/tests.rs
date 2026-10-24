@@ -1179,6 +1179,117 @@ fn stickies_keep_their_fixed_inset() {
 }
 
 #[test]
+fn valign_keeps_height_and_offsets_the_box() {
+    let mut e = ed();
+    let id = e.add_node(
+        Node::new(
+            NodeId(0),
+            NodeKind::Text {
+                text: "hello".into(),
+                font_size: 16.0,
+                auto_width: true,
+                align: TextAlign::Left,
+            },
+            Rect::new(100.0, 100.0, 60.0, 20.0),
+        ),
+        None,
+    );
+    // Make the box taller than its content, then center vertically.
+    e.edit("resize", |tx| {
+        tx.node_mut(id).unwrap().rect.h = 60.0;
+    });
+    e.edit("valign", |tx| {
+        tx.node_mut(id).unwrap().valign = crate::model::VAlign::Middle;
+    });
+    let n = e.doc.get(id).unwrap();
+    let l = crate::text::layout_node(n).unwrap();
+    assert_eq!(n.rect.h, 60.0, "Middle/Bottom keeps the user-set height");
+    let extra = 60.0 - n.pad.top - n.pad.bottom - l.height;
+    assert!(
+        extra > 10.0,
+        "box taller than content: h {} vs {}",
+        n.rect.h,
+        l.height
+    );
+    let mid = crate::text::text_origin(n, &l);
+    assert!(
+        (mid.y - extra * 0.5).abs() < 1e-9,
+        "middle centers the content; origin y {} vs extra {}",
+        mid.y,
+        extra
+    );
+
+    e.edit("valign bottom", |tx| {
+        tx.node_mut(id).unwrap().valign = crate::model::VAlign::Bottom;
+    });
+    let n = e.doc.get(id).unwrap();
+    let l = crate::text::layout_node(n).unwrap();
+    let bot = crate::text::text_origin(n, &l);
+    assert!(
+        (bot.y - mid.y - extra * 0.5).abs() < 1e-9,
+        "bottom = middle + extra/2; {} vs {}",
+        bot.y,
+        mid.y
+    );
+
+    // Back to Top re-fits the height to the content.
+    e.edit("valign top", |tx| {
+        tx.node_mut(id).unwrap().valign = crate::model::VAlign::Top;
+    });
+    e.fit_text(id);
+    let n = e.doc.get(id).unwrap();
+    let l = crate::text::layout_node(n).unwrap();
+    assert!(
+        (n.rect.h - l.height).abs() < 1e-9,
+        "Top auto-fits again, h {} vs content {}",
+        n.rect.h,
+        l.height
+    );
+    assert_eq!(crate::text::text_origin(n, &l), v2(0.0, 0.0));
+}
+
+#[test]
+fn writing_direction_overrides_paragraph_bidi() {
+    // "Hi Ally." under RTL: the trailing dot resolves to the paragraph
+    // level and moves to the LEFT edge, while the Latin run keeps its
+    // order; under LTR (and auto, which detects LTR) the dot trails.
+    let mk = |dir: crate::model::WritingDir| {
+        let mut n = Node::new(
+            NodeId(0),
+            NodeKind::Text {
+                text: "Hi Ally.".into(),
+                font_size: 16.0,
+                auto_width: false,
+                align: TextAlign::Left,
+            },
+            Rect::new(0.0, 0.0, 300.0, 24.0),
+        );
+        n.dir = dir;
+        crate::text::layout_node(&n).unwrap()
+    };
+    let ltr = mk(crate::model::WritingDir::Ltr);
+    let rtl = mk(crate::model::WritingDir::Rtl);
+    assert_eq!(ltr.glyphs.len(), 8, "one glyph per character");
+    assert_eq!(ltr.glyphs[0].char_index, 0, "H first under LTR");
+    assert_eq!(
+        ltr.glyphs.last().unwrap().char_index,
+        7,
+        "dot last under LTR"
+    );
+    assert_eq!(rtl.glyphs.last().unwrap().char_index, 6, "y still last");
+    assert_eq!(
+        rtl.glyphs[0].char_index, 7,
+        "the neutral dot leads the line under RTL"
+    );
+    // LTR and Automatic agree on pure-Latin content.
+    let auto = mk(crate::model::WritingDir::Auto);
+    assert_eq!(
+        auto.glyphs.iter().map(|g| g.gid).collect::<Vec<_>>(),
+        ltr.glyphs.iter().map(|g| g.gid).collect::<Vec<_>>()
+    );
+}
+
+#[test]
 fn resize_handles_with_shift_and_multi_scale() {
     let mut e = ed();
     let (a, b) = two_rects(&mut e);

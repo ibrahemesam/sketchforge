@@ -400,6 +400,43 @@ impl Pad {
     }
 }
 
+/// Vertical position of text inside its box (draw.io's Position Top/Middle/
+/// Bottom). Only visible when the box is taller than its content; a Middle
+/// or Bottom layer also stops auto-fitting its height so the position shows.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub enum VAlign {
+    #[default]
+    Top,
+    Middle,
+    Bottom,
+}
+
+impl VAlign {
+    pub fn is_top(&self) -> bool {
+        matches!(self, VAlign::Top)
+    }
+}
+
+/// Writing direction override for text layers (draw.io's Writing Direction).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub enum WritingDir {
+    /// Detect from the content (Arabic shapes bidi; Latin stays LTR).
+    #[default]
+    Auto,
+    Ltr,
+    Rtl,
+}
+
+impl WritingDir {
+    pub fn is_auto(&self) -> bool {
+        matches!(self, WritingDir::Auto)
+    }
+}
+
+fn is_false(b: &bool) -> bool {
+    !*b
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Node {
     pub id: NodeId,
@@ -443,6 +480,19 @@ pub struct Node {
     /// Spacing between a text layer's box edges and its content.
     #[serde(default, skip_serializing_if = "Pad::is_zero")]
     pub pad: Pad,
+    /// Text box background (draw.io's Background Color). Kept off `style.fills`,
+    /// which carries the FONT color for text layers.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub text_bg: Option<Color>,
+    /// Vertical position of the text inside its box.
+    #[serde(default, skip_serializing_if = "VAlign::is_top")]
+    pub valign: VAlign,
+    /// Writing direction override (draw.io's Writing Direction).
+    #[serde(default, skip_serializing_if = "WritingDir::is_auto")]
+    pub dir: WritingDir,
+    /// Soft drop shadow behind the glyphs (draw.io's Shadow).
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub text_shadow: bool,
 }
 
 /// One anchor of a vector path, with optional bezier handles (node-local, absolute).
@@ -522,6 +572,10 @@ impl Node {
             label: String::new(),
             label_color: None,
             pad: Pad::default(),
+            text_bg: None,
+            valign: VAlign::Top,
+            dir: WritingDir::Auto,
+            text_shadow: false,
         }
     }
 

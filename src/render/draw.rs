@@ -231,7 +231,30 @@ pub fn node_draw(n: &Node, wr: Rect, opacity: f64) -> NodeDraw {
     } else {
         match &n.kind {
             NodeKind::Group => {}
-            NodeKind::Text { .. } => text_ops(n, wr, opacity, &mut ops),
+            NodeKind::Text { .. } => {
+                // draw.io's Background Color for the text box.
+                if let Some(bg) = n.text_bg {
+                    ops.push(DrawOp::Fill {
+                        path: vector::rounded_rect(wr, [n.style.corner_radius; 4]),
+                        paint: PaintSpec::Solid(rgba(bg, opacity)),
+                        even_odd: false,
+                    });
+                }
+                // ... and Border Color.
+                if let Some(sc) = n.style.stroke
+                    && n.style.stroke_width > 0.0
+                {
+                    ops.push(DrawOp::Stroke {
+                        path: vector::rounded_rect(wr, [n.style.corner_radius; 4]),
+                        color: rgba(sc, opacity),
+                        width: n.style.stroke_width,
+                        cap: n.style.cap,
+                        join: n.style.join,
+                        dash: n.style.dash.clone(),
+                    });
+                }
+                text_ops(n, wr, opacity, &mut ops);
+            }
             NodeKind::Connector { .. } => connector_ops(n, wr, opacity, &mut ops, false),
             NodeKind::Sticky { .. } => {
                 let c = n
@@ -416,6 +439,8 @@ fn text_ops(n: &Node, wr: Rect, opacity: f64, ops: &mut Vec<DrawOp>) {
         return;
     };
     let o = wr.min() + text::text_origin(n, &l);
+    // Emit the glyphs of one styled run, either normally or as the shadow
+    // pass (draw.io's Shadow): same shapes, black, slightly down-right.
     let mut i = 0;
     while i < l.glyphs.len() {
         let g0 = l.glyphs[i];
@@ -427,6 +452,15 @@ fn text_ops(n: &Node, wr: Rect, opacity: f64, ops: &mut Vec<DrawOp>) {
             }
             glyphs.push((g.gid, o + v2(g.x, g.baseline)));
             i += 1;
+        }
+        if n.text_shadow {
+            let dxy = v2(g0.size * 0.07, g0.size * 0.10);
+            ops.push(DrawOp::Glyphs {
+                face: g0.face,
+                size: g0.size,
+                color: rgba(Color::rgba(0, 0, 0, 96), opacity),
+                glyphs: glyphs.iter().map(|(g, p)| (*g, *p + dxy)).collect(),
+            });
         }
         ops.push(DrawOp::Glyphs {
             face: g0.face,

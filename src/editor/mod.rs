@@ -1897,7 +1897,13 @@ impl Editor {
             } else {
                 n.rect.w
             },
-            l.height + n.pad.top + n.pad.bottom,
+            // Middle/Bottom layers keep their height so the vertical position
+            // has something to position against; Top (the default) auto-fits.
+            if n.valign.is_top() {
+                l.height + n.pad.top + n.pad.bottom
+            } else {
+                n.rect.h
+            },
         );
         let r = n.rect;
         if ((r.w - w).abs() > 1e-9 || (r.h - h).abs() > 1e-9)

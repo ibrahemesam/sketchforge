@@ -3,7 +3,115 @@
 Working notes for agents picking this project up in a later session. Keep this
 file current when the task, environment, or verification state changes.
 
-## ROUND 2+3 — DONE, awaiting review/PR decision (branch `agent/drawio-features`, uncommitted until this note lands)
+## ROUND 5 — DONE, committed on `agent/drawio-features` (see `git log -1`)
+
+Remaining Text-tab controls from the draw.io screenshot: vertical Position,
+Writing Direction, Background/Border color, Shadow, Opacity.
+
+- New `Node` fields (NOT in `NodeKind`, same reason as `Pad`): `text_bg:
+  Option<Color>` (Background Color — kept OFF `style.fills`, which is the FONT
+  color for text layers), `valign: VAlign{Top,Middle,Bottom}`, `dir:
+  WritingDir{Auto,Ltr,Rtl}`, `text_shadow: bool`. Serde `default` +
+  `skip_serializing_if` (`is_false` for the bool). `model::mod` re-exports
+  `VAlign, WritingDir`.
+- Vertical Position only matters when the box is taller than content:
+  `fit_text` (editor/mod.rs) keeps `rect.h` when `valign != Top` (Top
+  re-fits); `text::text_origin` adds `dy = extra×{0,.5,1}` above `pad.top`.
+- Writing Direction: `layout_node` routes to `layout_bidi` with
+  `para_dir: Option<Level>` for any explicit dir or Arabic content. KEY
+  TRICK: `unicode_bidi::BidiInfo::new(text, default_para_level)` only uses
+  the default when the text has NO strong character, and mutating
+  `paragraphs[].level` after construction does not affect `visual_runs`
+  levels. Solution: prefix the line with a zero-width strong char (`\u{200F}`
+  / `\u{200E}`) before `BidiInfo::new` and subtract it (`pre`) when mapping
+  run byte ranges back to cells. "Hi Ally. Draw" is a bad visual witness
+  (all neutrals sit between two L runs → identical layout under RTL); "Hi
+  Ally." flips its trailing dot to the leading position.
+- Renderer (draw.rs `node_draw` Text branch): `text_bg` → rounded Fill behind
+  the box (`style.corner_radius`), `style.stroke` → Stroke border,
+  `text_ops` emits a black shadow glyph pass (offset `size*0.07/0.10`, alpha
+  96) before the colored `DrawOp::Glyphs`.
+- Text tab rows (before Spacing in `text_section`): 3 valign icon buttons
+  (AlignTop/VCenter/Bottom) + Position combo (80%, 70px), "Direction" combo
+  (Automatic/LTR/RTL, 86px), Background checkbox + `color_button` (defaults
+  white on toggle), Border checkbox + color button (INK, forces
+  stroke_width 1.0), Shadow checkbox, Opacity row (percent ↔ `style.opacity`).
+- Tests (153 lib): `valign_keeps_height_and_offsets_the_box`,
+  `writing_direction_overrides_paragraph_bidi` (asserts RTL glyph order by
+  `char_index`: dot = index 7 LEADS; also Auto == LTR by gid list).
+- Runtime evidence (Xvfb :99, artifacts/): Text tab shows all rows
+  (r5-texttab.png); Background → white band (g3), Border+Shadow (g4),
+  Opacity 40 → dimmer (g5), Position Center + corner-resize to 160×150 →
+  text vertically centered (g8, g13); RTL dot-flip ".Hi Ally" (h2, h3,
+  h4crop). Cleaned up: text node deleted, LabelTest `440765:15` back at
+  (0,0) #202020 240×140, no auto layout; Export Transparent background off;
+  options.json grid_size 10.0.
+- Pitfalls that ate time: xdotool typing capitals sends ⇧A, and ⇧A with a
+  frame selected = Add auto layout → an invisible frame silently swallowed
+  nodes (delete removes children). `get_children` output truncation: don't
+  pipe to `head`. MCP writes don't repaint — jiggle the pointer before
+  screenshotting. `set_text_content` = `{"updates":[{"nodeId",
+  "textContent"}]}`. Small text nodes' mid-bottom handle drags register as
+  MOVE; corner resize works; click twice after windowfocus.
+
+Skipping still (honest): Font family (single bundled Inter), "Formatted
+Text" (always on); earlier rounds: angle/rotation, Glass text effect, paper
+size/page view/background image, Diagram tab.
+
+## ROUND 4 — DONE, committed `599c76d` on `agent/drawio-features`
+
+HEAD is now `831d128` → `d5b5234` → `599c76d`. All four rounds are committed;
+nothing pushed. Round 4 (this session):
+
+- Text spacing (draw.io Spacing): `Pad { left, top, right, bottom }` on
+  `Node` (NOT inside NodeKind — avoids breaking every `NodeKind::Text {…}`
+  literal), serde default + `skip_serializing_if Pad::is_zero`. `text::layout_node`
+  insets the wrap column to `rect.w - pad.left - pad.right`; `fit_text` grows
+  w (auto_width) and h by the pads; `text_origin` for Text nodes is
+  `v2(pad.left, pad.top)` — explicit Sticky match branch FIRST (Sticky keeps
+  STICKY_PAD; `NodeKind::text()` also matches Sticky, easy to regress).
+  Text tab shows All (= max side, writes all four) / Top / Left / Bottom /
+  Right rows in two 3-column lines, `vis` param added to `text_section`.
+- Style tab: palette grid (PALETTE_COLORS 10, 5×2) above/through fills —
+  click recolors topmost fill, creates one if none; Theme presets
+  (THEME_PRESETS 8, 4×2, fill+line pairs; Connector takes line only);
+  Rounded checkbox next to Radius in `geometry()` (Arrange tab; radius
+  0↔6.0, clears per-corner `style.radii`).
+- Canvas section (dot grid + size combo + Snap guides) under the tabs in
+  both paths (selection + nothing-selected); `nothing_selected` lost its
+  `st` param (its Grid row removed).
+- Auto-layout section deleted (user: "remove this damn autolayout"):
+  `fn auto_layout` + call site gone from inspector.rs; Repos still work,
+  the panel just doesn't manage it.
+- New tests (151 lib total): `text_padding_grows_box_and_offsets_content`,
+  `stickies_keep_their_fixed_inset`.
+- Runtime verified on Xvfb (screenshots in /tmp/opencode/artifacts/):
+  palette click → computed bg #2b6fd8; Slate theme → fill #2a2f3a +
+  1px white line; Rounded → Radius 0.0→6.0; Text pad Top 20 → box
+  102.6×19.4 → 102.6×39.4 with text sitting below the top edge; frame
+  Arrange tab has no Auto layout row.
+- model::mod re-exports `Pad`. egui 0.36: `rect_outline` doesn't exist —
+  use `rect(..., StrokeKind::Inside)`.
+
+Skipping still (honest): Font family (single bundled face), vertical
+Position align, Writing direction/RTL, angle/rotation, Glass/Shadow text
+effects, Paper size/Page view/Background image, "Formatted Text" (always on).
+
+### MCP schema facts (round 4)
+
+- `get_node_info` needs `nodeId`, not `id`; shows no fill info — use
+  `get_computed_styles {"nodeIds":[...]}` (bg, border, size, x/y).
+- `update_styles` = `{"updates":[{"nodeIds":[...],"styles":{CSS-ish}}]}`;
+  works: `background`, `border`, `border-radius`. Unknown keys come back
+  in `ignoredStyles`. `border":"none"` removes the stroke.
+- Text tool flow: `xdotool key t` may be eaten if window focus was just
+  set — re-screenshot between steps. Frame drag needs slow multi-step
+  mousemove (3-4 waypoints); single jumps don't create the frame.
+- Palette swatch coords in the 1366-wide window: row1 y≈289 x=1131+29k,
+  row2 y≈318; Theme cards y≈549/577. First click after `windowfocus` is
+  often dropped — click twice.
+
+## ROUND 2+3 — DONE (committed `d5b5234`)
 
 Committed in this batch (see `git log -1` after commit):
 
@@ -34,12 +142,11 @@ Committed in this batch (see `git log -1` after commit):
   wrap-wrapped.png, reopened2.png, grid10.png, final-state.png} + agent
   run (text-tab.png, 03/04 bold+clear round trip).
 
-### Grid-check project is RESTORED CLEAN
+## Grid-check project is RESTORED CLEAN (round 4)
 
-Single layer LabelTest `440765:1`, fill #202020, (0,0) 240x140;
-extra nodes :8,:9,:10,:11 deleted; options.json `grid_size: 10.0`
-(app combo set back to 10 and file confirmed). Old dirty-state cleanup
-steps kept below in case the project drifts again.
+Single layer LabelTest `440765:1`, fill #202020, no stroke, (0,0)
+240x140, corner radius cleared; test Text node and Frame deleted;
+/home/ibrahem/mnt/Files/Documents/sketch-rs/options.json `grid_size: 10.0`.
 
 ### Round-2 feature recap (all runtime verified)
 

@@ -1258,6 +1258,91 @@ fn text_section(ui: &mut Ui, ed: &mut Editor, vis: f32, ids: &[NodeId], first: &
             });
         }
     });
+    // Vertical position (draw.io's Position): works once the box is taller
+    // than its content, which is exactly why a Middle/Bottom layer stops
+    // auto-fitting its height.
+    if !first.valign.is_top() {
+        separator(ui);
+    }
+    ui.horizontal(|ui| {
+        for (va, ic) in [
+            (crate::model::VAlign::Top, theme::Icon::AlignTop),
+            (crate::model::VAlign::Middle, theme::Icon::AlignVCenter),
+            (crate::model::VAlign::Bottom, theme::Icon::AlignBottom),
+        ] {
+            if icon_btn(ui, ic, first.valign == va, "Vertical text position") {
+                apply(ed, "valign", ids, |n| n.valign = va);
+            }
+        }
+        ui.add_space(4.0);
+        let pos = [
+            (crate::model::VAlign::Top, "Top"),
+            (crate::model::VAlign::Middle, "Center"),
+            (crate::model::VAlign::Bottom, "Bottom"),
+        ];
+        if let Some(v) = combo(ui, "valign", first.valign, &pos, 70.0) {
+            apply(ed, "valign", ids, |n| n.valign = v);
+        }
+    });
+    // Writing direction (draw.io's Writing Direction).
+    let dir = [
+        (crate::model::WritingDir::Auto, "Automatic"),
+        (crate::model::WritingDir::Ltr, "Left to right"),
+        (crate::model::WritingDir::Rtl, "Right to left"),
+    ];
+    row(ui, "Direction", |ui| {
+        if let Some(v) = combo(ui, "wdir", first.dir, &dir, 86.0) {
+            apply(ed, "dir", ids, |n| n.dir = v);
+        }
+    });
+    // Box background and border, plus a glyph shadow, as in draw.io's
+    // Font/Background/Border color and Shadow checkboxes.
+    let mut bg_on = first.text_bg.is_some();
+    ui.horizontal(|ui| {
+        if ui.checkbox(&mut bg_on, "Background").changed() {
+            // Toggle on defaults the fill to white, as in draw.io.
+            let v = bg_on.then_some(Color::rgb(0xff, 0xff, 0xff));
+            apply(ed, "text background", ids, |n| n.text_bg = v);
+        }
+        if let Some(bg) = first.text_bg
+            && let Some(c) = color_button(ui, ed, bg)
+        {
+            apply(ed, "text background", ids, |n| n.text_bg = Some(c));
+        }
+    });
+    let mut border_on = first.style.stroke.is_some();
+    ui.horizontal(|ui| {
+        if ui.checkbox(&mut border_on, "Border").changed() {
+            let on = border_on;
+            apply(ed, "text border", ids, |n| {
+                n.style.stroke = on.then_some(Color::INK);
+                if on && n.style.stroke_width <= 0.0 {
+                    n.style.stroke_width = 1.0;
+                }
+            });
+        }
+        if border_on
+            && let Some(sc) = first.style.stroke
+            && let Some(c) = color_button(ui, ed, sc)
+        {
+            apply(ed, "border color", ids, |n| n.style.stroke = Some(c));
+        }
+    });
+    let mut shadow = first.text_shadow;
+    if ui.checkbox(&mut shadow, "Shadow").changed() {
+        let v = shadow;
+        apply(ed, "shadow", ids, |n| n.text_shadow = v);
+    }
+    // Panel-wide opacity, same field the Layer section edits.
+    row(ui, "Opacity", |ui| {
+        let o = (first.style.opacity * 100.0).round();
+        if let Some(v) = num_field(ui, ed, "", o, 1.0, 0.0..=100.0, 64.0) {
+            apply(ed, "opacity", ids, |n| {
+                n.style.opacity = (v / 100.0).clamp(0.0, 1.0)
+            });
+        }
+    });
+    separator(ui);
     // draw.io's Spacing: padding between the box edges and the text. "All"
     // writes every side at once; the per-side fields override.
     let three = (vis - 8.0) / 3.0;

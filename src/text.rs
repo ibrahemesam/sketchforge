@@ -161,7 +161,7 @@ pub fn layout_rich(
     align: TextAlign,
 ) -> TextLayout {
     if arabic::has_arabic(text) {
-        return layout_bidi(text, font_size, color, ts, max_width, align);
+        return layout_bidi(text, font_size, color, ts, max_width, align, None);
     }
     let chars: Vec<char> = text.chars().collect();
     let styles: Vec<CharStyle> = (0..chars.len())
@@ -318,6 +318,7 @@ fn layout_bidi(
     ts: &TextStyle,
     max_width: Option<f64>,
     align: TextAlign,
+    para_dir: Option<unicode_bidi::Level>,
 ) -> TextLayout {
     let chars: Vec<char> = text.chars().collect();
     let styles: Vec<CharStyle> = (0..chars.len())
@@ -439,12 +440,27 @@ fn layout_bidi(
         let natural = line_height(max_size);
         let baseline = top + ascent(max_size) + (lh - natural) * 0.5;
 
-        let line_text: String = chars[char_start..char_end].iter().collect();
+        let line_text0: String = chars[char_start..char_end].iter().collect();
         let mut visual: Vec<(usize, bool)> = Vec::new();
-        if !line_text.is_empty() {
+        if !line_text0.is_empty() {
+            // An explicit Writing Direction must steer every bidi rule, not
+            // just the paragraph default (which only applies without a strong
+            // character). A zero-width strong prefix makes the first strong
+            // character, and therefore the whole resolution, follow it.
+            let prefix = match para_dir {
+                Some(l) if l.is_rtl() => "\u{200F}",
+                Some(l) if l.is_ltr() => "\u{200E}",
+                _ => "",
+            };
+            let pre = prefix.chars().count();
+            let line_text = if pre > 0 {
+                format!("{prefix}{line_text0}")
+            } else {
+                line_text0.clone()
+            };
             let bidi = unicode_bidi::BidiInfo::new(&line_text, None);
             if let Some(para) = bidi.paragraphs.first() {
-                let (levels, runs) = bidi.visual_runs(para, 0..line_text.len());
+                let (levels, runs) = bidi.visual_runs(para, 0..bidi.text.len());
                 let mut byte_starts = Vec::with_capacity(line_text.chars().count() + 1);
                 let mut b = 0;
                 for ch in line_text.chars() {
@@ -464,8 +480,10 @@ fn layout_bidi(
                         .get(run.start)
                         .copied()
                         .unwrap_or(unicode_bidi::Level::ltr());
-                    let a = char_at(run.start);
-                    let b = char_at(run.end);
+                    // Bidi indices include the zero-width prefix; drop it
+                    // when mapping to real cells.
+                    let a = char_at(run.start).saturating_sub(pre);
+                    let b = char_at(run.end).saturating_sub(pre).max(a);
                     let mut run_cells = Vec::new();
                     for (k, ci) in (s..e).enumerate() {
                         if used[k] {
@@ -802,7 +820,16 @@ pub fn text_origin(n: &crate::model::Node, l: &TextLayout) -> V2 {
     } else if matches!(n.kind, crate::model::NodeKind::Sticky { .. }) {
         text_offset(n)
     } else if n.kind.text().is_some() {
-        v2(n.pad.left, n.pad.top)
+        // Vertical position inside the box; no effect while the height
+        // auto-fits the content.
+        let avail = (n.rect.h - n.pad.top - n.pad.bottom).max(0.0);
+        let extra = (avail - l.height).max(0.0);
+        let dy = match n.valign {
+            crate::model::VAlign::Top => 0.0,
+            crate::model::VAlign::Middle => extra * 0.5,
+            crate::model::VAlign::Bottom => extra,
+        };
+        v2(n.pad.left, n.pad.top + dy)
     } else {
         v2(LABEL_PAD, ((n.rect.h - l.height) * 0.5).max(0.0))
     }
@@ -843,12 +870,38 @@ pub fn layout_node(n: &crate::model::Node) -> Option<TextLayout> {
             .map_or(Color::INK, |p| p.preview_color());
         // The wrapped line column insets into the box by the spacing pad.
         let wide = (n.rect.w - n.pad.left - n.pad.right).max(1.0);
+        // Writing direction: automatic follows the content, otherwise the
+        // Writing Direction choice overrides the bidi paragraph direction.
+        let rtl = match n.dir {
+            crate::model::WritingDir::Auto => arabic::has_arabic(text),
+            crate::model::WritingDir::Ltr => false,
+            crate::model::WritingDir::Rtl => true,
+        };
+        let para = match n.dir {
+            crate::model::WritingDir::Auto => None,
+            crate::model::WritingDir::Ltr => Some(unicode_bidi::Level::ltr()),
+            crate::model::WritingDir::Rtl => Some(unicode_bidi::Level::rtl()),
+        };
+        let wide = (!auto_width).then_some(wide);
+        // Any bidi content, or an explicit direction override, goes through
+        // the bidi layout; the prefix below steers its paragraph direction.
+        if rtl || arabic::has_arabic(text) || !matches!(n.dir, crate::model::WritingDir::Auto) {
+            return Some(layout_bidi(
+                text,
+                *font_size,
+                color,
+                &n.text_style,
+                wide,
+                *align,
+                para,
+            ));
+        }
         return Some(layout_rich(
             text,
             *font_size,
             color,
             &n.text_style,
-            (!auto_width).then_some(wide),
+            wide,
             *align,
         ));
     }
