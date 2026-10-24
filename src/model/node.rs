@@ -382,6 +382,24 @@ impl NodeKind {
     }
 }
 
+/// Spacing between a text layer's box edges and its content (draw.io's
+/// Spacing Top/Left/Bottom/Right). Grows the auto-sized box, insets the
+/// wrapped line column, and offsets the drawn text.
+#[derive(Debug, Clone, Copy, PartialEq, Default, Serialize, Deserialize)]
+#[serde(default)]
+pub struct Pad {
+    pub left: f64,
+    pub top: f64,
+    pub right: f64,
+    pub bottom: f64,
+}
+
+impl Pad {
+    pub fn is_zero(&self) -> bool {
+        self.left == 0.0 && self.top == 0.0 && self.right == 0.0 && self.bottom == 0.0
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Node {
     pub id: NodeId,
@@ -422,6 +440,9 @@ pub struct Node {
     /// Explicit label color; None picks black or white from the shape fill.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub label_color: Option<Color>,
+    /// Spacing between a text layer's box edges and its content.
+    #[serde(default, skip_serializing_if = "Pad::is_zero")]
+    pub pad: Pad,
 }
 
 /// One anchor of a vector path, with optional bezier handles (node-local, absolute).
@@ -500,6 +521,7 @@ impl Node {
             instance: None,
             label: String::new(),
             label_color: None,
+            pad: Pad::default(),
         }
     }
 

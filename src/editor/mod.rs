@@ -1893,11 +1893,11 @@ impl Editor {
         };
         let (w, h) = (
             if *auto_width {
-                l.width.max(1.0)
+                (l.width + n.pad.left + n.pad.right).max(1.0)
             } else {
                 n.rect.w
             },
-            l.height,
+            l.height + n.pad.top + n.pad.bottom,
         );
         let r = n.rect;
         if ((r.w - w).abs() > 1e-9 || (r.h - h).abs() > 1e-9)

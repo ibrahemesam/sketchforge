@@ -799,8 +799,10 @@ pub fn text_origin(n: &crate::model::Node, l: &TextLayout) -> V2 {
     if n.is_frame() {
         // Frame titles sit centered above the frame, like a layer name.
         v2(((n.rect.w - l.width) * 0.5).max(0.0), -FRAME_TITLE_GAP)
-    } else if n.kind.text().is_some() {
+    } else if matches!(n.kind, crate::model::NodeKind::Sticky { .. }) {
         text_offset(n)
+    } else if n.kind.text().is_some() {
+        v2(n.pad.left, n.pad.top)
     } else {
         v2(LABEL_PAD, ((n.rect.h - l.height) * 0.5).max(0.0))
     }
@@ -839,12 +841,14 @@ pub fn layout_node(n: &crate::model::Node) -> Option<TextLayout> {
             .fills
             .last()
             .map_or(Color::INK, |p| p.preview_color());
+        // The wrapped line column insets into the box by the spacing pad.
+        let wide = (n.rect.w - n.pad.left - n.pad.right).max(1.0);
         return Some(layout_rich(
             text,
             *font_size,
             color,
             &n.text_style,
-            (!auto_width).then_some(n.rect.w),
+            (!auto_width).then_some(wide),
             *align,
         ));
     }

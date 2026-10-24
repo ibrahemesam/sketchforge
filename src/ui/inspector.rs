@@ -8,8 +8,8 @@ use crate::editor::vector_ops::BoolOp;
 use crate::editor::{AppRequest, Editor};
 use crate::geom::v2;
 use crate::model::{
-    Align, AutoLayout, BlendMode, Cap, Color, Constraint, Direction, ImageMode, Join, Node, NodeId,
-    NodeKind, Paint, Sizing, Stop, StrokeAlign, TextAlign,
+    BlendMode, Cap, Color, Constraint, ImageMode, Join, Node, NodeId, NodeKind, Paint, Sizing,
+    Stop, StrokeAlign, TextAlign,
 };
 use crate::theme;
 use egui::{RichText, Ui};
@@ -149,7 +149,9 @@ pub fn panel(ui: &mut Ui, ed: &mut Editor, st: &mut UiState) {
             ui.add_space(2.0);
             let ids = ed.top_selection();
             if ids.is_empty() {
-                nothing_selected(ui, ed, st);
+                nothing_selected(ui, ed);
+                separator(ui);
+                canvas_section(ui, ed, st);
                 separator(ui);
                 export_section(ui, ed, st);
                 return;
@@ -194,13 +196,15 @@ pub fn panel(ui: &mut Ui, ed: &mut Editor, st: &mut UiState) {
                     ) {
                         separator(ui);
                         sketch_section(ui, ed, &ids, &first);
+                        separator(ui);
+                        theme_presets(ui, ed, &ids, &first);
                     }
                     separator(ui);
                     style_actions(ui, ed, vis);
                 }
                 InspectorTab::Text => {
                     if matches!(first.kind, NodeKind::Text { .. }) {
-                        text_section(ui, ed, &ids, &first);
+                        text_section(ui, ed, vis, &ids, &first);
                     } else {
                         ui.label(
                             RichText::new("Select a text layer to edit its text.")
@@ -212,9 +216,8 @@ pub fn panel(ui: &mut Ui, ed: &mut Editor, st: &mut UiState) {
             }
             // Selection-structural sections stay below the tabs in every view.
             child_layout(ui, ed, &ids, &first);
-            if first.is_frame() && ids.len() == 1 {
-                auto_layout(ui, ed, &ids, &first);
-            }
+            separator(ui);
+            canvas_section(ui, ed, st);
             separator(ui);
             export_section(ui, ed, st);
         });
@@ -251,6 +254,126 @@ pub const STICKY_COLORS: [Color; 6] = [
     Color::rgb(0xd7, 0xc2, 0xff),
     Color::rgb(0xe8, 0xe8, 0xec),
 ];
+
+/// draw.io-style palette colors shown at the top of the Style tab.
+const PALETTE_COLORS: [Color; 10] = [
+    Color::rgb(0x14, 0x15, 0x1a),
+    Color::rgb(0x97, 0xd0, 0x2b),
+    Color::rgb(0x2e, 0x9e, 0x4a),
+    Color::rgb(0x3b, 0xb7, 0xd4),
+    Color::rgb(0x2b, 0x6f, 0xd8),
+    Color::rgb(0x7b, 0x3c, 0xd6),
+    Color::rgb(0xd6, 0x3f, 0x9e),
+    Color::rgb(0xb4, 0x1e, 0x2e),
+    Color::rgb(0xf5, 0xb7, 0x6b),
+    Color::rgb(0xff, 0xff, 0xff),
+];
+
+/// draw.io sketch-mode theme presets: fill and line color pairs.
+const THEME_PRESETS: [(&str, Color, Color); 8] = [
+    (
+        "Slate",
+        Color::rgb(0x2a, 0x2f, 0x3a),
+        Color::rgb(0xff, 0xff, 0xff),
+    ),
+    (
+        "Amber",
+        Color::rgb(0xf5, 0xb7, 0x6b),
+        Color::rgb(0xd9, 0x53, 0x1f),
+    ),
+    (
+        "Teal",
+        Color::rgb(0x2a, 0x9d, 0x8f),
+        Color::rgb(0x0f, 0x6b, 0x63),
+    ),
+    (
+        "Navy",
+        Color::rgb(0x1f, 0x3a, 0x5f),
+        Color::rgb(0xc7, 0xd7, 0xe6),
+    ),
+    (
+        "Steel",
+        Color::rgb(0x94, 0xb0, 0xc8),
+        Color::rgb(0x5a, 0x82, 0xa2),
+    ),
+    (
+        "Sage",
+        Color::rgb(0xc9, 0xd8, 0xc3),
+        Color::rgb(0x4d, 0x6b, 0x50),
+    ),
+    (
+        "Joy",
+        Color::rgb(0xff, 0xe9, 0x6b),
+        Color::rgb(0xe9, 0x4f, 0xa8),
+    ),
+    (
+        "Coral",
+        Color::rgb(0xe9, 0x5c, 0x5c),
+        Color::rgb(0x2a, 0x9d, 0x8f),
+    ),
+];
+
+/// A grid of clickable swatches; returns the clicked color.
+fn palette(ui: &mut Ui, id: &str, current: Color) -> Option<Color> {
+    let mut out = None;
+    egui::Grid::new(id).spacing([4.0, 4.0]).show(ui, |ui| {
+        for (i, c) in PALETTE_COLORS.iter().enumerate() {
+            if i % 5 == 0 {
+                ui.end_row();
+            }
+            let (r, resp) = ui.allocate_exact_size(egui::vec2(22.0, 22.0), egui::Sense::click());
+            ui.painter().rect_filled(r, 3.0, c32(*c));
+            if *c == current {
+                ui.painter().rect_stroke(
+                    r,
+                    3.0,
+                    egui::Stroke::new(2.0, theme::accent()),
+                    egui::StrokeKind::Outside,
+                );
+            }
+            if resp.clicked() {
+                out = Some(*c);
+            }
+        }
+    });
+    out
+}
+
+/// One click sets fill and line color together, like draw.io's Shape +
+/// Connector theme cards. Connector layers only take the line color.
+fn theme_presets(ui: &mut Ui, ed: &mut Editor, ids: &[NodeId], first: &Node) {
+    ui.label(title_text("Theme"));
+    egui::Grid::new("theme-presets")
+        .spacing([4.0, 4.0])
+        .show(ui, |ui| {
+            for (i, (name, fill, line)) in THEME_PRESETS.iter().enumerate() {
+                if i % 4 == 0 {
+                    ui.end_row();
+                }
+                let (r, resp) =
+                    ui.allocate_exact_size(egui::vec2(40.0, 26.0), egui::Sense::click());
+                ui.painter().rect_filled(r, 4.0, c32(*fill));
+                ui.painter().rect(
+                    r,
+                    4.0,
+                    egui::Color32::TRANSPARENT,
+                    egui::Stroke::new(2.0, c32(*line)),
+                    egui::StrokeKind::Inside,
+                );
+                if resp.clicked() {
+                    if matches!(first.kind, NodeKind::Connector { .. }) {
+                        apply(ed, "theme", ids, |n| n.style.stroke = Some(*line));
+                    } else {
+                        apply(ed, "theme", ids, |n| {
+                            n.style.fills = vec![Paint::solid(*fill)];
+                            n.style.stroke = Some(*line);
+                        });
+                    }
+                }
+                resp.on_hover_text(*name);
+            }
+        });
+}
 
 fn swatches(ui: &mut Ui, current: Color) -> Option<Color> {
     let mut out = None;
@@ -486,7 +609,30 @@ fn export_section(ui: &mut Ui, ed: &mut Editor, st: &mut UiState) {
     });
 }
 
-fn nothing_selected(ui: &mut Ui, ed: &mut Editor, st: &mut UiState) {
+/// Canvas-wide options (draw.io's Diagram tab): dot grid, its size, and snap
+/// guides. Shown under the inspector tabs whatever is selected.
+fn canvas_section(ui: &mut Ui, ed: &mut Editor, st: &mut UiState) {
+    ui.label(title_text("Canvas"));
+    ui.horizontal(|ui| {
+        let mut on = !st.show_grid_off;
+        if ui.checkbox(&mut on, "Dot grid").changed() {
+            st.show_grid_off = !on;
+        }
+        ui.add_space(6.0);
+        let steps = [(5.0, "5"), (10.0, "10"), (20.0, "20"), (50.0, "50")];
+        if let Some(v) = combo(ui, "grid-size", ed.grid_step, &steps, 48.0) {
+            ed.grid_step = v;
+            st.options.grid_size = v;
+            st.options_dirty = true;
+        }
+    });
+    let mut snap = ed.snapping;
+    if ui.checkbox(&mut snap, "Snap guides").changed() {
+        ed.snapping = snap;
+    }
+}
+
+fn nothing_selected(ui: &mut Ui, ed: &mut Editor) {
     ui.label(title_text("New shapes"));
     let mut sketch = ed.sketch.is_some();
     if ui.checkbox(&mut sketch, "Hand-drawn style").changed() {
@@ -519,16 +665,6 @@ fn nothing_selected(ui: &mut Ui, ed: &mut Editor, st: &mut UiState) {
         let mut c = c32(ed.ink_color);
         if ui.color_edit_button_srgba(&mut c).changed() {
             ed.ink_color = from32(c);
-        }
-    });
-    separator(ui);
-    ui.label(title_text("Grid"));
-    row(ui, "Size", |ui| {
-        let steps = [(5.0, "5"), (10.0, "10"), (20.0, "20"), (50.0, "50")];
-        if let Some(v) = combo(ui, "grid-size", ed.grid_step, &steps, 48.0) {
-            ed.grid_step = v;
-            st.options.grid_size = v;
-            st.options_dirty = true;
         }
     });
     separator(ui);
@@ -879,6 +1015,14 @@ fn geometry(ui: &mut Ui, ed: &mut Editor, st: &mut UiState, ids: &[NodeId], firs
         let per_corner = first.style.radii.is_some();
         ui.horizontal(|ui| {
             if !per_corner {
+                let mut rounded = first.style.corner_radius > 0.5;
+                if ui.checkbox(&mut rounded, "Rounded").changed() {
+                    let v = if rounded { 6.0 } else { 0.0 };
+                    apply(ed, "radius", ids, |n| {
+                        n.style.corner_radius = v;
+                        n.style.radii = None;
+                    });
+                }
                 if let Some(v) = num_field(
                     ui,
                     ed,
@@ -1022,89 +1166,7 @@ fn child_layout(ui: &mut Ui, ed: &mut Editor, ids: &[NodeId], first: &Node) {
     }
 }
 
-fn auto_layout(ui: &mut Ui, ed: &mut Editor, ids: &[NodeId], first: &Node) {
-    separator(ui);
-    ui.horizontal(|ui| {
-        ui.label(title_text("Auto layout"));
-        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-            if first.layout.is_some() {
-                if ui
-                    .small_button("−")
-                    .on_hover_text("Remove auto layout (⌥⇧A)")
-                    .clicked()
-                {
-                    ed.remove_auto_layout();
-                }
-            } else if ui
-                .small_button("+")
-                .on_hover_text("Add auto layout (⇧A)")
-                .clicked()
-            {
-                ed.add_auto_layout();
-            }
-        });
-    });
-    let Some(l) = first.layout else { return };
-    let set = |ed: &mut Editor, f: &dyn Fn(&mut AutoLayout)| {
-        apply(ed, "layout", ids, |n| {
-            if let Some(l) = &mut n.layout {
-                f(l);
-            }
-        });
-    };
-    ui.horizontal(|ui| {
-        if icon_btn(
-            ui,
-            theme::Icon::ArrowRight,
-            l.direction == Direction::Horizontal,
-            "Horizontal",
-        ) {
-            set(ed, &|l| l.direction = Direction::Horizontal);
-        }
-        if icon_btn(
-            ui,
-            theme::Icon::ArrowDown,
-            l.direction == Direction::Vertical,
-            "Vertical",
-        ) {
-            set(ed, &|l| l.direction = Direction::Vertical);
-        }
-        if icon_btn(ui, theme::Icon::Wrap, l.wrap, "Wrap") {
-            set(ed, &|l| l.wrap = !l.wrap);
-        }
-        ui.add_space(6.0);
-        ui.add_enabled_ui(!l.gap_auto, |ui| {
-            if let Some(v) = num_field(ui, ed, "Gap ", l.gap, 0.5, -1e4..=1e4, 70.0) {
-                set(ed, &|l| l.gap = v);
-            }
-        });
-        if icon_btn(ui, theme::Icon::SpaceBetween, l.gap_auto, "Space between") {
-            set(ed, &|l| l.gap_auto = !l.gap_auto);
-        }
-    });
-    ui.horizontal(|ui| {
-        for (i, p) in ["T ", "R ", "B ", "L "].iter().enumerate() {
-            if let Some(v) = num_field(ui, ed, p, l.padding[i], 0.5, 0.0..=1e4, 44.0) {
-                set(ed, &|l| l.padding[i] = v);
-            }
-        }
-    });
-    let opts = [
-        (Align::Start, "Start"),
-        (Align::Center, "Center"),
-        (Align::End, "End"),
-    ];
-    row(ui, "Align", |ui| {
-        if let Some(v) = combo(ui, "al-main", l.align_main, &opts, 64.0) {
-            set(ed, &|l| l.align_main = v);
-        }
-        if let Some(v) = combo(ui, "al-cross", l.align_cross, &opts, 64.0) {
-            set(ed, &|l| l.align_cross = v);
-        }
-    });
-}
-
-fn text_section(ui: &mut Ui, ed: &mut Editor, ids: &[NodeId], first: &Node) {
+fn text_section(ui: &mut Ui, ed: &mut Editor, vis: f32, ids: &[NodeId], first: &Node) {
     let NodeKind::Text {
         auto_width,
         font_size,
@@ -1196,6 +1258,41 @@ fn text_section(ui: &mut Ui, ed: &mut Editor, ids: &[NodeId], first: &Node) {
             });
         }
     });
+    // draw.io's Spacing: padding between the box edges and the text. "All"
+    // writes every side at once; the per-side fields override.
+    let three = (vis - 8.0) / 3.0;
+    ui.horizontal(|ui| {
+        ui.spacing_mut().item_spacing.x = 4.0;
+        let all = first
+            .pad
+            .top
+            .max(first.pad.bottom.max(first.pad.left.max(first.pad.right)));
+        if let Some(v) = num_field(ui, ed, "All  ", all, 1.0, 0.0..=1e4, three) {
+            apply(ed, "spacing", ids, |n| {
+                n.pad = crate::model::Pad {
+                    left: v,
+                    top: v,
+                    right: v,
+                    bottom: v,
+                };
+            });
+        }
+        if let Some(v) = num_field(ui, ed, "Top  ", first.pad.top, 1.0, 0.0..=1e4, three) {
+            apply(ed, "spacing top", ids, |n| n.pad.top = v);
+        }
+    });
+    ui.horizontal(|ui| {
+        ui.spacing_mut().item_spacing.x = 4.0;
+        if let Some(v) = num_field(ui, ed, "Left ", first.pad.left, 1.0, 0.0..=1e4, three) {
+            apply(ed, "spacing left", ids, |n| n.pad.left = v);
+        }
+        if let Some(v) = num_field(ui, ed, "Bottom ", first.pad.bottom, 1.0, 0.0..=1e4, three) {
+            apply(ed, "spacing bottom", ids, |n| n.pad.bottom = v);
+        }
+        if let Some(v) = num_field(ui, ed, "Right ", first.pad.right, 1.0, 0.0..=1e4, three) {
+            apply(ed, "spacing right", ids, |n| n.pad.right = v);
+        }
+    });
     if ids.len() == 1 && ed.text_edit.is_none() {
         let NodeKind::Text { text, .. } = &first.kind else {
             return;
@@ -1235,6 +1332,20 @@ fn fills(ui: &mut Ui, ed: &mut Editor, ids: &[NodeId], first: &Node) {
     for i in (0..fills.len()).rev() {
         let p = fills[i].clone();
         ui.push_id(i, |ui| fill_row(ui, ed, ids, i, &p));
+    }
+    // draw.io's top-of-Style-tab palette: one click recolors the topmost
+    // fill (or creates the first one on a bare shape).
+    let cur = fills
+        .last()
+        .map_or(Color::rgb(0xd9, 0xd9, 0xd9), |p| p.preview_color());
+    if let Some(c) = palette(ui, "fill-palette", cur) {
+        apply(ed, "fills", ids, |n| {
+            if let Some(slot) = n.style.fills.last_mut() {
+                *slot = Paint::solid(c);
+            } else {
+                n.style.fills.push(Paint::solid(c));
+            }
+        });
     }
 }
 

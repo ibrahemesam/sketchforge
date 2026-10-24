@@ -1094,6 +1094,91 @@ fn clear_formatting_strips_character_overrides() {
 }
 
 #[test]
+fn text_padding_grows_box_and_offsets_content() {
+    let mut e = ed();
+    let kind = NodeKind::Text {
+        text: "wraps when the column narrows enough".into(),
+        font_size: 16.0,
+        auto_width: true,
+        align: TextAlign::Left,
+    };
+    let id = e.add_node(
+        Node::new(NodeId(0), kind, Rect::new(100.0, 100.0, 300.0, 24.0)),
+        None,
+    );
+    let bare = e.doc.get(id).unwrap().rect;
+    e.edit("pad", |tx| {
+        tx.node_mut(id).unwrap().pad = crate::model::Pad {
+            left: 20.0,
+            top: 10.0,
+            right: 30.0,
+            bottom: 5.0,
+        };
+    });
+    e.fit_text(id);
+    let padded = e.doc.get(id).unwrap().rect;
+    let l = crate::text::layout_node(e.doc.get(id).unwrap()).unwrap();
+    assert!(
+        (padded.w - (l.width + 50.0)).abs() < 1e-9,
+        "width grows by the side pads, {:?} vs {}",
+        padded,
+        l.width
+    );
+    assert!(
+        (padded.h - (bare.h + 15.0)).abs() < 1e-9,
+        "height grows by the top/bottom pads: {:?} vs {:?}",
+        padded,
+        bare
+    );
+    assert_eq!(
+        crate::text::text_origin(e.doc.get(id).unwrap(), &l),
+        v2(20.0, 10.0),
+        "content starts at the left/top pad"
+    );
+
+    // With wrap on, the line column insets: same box width, fewer words per
+    // line than without padding.
+    e.set_word_wrap(&[id], true);
+    let padded = e.doc.get(id).unwrap().rect;
+    e.edit("pad more", |tx| {
+        tx.node_mut(id).unwrap().pad.right = 200.0;
+    });
+    e.fit_text(id);
+    let n = e.doc.get(id).unwrap();
+    let l = crate::text::layout_node(n).unwrap();
+    assert!(
+        (n.rect.h - (l.height + 15.0)).abs() < 1e-9,
+        "height tracks the wrapped lines plus pads, {:?} vs {}",
+        n.rect,
+        l.height
+    );
+    assert!(n.rect.h > padded.h, "more padding, taller wrapped box");
+}
+
+#[test]
+fn stickies_keep_their_fixed_inset() {
+    let mut e = ed();
+    let id = e.add_node(
+        Node::new(
+            NodeId(0),
+            NodeKind::Sticky {
+                text: "note".into(),
+                font_size: 16.0,
+            },
+            Rect::new(100.0, 100.0, 120.0, 120.0),
+        ),
+        None,
+    );
+    let n = e.doc.get(id).unwrap();
+    let l = crate::text::layout_node(n).unwrap();
+    assert_eq!(
+        crate::text::text_origin(n, &l),
+        v2(crate::text::STICKY_PAD, crate::text::STICKY_PAD),
+        "sticky notes inset by their own constant, not the pad"
+    );
+}
+
+#[test]
 fn resize_handles_with_shift_and_multi_scale() {
     let mut e = ed();
     let (a, b) = two_rects(&mut e);
