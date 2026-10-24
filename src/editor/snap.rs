@@ -1,6 +1,6 @@
 //! Alignment snapping between bounding boxes.
 
-use crate::geom::Rect;
+use crate::geom::{Rect, V2, v2};
 
 /// Snap distance in screen pixels.
 pub const SNAP_PX: f64 = 6.0;
@@ -9,8 +9,17 @@ pub const SNAP_PX: f64 = 6.0;
 pub const GRID_STEP: f64 = crate::render::scene::GRID_STEP;
 
 /// Round a coordinate to the nearest grid line.
-pub fn grid(v: f64) -> f64 {
-    (v / GRID_STEP).round() * GRID_STEP
+pub fn grid(v: f64, step: f64) -> f64 {
+    if step > 0.0 {
+        (v / step).round() * step
+    } else {
+        v
+    }
+}
+
+/// Round both components to the nearest grid line.
+pub fn grid_v(v: V2, step: f64) -> V2 {
+    v2(grid(v.x, step), grid(v.y, step))
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]

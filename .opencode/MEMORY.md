@@ -3,6 +3,85 @@
 Working notes for agents picking this project up in a later session. Keep this
 file current when the task, environment, or verification state changes.
 
+## ROUND 2+3 — DONE, awaiting review/PR decision (branch `agent/drawio-features`, uncommitted until this note lands)
+
+Committed in this batch (see `git log -1` after commit):
+
+- Grid fallback everywhere: move, resize (per dragged edge only, sym skipped,
+  opposite edge fixed), create end + create start, arrow start, connector
+  end, path point. Behavior matches mxGraph's `mxGraph.snap`
+  (`round(v / gridSize) * gridSize`) and `mxVertexHandler` (only dragged
+  edges snap; grid-off still pixel-rounds). Cmd/Ctrl (precision) and shift
+  stay free; `snap::grid_v` helper added in `src/editor/snap.rs`.
+- draw.io reference (behavior only, no code copied): `jgraph/mxgraph`
+  master `javascript/src/js/{view/mxGraph.js,view/mxGraphView.js,handler/
+  mxGraphHandler.js,handler/mxVertexHandler.js}` and `jgraph/drawio` dev
+  `src/main/webapp/js/grapheditor/Graph.js` (fetched to /tmp/opencode/).
+- New tests (149 lib tests total, 205 across all suites): 
+  `creating_uses_grid_when_no_anchor_hit` (two_rects-style + far sibling,
+  grid 20, end 228.4→220 / 170→180), `resizing_uses_grid_when_no_anchor_hit`
+  (edge + corner; note the down point must be at the handle, e.g. (453,353)
+  for a bottom-right corner of b(400,300,50,50), NOT inside the rect).
+- Word wrap runtime verified live: wrap ON + narrowed box → 260×38.72
+  (two lines); OFF → back to 336.73×19.36. Node 440765:10 used, then
+  deleted during cleanup.
+- Grid size survives open paths: explore agent found `session.open` →
+  `load` resets `grid_step` to 10; fixed by syncing `ed.grid_step =
+  st.options.grid_size` in both `App::new` Project arm AND `open_project`
+  (covers Home open, New, import, SaveAs-duplicate; MCP open_project at
+  src/mcp/exec.rs remains without it — acceptable, headless).
+- Runtime evidence files: /tmp/opencode/artifacts/{r3-create.png,
+  wrap-wrapped.png, reopened2.png, grid10.png, final-state.png} + agent
+  run (text-tab.png, 03/04 bold+clear round trip).
+
+### Grid-check project is RESTORED CLEAN
+
+Single layer LabelTest `440765:1`, fill #202020, (0,0) 240x140;
+extra nodes :8,:9,:10,:11 deleted; options.json `grid_size: 10.0`
+(app combo set back to 10 and file confirmed). Old dirty-state cleanup
+steps kept below in case the project drifts again.
+
+### Round-2 feature recap (all runtime verified)
+
+Word wrap (Text tab checkbox → `set_word_wrap`), Clear formatting both
+modes (whole-layer + range), Set Default / Reset Default Style (session
+scope, non-frame only), Grid Size combo 5/10/20/50 (persisted via
+options.json, clamped 2..=100 on load), Snap to Grid button honoring
+`ed.grid_step`. Backed where the model supports it; vertical text align
+skipped (boxes auto-fit height).
+
+### LIVEAPP procedure (unchanged, works well)
+
+- Xvfb `:99`, window id 2097154; restart:
+  `p=$(ps -eo pid,args | awk '/debug\/sketch-rs \/home/ && !/awk/{print $1}'); kill $p; sleep 2`
+  then `env -u WAYLAND_DISPLAY -u XDG_SESSION_TYPE -u XAUTHORITY
+  SKETCH_RS_MCP_PORT=29981 DISPLAY=:99 nohup ./target/debug/sketch-rs
+  /home/ibrahem/mnt/Files/Documents/sketch-rs/grid-check >/tmp/opencode/app.log 2>&1 & sleep 7`
+  then `xdotool windowsize 2097154 1366 768` + `windowfocus` before every input burst.
+- Content offset zoom 1: world (0,0) ≈ screen (588,396); verify visually first.
+- Build with grid 20 preloaded in options.json to make fallbacks observable.
+- MCP helper: `python3 /tmp/opencode/mcp.py <tool> '<json>'`; labels used:
+  get_children/get_node_info/get_selection/update_styles(left,top,width,
+  height,background)/delete_nodes. MCP `left/top` is NOT plain world x/y —
+  verify via get_node_info after each write (a left=20 landed around
+  world 121 once; unknown mapping, empirical only).
+- Selection geometry: read the selection outline from a screenshot rather
+  than trusting computed positions (text-node right handle was at
+  (1046,697) after a "left" write, not where arithmetic said).
+- Word-wrap caveat: toggling wrap ON at full content width changes
+  nothing visually (one line still fits); narrow the box first.
+- `import -window root` for screenshots; user's own Sketch runs on :0
+  (MCP 29980) — never kill or touch it.
+
+## Remaining ideas (not requested, from draw.io parity)
+
+- Grid section in a proper View menu entry? Currently lives in the
+  no-selection panel only.
+- Snap-to-Grid command could also size nodes to the grid (mxGraph
+  `snapCellsToGrid` also fits widths/heights); ours only moves x/y.
+- draw.io `snapDelta` tolerance (gridSize/2 dead zone) is unexplored.
+
+
 ## Current task (branch `agent/drawio-features`, all uncommitted)
 
 Same checkout as before: `/home/ibrahem/mnt/Files/Desktop/Linux/Apps/sketch-rs`

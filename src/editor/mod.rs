@@ -267,6 +267,11 @@ pub struct Editor {
     pub arrow_route: crate::model::Route,
     /// Hand-drawn style for new shapes (None = clean lines).
     pub sketch: Option<crate::model::rough::Rough>,
+    /// Remembered style for new shapes (draw.io's Set as Default Style). Session
+    /// scope, like the hand-drawn option above.
+    pub default_style: Option<crate::model::Style>,
+    /// Grid spacing in world units, from options.json's `grid_size`.
+    pub grid_step: f64,
     pub sticky_color: Color,
     /// Requests for the chrome (command palette, rename...).
     pub ui_events: Vec<commands::UiEvent>,
@@ -333,6 +338,8 @@ impl Editor {
             now_ms: 0.0,
             arrow_route: crate::model::Route::Straight,
             sketch: None,
+            default_style: None,
+            grid_step: snap::GRID_STEP,
             sticky_color: Color::rgb(0xff, 0xdf, 0x6b),
             ui_events: Vec::new(),
             clipboard_style: None,
@@ -793,7 +800,11 @@ impl Editor {
                 self.pen_down(world, pos);
                 self.gesture = Gesture::Pen;
             }
-            Tool::Arrow => self.arrow_down(if self.snapping { world.round() } else { world }),
+            Tool::Arrow => self.arrow_down(if self.snapping {
+                snap::grid_v(world, self.grid_step)
+            } else {
+                world
+            }),
             Tool::Sticky => self.sticky_down(world),
             Tool::Laser => {
                 self.laser_point(world, time_ms);
@@ -809,7 +820,11 @@ impl Editor {
                 self.end_text_edit();
                 let label = format!("Add {}", self.tool.label().to_lowercase());
                 self.begin(&label);
-                let start = if self.snapping { world.round() } else { world };
+                let start = if self.snapping {
+                    snap::grid_v(world, self.grid_step)
+                } else {
+                    world
+                };
                 let parent = self.frame_at(start, &[]);
                 let origin = self.doc.parent_origin(parent);
                 let kind = match self.tool {
@@ -829,6 +844,7 @@ impl Editor {
                 };
                 let frame_count = self.doc.nodes.values().filter(|n| n.is_frame()).count();
                 let sketch = self.sketch;
+                let default_style = self.default_style.clone();
                 let id = {
                     let mut tx = self.tx();
                     let id = tx.alloc_id();
@@ -837,6 +853,13 @@ impl Editor {
                         kind,
                         Rect::new(start.x - origin.x, start.y - origin.y, 0.0, 0.0),
                     );
+                    // draw.io's default style: remembered fills/stroke/radius, which
+                    // frames skip so containers stay transparent.
+                    if !n.is_frame()
+                        && let Some(ds) = default_style
+                    {
+                        n.style = ds;
+                    }
                     if n.is_frame() {
                         n.name = format!("Frame {}", frame_count + 1);
                     } else if let Some(r) = sketch {
@@ -1312,10 +1335,10 @@ impl Editor {
                         }));
                     }
                     if sx == 0.0 && gx == 0.0 {
-                        moved.x = snap::grid(moved.x);
+                        moved.x = snap::grid(moved.x, self.grid_step);
                     }
                     if sy == 0.0 && gy == 0.0 {
-                        moved.y = snap::grid(moved.y);
+                        moved.y = snap::grid(moved.y, self.grid_step);
                     }
                 }
                 let d = moved.min() - bounds0.min();
@@ -1440,10 +1463,10 @@ impl Editor {
                     end = end + v2(sx, sy);
                     // Grid fallback on the axes that did not magnet.
                     if sx == 0.0 {
-                        end.x = end.x.round();
+                        end.x = snap::grid(end.x, self.grid_step);
                     }
                     if sy == 0.0 {
-                        end.y = end.y.round();
+                        end.y = snap::grid(end.y, self.grid_step);
                     }
                     self.guides = gs;
                 } else {
@@ -1496,7 +1519,7 @@ impl Editor {
             }
             Gesture::ConnectorEnd { id, end, start } => {
                 let w = if self.snapping && !self.mods.command() {
-                    world.round()
+                    snap::grid_v(world, self.grid_step)
                 } else {
                     world
                 };
@@ -1520,7 +1543,7 @@ impl Editor {
             }
             Gesture::PathPart { si, pi, part } => {
                 let w = if self.snapping && !self.mods.command() {
-                    world.round()
+                    snap::grid_v(world, self.grid_step)
                 } else {
                     world
                 };
@@ -1615,16 +1638,23 @@ impl Editor {
             } else if hy == 1.0 {
                 r.h += sy
             }
-            let round = |v: f64| v.round();
-            if sx == 0.0 && hx != 0.5 {
-                let (l, rr) = (round(r.x), round(r.right()));
+            // Un-snapped axes fall back to the grid: snap the dragged edge only,
+            // so a fixed edge stays put and sym keeps the center (skipped).
+            if sx == 0.0 && hx == 0.0 {
+                let l = snap::grid(r.x, self.grid_step);
+                r.w = r.right() - l;
                 r.x = l;
-                r.w = rr - l;
+            } else if sx == 0.0 && hx == 1.0 {
+                let rr = snap::grid(r.right(), self.grid_step);
+                r.w = rr - r.x;
             }
-            if sy == 0.0 && hy != 0.5 {
-                let (t, bb) = (round(r.y), round(r.bottom()));
+            if sy == 0.0 && hy == 0.0 {
+                let t = snap::grid(r.y, self.grid_step);
+                r.h = r.bottom() - t;
                 r.y = t;
-                r.h = bb - t;
+            } else if sy == 0.0 && hy == 1.0 {
+                let bb = snap::grid(r.bottom(), self.grid_step);
+                r.h = bb - r.y;
             }
             // Keep snap_rect's guides: they appear while the dragged edge sits
             // on a candidate anchor, even when the correction is already 0.
@@ -1876,6 +1906,43 @@ impl Editor {
             n.rect.w = w;
             n.rect.h = h;
         }
+    }
+
+    /// Switch text layers between a fixed line width that wraps (draw.io's
+    /// word wrap) and a box that grows to fit the content on one line.
+    pub fn set_word_wrap(&mut self, ids: &[NodeId], wrap: bool) {
+        let targets: Vec<NodeId> = ids
+            .iter()
+            .copied()
+            .filter(|id| {
+                matches!(
+                    self.doc.get(*id).map(|n| &n.kind),
+                    Some(NodeKind::Text { .. })
+                )
+            })
+            .collect();
+        if targets.is_empty() {
+            return;
+        }
+        self.begin(if wrap {
+            "Enable word wrap"
+        } else {
+            "Disable word wrap"
+        });
+        {
+            let mut tx = self.tx();
+            for id in &targets {
+                if let Some(n) = tx.node_mut(*id)
+                    && let NodeKind::Text { auto_width, .. } = &mut n.kind
+                {
+                    *auto_width = !wrap;
+                }
+            }
+        }
+        for id in targets {
+            self.fit_text(id);
+        }
+        self.commit();
     }
 
     pub fn start_text_edit(&mut self, id: NodeId, at_world: Option<V2>) {

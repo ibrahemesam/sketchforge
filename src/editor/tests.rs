@@ -4,6 +4,7 @@
 
 use super::*;
 use crate::geom::Camera;
+use crate::model::Paint;
 
 fn ed() -> Editor {
     let mut e = Editor::default();
@@ -747,6 +748,54 @@ fn creating_magnetizes_to_sibling_anchors() {
 }
 
 #[test]
+fn creating_uses_grid_when_no_anchor_hit() {
+    let mut e = ed();
+    // Sibling far away so no magnet anchor is within reach at the end point.
+    e.add_node(
+        Node::new(
+            NodeId(0),
+            NodeKind::Rect,
+            Rect::new(600.0, 500.0, 50.0, 50.0),
+        ),
+        None,
+    );
+    e.grid_step = 20.0;
+    press(&mut e, 'r');
+    // End off-grid: x 228.4 snaps to the 20 grid (220), y 170 to 180.
+    drag(&mut e, (200.0, 120.0), (228.4, 170.0), 0.0);
+    let nb = rect_of(&e, e.selection[0]);
+    assert_eq!(nb.right(), 220.0, "end edge fell back to the grid");
+    assert_eq!(nb.bottom(), 180.0, "bottom fell back to the grid");
+    assert_eq!(nb.x, 200.0, "start corner stays on the grid");
+    assert!(e.guides.is_empty());
+}
+
+#[test]
+fn resizing_uses_grid_when_no_anchor_hit() {
+    let mut e = ed();
+    let (_, b) = two_rects(&mut e);
+    e.grid_step = 20.0;
+    e.select(vec![b]);
+    // Drag the right edge to an off-grid spot with no anchor nearby.
+    down(&mut e, 446.0, 325.0, 0.0);
+    mv(&mut e, 453.2, 325.0, 16.0);
+    let r = rect_of(&e, b);
+    assert_eq!(r.right(), 460.0, "dragged edge fell back to the grid");
+    assert_eq!(r.x, 400.0, "the opposite edge stays put");
+    assert!(e.guides.is_empty());
+    // Resizing a corner likewise snaps only the dragged edges.
+    up(&mut e, 453.2, 325.0, 32.0);
+    e.select(vec![b]);
+    down(&mut e, 453.0, 353.0, 100.0);
+    mv(&mut e, 433.0, 359.4, 116.0);
+    let r = rect_of(&e, b);
+    assert_eq!(r.x, 400.0, "left edge stays put");
+    assert_eq!(r.y, 300.0, "top edge stays put");
+    assert_eq!(r.right(), 440.0, "dragged right edge snapped to the grid");
+    assert_eq!(r.bottom(), 360.0, "dragged bottom snapped to the grid");
+}
+
+#[test]
 fn creating_inside_frame_magnetizes_to_frame_children() {
     let mut e = ed();
     press(&mut e, 'r');
@@ -903,6 +952,145 @@ fn move_snaps_to_the_grid() {
     );
     drag(&mut e, (130.0, 115.0), (148.4, 132.8), 0.0);
     assert_eq!(rect_of(&e, id).min(), v2(120.0, 110.0));
+}
+
+#[test]
+fn grid_size_option_changes_move_fallback() {
+    let mut e = ed();
+    e.grid_step = 20.0;
+    let id = e.add_node(
+        Node::new(
+            NodeId(0),
+            NodeKind::Rect,
+            Rect::new(103.0, 97.0, 60.0, 40.0),
+        ),
+        None,
+    );
+    // No siblings nearby: away from anchors, moves fall back to the configured step.
+    drag(&mut e, (130.0, 115.0), (148.4, 132.8), 0.0);
+    assert_eq!(rect_of(&e, id).min(), v2(120.0, 120.0));
+}
+
+#[test]
+fn default_style_remembered_for_new_shapes_but_not_frames() {
+    let mut e = ed();
+    let src = e.add_node(
+        Node::new(
+            NodeId(0),
+            NodeKind::Rect,
+            Rect::new(100.0, 100.0, 100.0, 60.0),
+        ),
+        None,
+    );
+    e.edit("style", |tx| {
+        let n = tx.node_mut(src).unwrap();
+        n.style.fills = vec![Paint::solid(Color::rgb(255, 0, 0))];
+        n.style.stroke = Some(Color::rgb(0, 0, 255));
+        n.style.corner_radius = 8.0;
+    });
+    e.default_style = Some(e.doc.get(src).unwrap().style.clone());
+
+    // A new shape takes on the remembered style...
+    press(&mut e, 'r');
+    drag(&mut e, (210.0, 120.0), (280.0, 180.0), 0.0);
+    let new_id = e.selection[0];
+    let st = &e.doc.get(new_id).unwrap().style;
+    assert!(
+        matches!(st.fills.last(), Some(Paint::Solid { color }) if *color == Color::rgb(255, 0, 0)),
+        "fills carry over, {:?}",
+        st.fills
+    );
+    assert!(st.stroke == Some(Color::rgb(0, 0, 255)));
+    assert_eq!(st.corner_radius, 8.0);
+
+    // ...but a frame stays transparent (no remembered fill).
+    press(&mut e, 'f');
+    drag(&mut e, (400.0, 400.0), (560.0, 520.0), 100.0);
+    let frame_id = e.selection[0];
+    assert!(e.doc.get(frame_id).unwrap().is_frame());
+    assert!(
+        !matches!(
+            e.doc.get(frame_id).unwrap().style.fills.last(),
+            Some(Paint::Solid { color }) if *color == Color::rgb(255, 0, 0)
+        ),
+        "frames skip the remembered fill"
+    );
+}
+
+#[test]
+fn word_wrap_toggles_fixed_width_and_refits() {
+    let mut e = ed();
+    let kind = NodeKind::Text {
+        text: "the quick brown fox jumps over the lazy dog".into(),
+        font_size: 16.0,
+        auto_width: true,
+        align: TextAlign::Left,
+    };
+    let id = e.add_node(
+        Node::new(NodeId(0), kind, Rect::new(100.0, 100.0, 300.0, 24.0)),
+        None,
+    );
+    // add_node() fits the width to the content; narrow the box so the text
+    // has something to wrap at.
+    e.edit("narrow", |tx| {
+        tx.node_mut(id).unwrap().rect.w = 200.0;
+    });
+    e.select(vec![id]);
+    e.set_word_wrap(&[id], true);
+    let n = e.doc.get(id).unwrap();
+    let NodeKind::Text { auto_width, .. } = &n.kind else {
+        panic!("not text");
+    };
+    assert!(!*auto_width, "wrap keeps a fixed line width");
+    assert!(n.rect.h > 30.0, "now two lines, {:?}", n.rect);
+
+    // Turning wrap off grows the box back to one line.
+    e.set_word_wrap(&[id], false);
+    let n = e.doc.get(id).unwrap();
+    let NodeKind::Text { auto_width, .. } = &n.kind else {
+        panic!("not text");
+    };
+    assert!(*auto_width);
+    assert!(
+        n.rect.w > 300.0 && n.rect.h < 30.0,
+        "single line again, {:?}",
+        n.rect
+    );
+}
+
+#[test]
+fn clear_formatting_strips_character_overrides() {
+    let mut e = ed();
+    let kind = NodeKind::Text {
+        text: "Hello big styled text".into(),
+        font_size: 16.0,
+        auto_width: true,
+        align: TextAlign::Left,
+    };
+    let id = e.add_node(
+        Node::new(NodeId(0), kind, Rect::new(100.0, 100.0, 300.0, 24.0)),
+        None,
+    );
+    e.select(vec![id]);
+    // Emulate a selection-wide bold + red size override.
+    let len = "Hello big styled text".chars().count();
+    {
+        let mut tx = e.tx();
+        let n = tx.node_mut(id).unwrap();
+        n.text_style.apply_range(0, len, |sp| {
+            sp.bold = Some(true);
+            sp.size = Some(24.0);
+        });
+    }
+    {
+        let mut tx = e.tx();
+        let n = tx.node_mut(id).unwrap();
+        n.text_style.bold = true;
+    }
+    e.clear_text_formatting();
+    let n = e.doc.get(id).unwrap();
+    assert!(n.text_style.spans.is_empty(), "spans stripped");
+    assert!(!n.text_style.bold);
 }
 
 #[test]

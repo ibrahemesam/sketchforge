@@ -278,6 +278,59 @@ impl Editor {
         }
     }
 
+    /// Reset character formatting (draw.io's Clear Formatting): inside an edited
+    /// selection, drop every override in the range; otherwise strip span
+    /// formatting from the selected text layers and reset their bold/italic.
+    /// A layer's base size and color stay untouched, like the node's own style.
+    pub fn clear_text_formatting(&mut self) {
+        if let (Some(te), Some((a, b))) = (self.text_edit.clone(), self.text_selection()) {
+            {
+                let mut tx = self.tx();
+                if let Some(n) = tx.node_mut(te.id) {
+                    n.text_style.apply_range(a, b, |s| s.clear());
+                }
+            }
+            self.mark_overrides(&[te.id], "clear formatting");
+            self.fit_text(te.id);
+            return;
+        }
+        let ids: Vec<NodeId> = self
+            .selection
+            .iter()
+            .copied()
+            .filter(|id| {
+                matches!(
+                    self.doc.get(*id).map(|n| &n.kind),
+                    Some(NodeKind::Text { .. })
+                )
+            })
+            .collect();
+        if ids.is_empty() {
+            return;
+        }
+        let editing = self.text_edit.is_some();
+        if !editing {
+            self.begin("Clear formatting");
+        }
+        for id in &ids {
+            {
+                let mut tx = self.tx();
+                let Some(n) = tx.node_mut(*id) else {
+                    continue;
+                };
+                n.text_style.spans.clear();
+                n.text_style.bold = false;
+                n.text_style.italic = false;
+                n.text_style.normalize();
+            }
+            self.fit_text(*id);
+        }
+        self.mark_overrides(&ids, "clear formatting");
+        if !editing {
+            self.commit();
+        }
+    }
+
     /// The style at the caret / selection start (for toggles and the inspector).
     pub fn current_char_style(&self) -> Option<crate::model::CharStyle> {
         let id = self

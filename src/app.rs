@@ -116,6 +116,8 @@ impl App {
                 } else {
                     app.st.project_name = app.session.project_name();
                 }
+                // Options carry app-wide settings like the grid size.
+                app.ed.grid_step = app.st.options.grid_size;
             }
             Start::Scratch(ed) => app.ed = *ed,
         }
@@ -251,6 +253,8 @@ impl App {
                 self.st.project_name = self.session.project_name();
                 self.st.save_state.clear();
                 self.ed.status.clear();
+                // Options carry app-wide settings like the grid size.
+                self.ed.grid_step = self.st.options.grid_size;
             }
             Err(e) => self.error(format!("Could not open {}: {e}", dir.display())),
         }

@@ -292,6 +292,18 @@ pub struct TextStyle {
     pub spans: Vec<TextSpan>,
 }
 
+impl TextSpan {
+    /// Drop every override, leaving the span (and its characters) unstyled.
+    pub fn clear(&mut self) {
+        self.bold = None;
+        self.italic = None;
+        self.size = None;
+        self.color = None;
+        self.underline = None;
+        self.strike = None;
+    }
+}
+
 impl TextStyle {
     pub fn is_default(&self) -> bool {
         *self == TextStyle::default()

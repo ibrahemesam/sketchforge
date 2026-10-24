@@ -149,7 +149,7 @@ pub fn panel(ui: &mut Ui, ed: &mut Editor, st: &mut UiState) {
             ui.add_space(2.0);
             let ids = ed.top_selection();
             if ids.is_empty() {
-                nothing_selected(ui, ed);
+                nothing_selected(ui, ed, st);
                 separator(ui);
                 export_section(ui, ed, st);
                 return;
@@ -486,7 +486,7 @@ fn export_section(ui: &mut Ui, ed: &mut Editor, st: &mut UiState) {
     });
 }
 
-fn nothing_selected(ui: &mut Ui, ed: &mut Editor) {
+fn nothing_selected(ui: &mut Ui, ed: &mut Editor, st: &mut UiState) {
     ui.label(title_text("New shapes"));
     let mut sketch = ed.sketch.is_some();
     if ui.checkbox(&mut sketch, "Hand-drawn style").changed() {
@@ -519,6 +519,16 @@ fn nothing_selected(ui: &mut Ui, ed: &mut Editor) {
         let mut c = c32(ed.ink_color);
         if ui.color_edit_button_srgba(&mut c).changed() {
             ed.ink_color = from32(c);
+        }
+    });
+    separator(ui);
+    ui.label(title_text("Grid"));
+    row(ui, "Size", |ui| {
+        let steps = [(5.0, "5"), (10.0, "10"), (20.0, "20"), (50.0, "50")];
+        if let Some(v) = combo(ui, "grid-size", ed.grid_step, &steps, 48.0) {
+            ed.grid_step = v;
+            st.options.grid_size = v;
+            st.options_dirty = true;
         }
     });
     separator(ui);
@@ -702,13 +712,13 @@ fn arrange_section(
     separator(ui);
     // draw.io's Align > Snap to Grid: round everything to the nearest grid line.
     if ui.button("Snap to Grid").clicked() {
-        const G: f64 = crate::editor::snap::GRID_STEP;
+        let g = ed.grid_step;
         let ids: Vec<NodeId> = ed.top_selection();
         ed.edit("Snap to grid", |tx| {
             for id in ids {
                 if let Some(n) = tx.node_mut(id) {
-                    n.rect.x = (n.rect.x / G).round() * G;
-                    n.rect.y = (n.rect.y / G).round() * G;
+                    n.rect.x = crate::editor::snap::grid(n.rect.x, g);
+                    n.rect.y = crate::editor::snap::grid(n.rect.y, g);
                 }
             }
         });
@@ -752,6 +762,27 @@ fn style_actions(ui: &mut Ui, ed: &mut Editor, vis: f32) {
             .clicked()
         {
             ed.run(shortcuts::Action::PasteProps);
+        }
+    });
+    // draw.io's Set as Default Style: remembered fills/stroke/radius for new
+    // shapes created from the tools. Frames stay transparent.
+    ui.horizontal(|ui| {
+        ui.spacing_mut().item_spacing.x = 4.0;
+        let w = (vis - 4.0) * 0.5;
+        if ui
+            .add_sized([w, 20.0], egui::Button::new("Set Default"))
+            .on_hover_text("New shapes use this style (session scope)")
+            .clicked()
+        {
+            ed.default_style = Some(ed.doc.get(ed.top_selection()[0]).unwrap().style.clone());
+            ed.status = "Default style set".into();
+        }
+        if ed.default_style.is_some()
+            && ui
+                .add_sized([w, 20.0], egui::Button::new("Reset Default"))
+                .clicked()
+        {
+            ed.default_style = None;
         }
     });
 }
@@ -1075,11 +1106,15 @@ fn auto_layout(ui: &mut Ui, ed: &mut Editor, ids: &[NodeId], first: &Node) {
 
 fn text_section(ui: &mut Ui, ed: &mut Editor, ids: &[NodeId], first: &Node) {
     let NodeKind::Text {
-        font_size, align, ..
+        auto_width,
+        font_size,
+        align,
+        ..
     } = &first.kind
     else {
         return;
     };
+    let auto_width = *auto_width;
     let editing_range = ed.text_selection().is_some();
     ui.horizontal(|ui| {
         ui.label(title_text("Text"));
@@ -1091,6 +1126,17 @@ fn text_section(ui: &mut Ui, ed: &mut Editor, ids: &[NodeId], first: &Node) {
             );
         }
     });
+    // Word wrap keeps a fixed line width instead of growing to fit the text.
+    row(ui, "Wrap", |ui| {
+        let mut wrap = !auto_width;
+        if ui.checkbox(&mut wrap, "Word wrap").changed() {
+            ed.set_word_wrap(ids, wrap);
+        }
+    });
+    // Clear character formatting, as in draw.io's Text tab.
+    if ui.button("Clear formatting").clicked() {
+        ed.clear_text_formatting();
+    }
     let cs = ed.current_char_style();
     ui.horizontal(|ui| {
         let size = cs.map_or(*font_size, |c| c.size);

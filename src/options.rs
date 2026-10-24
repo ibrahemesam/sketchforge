@@ -14,10 +14,31 @@ pub enum ThemeChoice {
     Dark,
 }
 
-#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Options {
     pub theme: ThemeChoice,
+    /// Canvas grid spacing in world units (draw.io's Grid size). Keep this a
+    /// multiple of anything snapping treats as a hard floor; 10 is the default.
+    pub grid_size: f64,
+}
+
+impl Default for Options {
+    fn default() -> Self {
+        Options {
+            theme: ThemeChoice::default(),
+            grid_size: 10.0,
+        }
+    }
+}
+
+/// `grid_size` may load as garbage (old files hand-edited, corrupted json).
+fn grid_size_default(v: f64) -> f64 {
+    if v.is_finite() && (2.0..=100.0).contains(&v) {
+        v
+    } else {
+        10.0
+    }
 }
 
 impl Options {
@@ -28,10 +49,14 @@ impl Options {
     pub fn load(root: &Path) -> Options {
         let path = Self::path_in(root);
         match std::fs::read_to_string(&path) {
-            Ok(s) => serde_json::from_str(&s).unwrap_or_else(|e| {
-                log::warn!("ignoring {}: {e}", path.display());
-                Options::default()
-            }),
+            Ok(s) => {
+                let mut o: Options = serde_json::from_str(&s).unwrap_or_else(|e| {
+                    log::warn!("ignoring {}: {e}", path.display());
+                    Options::default()
+                });
+                o.grid_size = grid_size_default(o.grid_size);
+                o
+            }
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => Options::default(),
             Err(e) => {
                 log::warn!("could not read {}: {e}", path.display());
@@ -67,6 +92,7 @@ mod tests {
         let r = root("rt");
         let o = Options {
             theme: ThemeChoice::Light,
+            grid_size: 20.0,
         };
         o.save(&r).unwrap();
         assert_eq!(Options::load(&r), o);

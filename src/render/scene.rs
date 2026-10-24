@@ -65,9 +65,14 @@ impl View<'_> {
 }
 
 /// Square grid lines, like draw.io. Spacing adapts to the zoom so lines never get too dense.
-pub fn grid(mb: &mut MeshBuilder, v: &View, dark: bool) {
+pub fn grid(mb: &mut MeshBuilder, v: &View, step_world: f64, dark: bool) {
     let z = v.camera.zoom;
-    let mut spacing = GRID_STEP;
+    let step_world = if step_world > 0.0 {
+        step_world
+    } else {
+        GRID_STEP
+    };
+    let mut spacing = step_world;
     while spacing * z < 8.0 {
         spacing *= 5.0;
     }
@@ -679,7 +684,7 @@ pub fn canvas(
     under.set_clip(Some(v.canvas_rect()));
     under.rect(v.canvas_rect(), rgba(canvas_bg(dark)));
     if show_grid {
-        grid(&mut under, &v, dark);
+        grid(&mut under, &v, ed.grid_step, dark);
     }
     let vis = ed.camera.visible_world(ed.viewport);
     let bucket = zoom_bucket(ed.camera.zoom);
