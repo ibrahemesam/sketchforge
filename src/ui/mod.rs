@@ -18,6 +18,9 @@ use std::collections::HashSet;
 pub struct UiState {
     pub collapsed: HashSet<NodeId>,
     pub renaming: Option<(NodeId, String)>,
+    /// The rename field is focused once when it opens. Re-requesting every frame
+    /// would pin the focus, so committing on Enter or a click away could never fire.
+    pub renaming_focus: bool,
     pub show_help: bool,
     pub show_grid_off: bool,
     /// Export settings (inspector Export section).
@@ -46,6 +49,23 @@ pub struct UiState {
     pub layer_rows: Vec<(NodeId, egui::Rect, usize)>,
     pub options: crate::options::Options,
     pub options_dirty: bool,
+    /// Which inspector tab (Style | Text | Arrange) is showing for the selection.
+    pub inspector_tab: InspectorTab,
+    /// Arrange tab: keep width/height proportional while editing either field.
+    pub lock_aspect: bool,
+    /// Ratio captured when the aspect lock was switched on (w / h).
+    pub aspect_ratio: f64,
+    /// Arrange tab: a copied size (draw.io's Copy Size), applied via Apply Size.
+    pub copied_size: Option<(f64, f64)>,
+}
+
+/// The right panel's draw.io-style tabs for the selection.
+#[derive(Debug, Default, Clone, Copy, PartialEq)]
+pub enum InspectorTab {
+    #[default]
+    Style,
+    Text,
+    Arrange,
 }
 
 /// Where a dragged layer lands relative to a row.
@@ -125,6 +145,7 @@ pub fn draw(ui: &mut Ui, ed: &mut Editor, st: &mut UiState) -> egui::Rect {
             UiEvent::Rename(id) => {
                 if let Some(n) = ed.doc.get(id) {
                     st.renaming = Some((id, n.name.clone()));
+                    st.renaming_focus = false;
                     st.show_library = false;
                     st.hide_ui = false;
                 }
@@ -650,8 +671,39 @@ fn layer_row(ui: &mut Ui, ed: &mut Editor, st: &mut UiState, id: NodeId, depth: 
             name_rect.shrink2(egui::vec2(0.0, 2.0)),
             egui::TextEdit::singleline(name),
         );
-        r.request_focus();
-        if r.lost_focus() {
+        // Focus once when the rename opens; a per-frame request would pin the focus
+        // and stop Enter and clicks elsewhere from ever firing `lost_focus`.
+        if !st.renaming_focus {
+            r.request_focus();
+            st.renaming_focus = true;
+        }
+        let (enter, enter_ctrl, escape) = ui.input(|i| {
+            (
+                i.key_pressed(egui::Key::Enter),
+                i.modifiers.ctrl || i.modifiers.command,
+                i.key_pressed(egui::Key::Escape),
+            )
+        });
+        if r.has_focus() && escape {
+            // Unfocus and discard the typed text (the node keeps its old name).
+            st.renaming = None;
+        } else if r.has_focus() && enter && enter_ctrl {
+            // Ctrl+Enter keeps editing and adds a new line at the caret.
+            let at = egui::TextEdit::load_state(ui.ctx(), r.id)
+                .and_then(|s| s.cursor.char_range())
+                .map_or(name.chars().count(), |c| c.primary.index.0);
+            let byte = name.char_indices().nth(at).map_or(name.len(), |(b, _)| b);
+            name.insert(byte, '\n');
+            if let Some(mut s) = egui::TextEdit::load_state(ui.ctx(), r.id) {
+                s.cursor
+                    .set_char_range(Some(egui::text::CCursorRange::one(egui::text::CCursor {
+                        index: egui::text::CharIndex::from(at + 1),
+                        prefer_next_row: true,
+                    })));
+                s.store(ui.ctx(), r.id);
+            }
+        } else if r.lost_focus() {
+            // Enter (egui unfocuses singleline) or clicking another widget commits.
             let new = name.trim().to_string();
             st.renaming = None;
             if !new.is_empty() && new != n.name {
@@ -673,6 +725,7 @@ fn layer_row(ui: &mut Ui, ed: &mut Editor, st: &mut UiState, id: NodeId, depth: 
 
     if resp.double_clicked() {
         st.renaming = Some((id, n.name.clone()));
+        st.renaming_focus = false;
     } else if resp.clicked() {
         ed.end_text_edit();
         if ui.input(|i| i.modifiers.shift || i.modifiers.command) {

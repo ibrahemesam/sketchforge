@@ -79,6 +79,37 @@ pub enum Key {
     PageDown,
 }
 
+/// Which mouse cursor to show while over the canvas, derived from the hovered
+/// resize handle (see [`super::Editor::hover_cursor`]).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CursorShape {
+    /// Diagonal ⤢: a corner handle that resizes along the nw–se axis.
+    NwSe,
+    /// Diagonal ⤡: a corner handle that resizes along the ne–sw axis.
+    NeSw,
+    /// ⟷: a top/bottom side handle that resizes the width.
+    Ew,
+    /// ↕: a left/right side handle that resizes the height.
+    Ns,
+}
+
+impl CursorShape {
+    /// The shape for a resize handle, from its position as a fraction of the
+    /// selection bounds (one of [`super::hit::HANDLES`]).
+    pub fn resize((hx, hy): (f64, f64)) -> CursorShape {
+        let mid = |v: f64| v == 0.5;
+        match (mid(hx), mid(hy)) {
+            // A mid handle on the top/bottom edges changes the height (↕).
+            (true, _) => CursorShape::Ns,
+            // A mid handle on the left/right edges changes the width (⟷).
+            (_, true) => CursorShape::Ew,
+            // True corners: nw-se handles have hx == hy, ne-sw the opposite.
+            _ if hx == hy => CursorShape::NwSe,
+            _ => CursorShape::NeSw,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum InputEvent {
     /// Screen position in logical pixels relative to the canvas viewport.

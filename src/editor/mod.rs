@@ -18,7 +18,7 @@ use crate::history::{History, Recording, Tx};
 use crate::ink::{self, InkBuilder};
 use crate::model::{Color, Document, Node, NodeId, NodeKind, StrokePoint, TextAlign};
 use crate::text;
-pub use input::{Button, InputEvent, Key, Modifiers};
+pub use input::{Button, CursorShape, InputEvent, Key, Modifiers};
 pub use pages::{PageSlot, PageStash};
 use snap::Guide;
 use std::path::PathBuf;
@@ -132,8 +132,6 @@ pub struct TextEdit {
     pub caret: usize,
     /// Other end of the selection (None = no selection).
     pub anchor: Option<usize>,
-    /// Text at the moment editing started (for Escape to discard changes).
-    pub original: String,
 }
 
 #[derive(Debug)]
@@ -788,7 +786,6 @@ impl Editor {
                     id,
                     caret: 0,
                     anchor: None,
-                    original: String::new(),
                 });
                 self.tool = Tool::Select;
             }
@@ -872,6 +869,14 @@ impl Editor {
             if self.connector_handle_down(pos, world) {
                 return;
             }
+            // Press a quick-connect knob on the hovered (unselected) shape and
+            // drag to draw an arrow straight to another shape, as in draw.io.
+            if let Some((id, knobs)) = self.hover_knobs()
+                && let Some(&(dir, _)) = knobs.iter().find(|(_, p)| p.dist(pos) <= 9.0)
+            {
+                self.hover_connect_down(id, dir, world);
+                return;
+            }
         }
         if self.path_edit.is_some() {
             if let Some((si, pi, part)) = self.path_part_at(pos) {
@@ -922,6 +927,35 @@ impl Editor {
                     };
                     return;
                 }
+            }
+        }
+        // The hovered (unselected) shape grows its own handles, as in draw.io:
+        // press one to resize it without selecting it first.
+        if self.text_edit.is_none()
+            && let Some(h) = self.hover
+            && !self.selection.contains(&h)
+            && !self.doc.is_effectively_locked(h)
+            && let Some(n) = self.doc.get(h)
+            && !matches!(n.kind, NodeKind::Connector { .. })
+            && let Some(wr) = self.doc.world_rect(h)
+        {
+            let hs = self.camera.world_rect_to_screen(&wr);
+            if let Some(handle) = hit::handle_at(&hs, pos) {
+                self.begin("Resize");
+                let snapshot = self
+                    .doc
+                    .subtree(h)
+                    .iter()
+                    .filter_map(|id| self.doc.get(*id).cloned())
+                    .collect();
+                self.gesture = Gesture::Resize {
+                    handle,
+                    start: world,
+                    bounds0: wr,
+                    origins: vec![(h, wr)],
+                    snapshot,
+                };
+                return;
             }
         }
         if let Some(id) = self.label_at(pos) {
@@ -1100,12 +1134,73 @@ impl Editor {
         };
     }
 
+    /// The nodes a marquee rectangle hits, scanning `scope`'s children (None =
+    /// the top level). Frames the marquee fully encloses are selected as a
+    /// whole; frames it merely grazes are stepped into, so intersecting
+    /// children inside them get selected rather than nothing.
+    fn marquee_collect(&self, scope: Option<NodeId>, r: Rect, sel: &mut Vec<NodeId>) {
+        for id in self.doc.children(scope) {
+            let Some(n) = self.doc.get(*id) else {
+                continue;
+            };
+            if !n.visible || n.locked || sel.contains(id) {
+                continue;
+            }
+            let Some(wr) = self.doc.world_rect(*id) else {
+                continue;
+            };
+            if !r.intersects(&wr) {
+                continue;
+            }
+            if n.is_frame() && !r.contains_rect(&wr) {
+                self.marquee_collect(Some(*id), r, sel);
+            } else {
+                sel.push(*id);
+            }
+        }
+    }
+
     fn top_selection_world(&self) -> Vec<(NodeId, Rect)> {
         self.top_selection()
             .into_iter()
             .filter(|id| !self.doc.is_effectively_locked(*id))
             .filter_map(|id| Some((id, self.doc.world_rect(id)?)))
             .collect()
+    }
+
+    /// The cursor shape to show while the pointer is over the canvas, from the
+    /// resize handle it hovers (⤢/⤡ for corners, ⟷/↕ for sides). Stays set while
+    /// a resize drag is active so the icon does not flicker during the drag.
+    /// Positions match [`Self::select_down`]: screen pixels relative to the canvas.
+    pub fn hover_cursor(&self) -> Option<CursorShape> {
+        if self.tool != Tool::Select {
+            return None;
+        }
+        if let Gesture::Resize { handle, .. } = &self.gesture {
+            return Some(CursorShape::resize(*handle));
+        }
+        if self.text_edit.is_some() {
+            return None;
+        }
+        if let Some(b) = self.selection_bounds() {
+            let bs = self.camera.world_rect_to_screen(&b);
+            if let Some(handle) = hit::handle_at(&bs, self.pointer) {
+                return Some(CursorShape::resize(handle));
+            }
+        }
+        // Handles on the hovered unselected shape match the press routing in
+        // `select_down`.
+        self.hover
+            .filter(|h| !self.selection.contains(h))
+            .filter(|&h| !self.doc.is_effectively_locked(h))
+            .filter(|&h| {
+                self.doc
+                    .get(h)
+                    .is_some_and(|n| !matches!(n.kind, NodeKind::Connector { .. }))
+            })
+            .and_then(|h| self.doc.world_rect(h))
+            .and_then(|wr| hit::handle_at(&self.camera.world_rect_to_screen(&wr), self.pointer))
+            .map(CursorShape::resize)
     }
 
     fn pointer_move(&mut self, pos: V2, pressure: Option<f64>, time_ms: f64) {
@@ -1248,7 +1343,12 @@ impl Editor {
                 origins,
                 snapshot,
             } => {
-                let nb = self.resize_bounds(handle, start, world, bounds0);
+                let nb = {
+                    let ids: Vec<NodeId> = origins.iter().map(|(id, _)| *id).collect();
+                    let (nb, guides) = self.resize_bounds(handle, start, world, bounds0, &ids);
+                    self.guides = guides;
+                    nb
+                };
                 // Restore the drag-start state, then apply this frame's size from it.
                 {
                     let mut tx = self.tx();
@@ -1311,31 +1411,47 @@ impl Editor {
             Gesture::Marquee { start, scope, base } => {
                 let r = Rect::from_points(start, world);
                 self.marquee = Some(r);
-                let pool: Vec<NodeId> = self.doc.children(scope).to_vec();
                 let mut sel = base.clone();
-                for id in pool {
-                    let n = self.doc.get(id).unwrap();
-                    if !n.visible || n.locked || sel.contains(&id) {
-                        continue;
-                    }
-                    let Some(wr) = self.doc.world_rect(id) else {
-                        continue;
-                    };
-                    // Top-level frames must be fully enclosed; everything else just intersect.
-                    let hit = if n.is_frame() && scope.is_none() {
-                        r.contains_rect(&wr)
-                    } else {
-                        r.intersects(&wr)
-                    };
-                    if hit {
-                        sel.push(id);
-                    }
-                }
+                self.marquee_collect(scope, r, &mut sel);
                 self.selection = sel;
                 self.gesture = Gesture::Marquee { start, scope, base };
             }
             Gesture::Create { tool, start, id } => {
-                let mut end = if self.snapping { world.round() } else { world };
+                let mut end = world;
+                if self.snapping_active() && !self.mods.shift {
+                    // Magnet the dragged end onto nearby elements (draw.io
+                    // style): the start corner stays put, only the end moves.
+                    // Candidates come from the new node's parent, so shapes
+                    // inside the same frame magnet against each other.
+                    let ids = [id];
+                    let cands = self.snap_candidates(&ids);
+                    let r = Rect::from_points(start, end);
+                    let ux = if end.x >= start.x {
+                        [false, true, true]
+                    } else {
+                        [true, true, false]
+                    };
+                    let uy = if end.y >= start.y {
+                        [false, true, true]
+                    } else {
+                        [true, true, false]
+                    };
+                    let (sx, sy, gs) = snap::snap_rect(&r, ux, uy, &cands, self.snap_threshold());
+                    end = end + v2(sx, sy);
+                    // Grid fallback on the axes that did not magnet.
+                    if sx == 0.0 {
+                        end.x = end.x.round();
+                    }
+                    if sy == 0.0 {
+                        end.y = end.y.round();
+                    }
+                    self.guides = gs;
+                } else {
+                    self.guides.clear();
+                    if self.snapping {
+                        end = world.round();
+                    }
+                }
                 if self.mods.shift && tool != Tool::Line {
                     let d = end - start;
                     let s = d.x.abs().max(d.y.abs());
@@ -1414,7 +1530,14 @@ impl Editor {
         }
     }
 
-    fn resize_bounds(&self, (hx, hy): (f64, f64), start: V2, world: V2, b0: Rect) -> Rect {
+    fn resize_bounds(
+        &self,
+        (hx, hy): (f64, f64),
+        start: V2,
+        world: V2,
+        b0: Rect,
+        ids: &[NodeId],
+    ) -> (Rect, Vec<Guide>) {
         let d = world - start;
         let (mut x0, mut y0, mut x1, mut y1) = (b0.x, b0.y, b0.right(), b0.bottom());
         let sym = self.mods.alt;
@@ -1471,12 +1594,15 @@ impl Editor {
             }
         }
         let mut r = Rect::from_points(v2(x0, y0), v2(x1, y1));
+        let mut guides = Vec::new();
         if self.snapping_active() && !self.mods.shift {
-            let ids: Vec<NodeId> = self.top_selection();
-            let cands = self.snap_candidates(&ids);
+            // Magnet the dragged edges onto sibling anchors. `ids` are the
+            // resized nodes, so their parent's children (inside a frame) are
+            // candidates even when the fetch comes from a hover resize.
+            let cands = self.snap_candidates(ids);
             let ux = [hx == 0.0, false, hx == 1.0];
             let uy = [hy == 0.0, false, hy == 1.0];
-            let (sx, sy, _) = snap::snap_rect(&r, ux, uy, &cands, self.snap_threshold());
+            let (sx, sy, gs) = snap::snap_rect(&r, ux, uy, &cands, self.snap_threshold());
             if hx == 0.0 {
                 r.x += sx;
                 r.w -= sx
@@ -1500,10 +1626,13 @@ impl Editor {
                 r.y = t;
                 r.h = bb - t;
             }
+            // Keep snap_rect's guides: they appear while the dragged edge sits
+            // on a candidate anchor, even when the correction is already 0.
+            guides = gs;
         }
         r.w = r.w.max(1.0 / self.camera.zoom);
         r.h = r.h.max(1.0 / self.camera.zoom);
-        r
+        (r, guides)
     }
 
     fn pointer_up(&mut self, pos: V2, button: Button, _time_ms: f64) {
@@ -1750,10 +1879,14 @@ impl Editor {
     }
 
     pub fn start_text_edit(&mut self, id: NodeId, at_world: Option<V2>) {
-        let Some(original) = self.doc.get(id).and_then(|n| n.edited_text()).cloned() else {
+        let Some(len) = self
+            .doc
+            .get(id)
+            .and_then(|n| n.edited_text())
+            .map(|t| t.chars().count())
+        else {
             return;
         };
-        let len = original.chars().count();
         let caret = at_world.map(|p| self.text_caret_at(id, p)).unwrap_or(len);
         if let Some(te) = self.text_edit.as_mut().filter(|te| te.id == id) {
             // Clicking inside the text being edited: place the caret (Shift extends) and
@@ -1774,7 +1907,6 @@ impl Editor {
             id,
             caret,
             anchor: if at_world.is_none() { Some(0) } else { None },
-            original,
         });
     }
 

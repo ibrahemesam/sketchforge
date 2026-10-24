@@ -1,6 +1,6 @@
 //! The windowed application: winit event loop, wgpu surface, egui integration, file dialogs.
 
-use crate::editor::{AppRequest, Button, Editor, InputEvent, Key, Modifiers};
+use crate::editor::{AppRequest, Button, CursorShape, Editor, InputEvent, Key, Modifiers};
 use crate::geom::{V2, v2};
 use crate::io::{file, png};
 use crate::project::Store;
@@ -688,10 +688,28 @@ impl App {
     fn redraw(&mut self) {
         let now = self.now();
         self.ed.tick(now);
+        // A resize cursor when the pointer is over a selection handle (or a resize drag
+        // is running); egui keeps its own cursors everywhere else. Computed before the
+        // surface is taken, since it borrows self immutably.
+        let over_canvas = self
+            .ctx
+            .input(|i| i.pointer.latest_pos())
+            .is_some_and(|p| self.over_canvas(v2(p.x as f64, p.y as f64)));
+        let hover_cursor = (over_canvas || self.captured)
+            .then(|| self.ed.hover_cursor())
+            .flatten();
         let Some(g) = self.gfx.as_mut() else { return };
         let input = g.egui.take_egui_input(&g.window);
         let mut l = frame::layout(&self.ctx, input, &mut self.ed, &mut self.st);
         self.canvas = l.canvas;
+        if let Some(shape) = hover_cursor {
+            l.output.platform_output.cursor_icon = match shape {
+                CursorShape::NwSe => egui::CursorIcon::ResizeNwSe,
+                CursorShape::NeSw => egui::CursorIcon::ResizeNeSw,
+                CursorShape::Ew => egui::CursorIcon::ResizeHorizontal,
+                CursorShape::Ns => egui::CursorIcon::ResizeVertical,
+            };
+        }
         let repaint_delay = l
             .output
             .viewport_output

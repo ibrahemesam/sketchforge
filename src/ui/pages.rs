@@ -10,6 +10,8 @@ use egui::{Color32, RichText, Ui};
 pub struct PagesUi {
     pub collapsed: bool,
     pub renaming: Option<(usize, String)>,
+    /// Focus request happens once when a page rename opens (see UiState::renaming_focus).
+    pub renaming_focus: bool,
     /// Row being dragged, and the index it would drop at.
     drag: Option<(usize, usize)>,
 }
@@ -110,8 +112,15 @@ fn page_row(ui: &mut Ui, ed: &mut Editor, st: &mut UiState, i: usize, top: f32) 
             name_rect.shrink2(egui::vec2(0.0, 2.0)),
             egui::TextEdit::singleline(name),
         );
-        r.request_focus();
-        if r.lost_focus() {
+        if !st.pages.renaming_focus {
+            r.request_focus();
+            st.pages.renaming_focus = true;
+        }
+        let esc = ui.input(|i| i.key_pressed(egui::Key::Escape));
+        if r.has_focus() && esc {
+            // Unfocus and discard the typed name.
+            st.pages.renaming = None;
+        } else if r.lost_focus() {
             let (idx, name) = st.pages.renaming.take().unwrap();
             if !ui.input(|i| i.key_pressed(egui::Key::Escape)) {
                 ed.rename_page(idx, &name);
@@ -136,6 +145,7 @@ fn page_row(ui: &mut Ui, ed: &mut Editor, st: &mut UiState, i: usize, top: f32) 
     }
     if resp.double_clicked() {
         st.pages.renaming = Some((i, ed.pages[i].name.clone()));
+        st.pages.renaming_focus = false;
     } else if resp.clicked() {
         ed.switch_page(i);
     }
@@ -152,6 +162,7 @@ fn page_row(ui: &mut Ui, ed: &mut Editor, st: &mut UiState, i: usize, top: f32) 
     resp.context_menu(|ui| {
         if ui.button("Rename").clicked() {
             st.pages.renaming = Some((i, ed.pages[i].name.clone()));
+            st.pages.renaming_focus = false;
             ui.close();
         }
         if ui.button("Duplicate").clicked() {

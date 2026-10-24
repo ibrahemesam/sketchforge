@@ -365,6 +365,26 @@ pub fn overlay(mb: &mut MeshBuilder, ed: &Editor, offset: V2) {
         && let Some(wr) = ed.doc.world_rect(h)
     {
         outline_node(mb, &v, h, v.rect_to_screen(&wr), accent, 1.5);
+        // draw.io-style: the hovered unselected shape also grows resize handles
+        // (no edge handles on tiny shapes), matching the press routing in
+        // `select_down`.
+        let resizes = ed
+            .doc
+            .get(h)
+            .is_some_and(|n| !matches!(n.kind, NodeKind::Connector { .. }));
+        if resizes && !ed.doc.is_effectively_locked(h) {
+            let sb = v.rect_to_screen(&wr);
+            let tiny = sb.w.min(sb.h) < 24.0;
+            for (hx, hy) in hit::HANDLES {
+                if tiny && (hx == 0.5 || hy == 0.5) {
+                    continue;
+                }
+                let c = v2(sb.x + sb.w * hx, sb.y + sb.h * hy);
+                let r = Rect::new(c.x - 4.0, c.y - 4.0, 8.0, 8.0);
+                mb.rect(r, [1.0, 1.0, 1.0, 1.0]);
+                mb.rect_outline(r, 1.0, accent);
+            }
+        }
     }
 
     for id in &ed.selection {
@@ -491,11 +511,20 @@ fn whiteboard_overlay(mb: &mut MeshBuilder, ed: &Editor, v: &View, accent: [f32;
             mb.circle(p, 4.0, [1.0; 4]);
         }
     }
-    for (_, p) in ed.quick_knobs() {
+    let mut knob = |p: V2| {
         let p = p + off;
         mb.circle(p, 8.0, [accent[0], accent[1], accent[2], 0.9]);
         mb.line(p - v2(4.0, 0.0), p + v2(4.0, 0.0), 1.6, [1.0; 4]);
         mb.line(p - v2(0.0, 4.0), p + v2(0.0, 4.0), 1.6, [1.0; 4]);
+    };
+    for (_, p) in ed.quick_knobs() {
+        knob(p);
+    }
+    // Knobs on the hovered unselected shape: press and drag to connect an arrow.
+    if let Some((_, knobs)) = ed.hover_knobs() {
+        for (_, p) in knobs {
+            knob(p);
+        }
     }
     let trail = ed.laser_trail(ed.now_ms);
     if trail.len() >= 2 {

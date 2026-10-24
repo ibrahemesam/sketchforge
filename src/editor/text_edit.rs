@@ -1,7 +1,7 @@
 //! Text editing: caret and selection, typing with style-span bookkeeping, and per-range rich
 //! text styling (bold, italic, underline, strikethrough, size, color).
 
-use super::{Editor, Gesture, Key, TextEdit};
+use super::{Editor, Key, TextEdit};
 use crate::model::{Color, NodeId, NodeKind, TextSpan};
 use crate::text;
 
@@ -62,7 +62,6 @@ impl Editor {
             id: te.id,
             caret,
             anchor: None,
-            original: te.original.clone(),
         });
         self.mark_overrides(&[te.id], "text");
         self.fit_text(te.id);
@@ -86,7 +85,6 @@ impl Editor {
             id: te.id,
             caret: a,
             anchor: None,
-            original: te.original.clone(),
         });
         self.mark_overrides(&[te.id], "text");
         self.fit_text(te.id);
@@ -133,27 +131,9 @@ impl Editor {
         let len = self.text_len(te.id);
         let cmd = self.mods.command();
         match key {
-            Key::Escape => {
-                let original = te.original.clone();
-                if let Some(n) = self.tx().node_mut(te.id)
-                    && let Some((text, _)) = n.edited_text_and_style_mut()
-                {
-                    *text = original.clone();
-                }
-                self.fit_text(te.id);
-                if original.is_empty() {
-                    // Don't let end_text_edit remove it if we're discarding a brand new empty text.
-                    self.tx().remove(te.id);
-                    self.selection.clear();
-                    self.text_edit = None;
-                    if matches!(self.gesture, Gesture::TextSelect { .. }) {
-                        self.gesture = Gesture::None;
-                    }
-                    self.commit();
-                } else {
-                    self.end_text_edit();
-                }
-            }
+            // Escape keeps the changes that were typed and closes the editor; an
+            // empty text node is removed by end_text_edit on the way out.
+            Key::Escape => self.end_text_edit(),
             Key::Enter if cmd => self.end_text_edit(),
             Key::Enter => self.insert_text("\n"),
             Key::Backspace => match self.text_selection() {
@@ -170,12 +150,23 @@ impl Editor {
                 None => {}
             },
             Key::Left | Key::Right => {
+                let forward = *key == Key::Right;
                 let to = match (self.text_selection(), self.mods.shift) {
-                    (Some((a, _)), false) if *key == Key::Left => a,
+                    (Some((a, _)), false) if !forward => a,
                     (Some((_, b)), false) => b,
-                    _ if cmd && *key == Key::Left => 0,
+                    // Ctrl+Left/Right jumps one word (Option does the same on macOS);
+                    // with Shift it extends the selection to that word boundary.
+                    _ if self.mods.ctrl || self.mods.alt => {
+                        let chars = self
+                            .doc
+                            .get(te.id)
+                            .and_then(|n| n.edited_text())
+                            .map_or_else(Vec::new, |t| t.chars().collect());
+                        word_caret(&chars, te.caret, forward)
+                    }
+                    _ if cmd && !forward => 0,
                     _ if cmd => len,
-                    _ if *key == Key::Left => te.caret.saturating_sub(1),
+                    _ if !forward => te.caret.saturating_sub(1),
                     _ => (te.caret + 1).min(len),
                 };
                 self.move_caret(to);
@@ -332,4 +323,46 @@ impl Editor {
 
 fn byte_at(t: &str, char_idx: usize) -> usize {
     t.char_indices().nth(char_idx).map_or(t.len(), |(b, _)| b)
+}
+
+/// Caret index one word away from `from` in `chars`, as Ctrl+Left/Right moves in
+/// text editors: over a whole word in its direction, and forward also over the
+/// whitespace that follows it. Punctuation counts as its own word.
+fn word_caret(chars: &[char], from: usize, forward: bool) -> usize {
+    let is_word = |c: char| c.is_alphanumeric() || c == '_' || c == '\'';
+    let at = |i: usize| chars.get(i).copied().unwrap_or('\0');
+    if forward {
+        let mut i = from.min(chars.len());
+        while at(i) != '\0' && at(i).is_whitespace() {
+            i += 1;
+        }
+        if is_word(at(i)) {
+            while is_word(at(i)) && i < chars.len() {
+                i += 1;
+            }
+        } else {
+            while i < chars.len() && !is_word(at(i)) && !at(i).is_whitespace() {
+                i += 1;
+            }
+        }
+        while i < chars.len() && chars[i].is_whitespace() {
+            i += 1;
+        }
+        i
+    } else {
+        let mut i = from;
+        while i > 0 && chars[i - 1].is_whitespace() {
+            i -= 1;
+        }
+        if i > 0 && is_word(chars[i - 1]) {
+            while i > 0 && is_word(chars[i - 1]) {
+                i -= 1;
+            }
+        } else {
+            while i > 0 && !is_word(chars[i - 1]) && !chars[i - 1].is_whitespace() {
+                i -= 1;
+            }
+        }
+        i
+    }
 }

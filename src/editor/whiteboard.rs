@@ -297,12 +297,25 @@ impl Editor {
 
     /// Screen positions of the quick-connect knobs around a single selected shape.
     pub fn quick_knobs(&self) -> Vec<(usize, V2)> {
-        if self.tool != Tool::Select || self.text_edit.is_some() || self.is_busy() {
-            return vec![];
-        }
         let [id] = self.selection[..] else {
             return vec![];
         };
+        self.knobs_for(id)
+    }
+
+    /// Knobs around the hovered unselected shape (as in draw.io): press one and
+    /// drag to connect an arrow to whatever shape is under the release point.
+    pub fn hover_knobs(&self) -> Option<(NodeId, Vec<(usize, V2)>)> {
+        let id = self.hover.filter(|h| !self.selection.contains(h))?;
+        let knobs = self.knobs_for(id);
+        (!knobs.is_empty()).then_some((id, knobs))
+    }
+
+    /// Knob positions around one connectable shape, just outside its edges.
+    fn knobs_for(&self, id: NodeId) -> Vec<(usize, V2)> {
+        if self.tool != Tool::Select || self.text_edit.is_some() || self.is_busy() {
+            return vec![];
+        }
         let Some(n) = self.doc.get(id) else {
             return vec![];
         };
@@ -325,6 +338,59 @@ impl Editor {
                 (i, c + v2(d.x * off.x, d.y * off.y))
             })
             .collect()
+    }
+
+    /// Press on a knob of the hovered shape: drag out an arrow from that side,
+    /// binding its end to whatever shape the release lands on.
+    pub(super) fn hover_connect_down(&mut self, id: NodeId, dir: usize, world: V2) -> bool {
+        let Some(wr) = self.doc.world_rect(id) else {
+            return false;
+        };
+        self.end_text_edit();
+        self.begin("Add arrow");
+        // The arrow starts pinned to the midpoint of the side the knob sits on.
+        let d = QUICK_DIRS[dir];
+        let start = Some(Binding {
+            node: id,
+            fixed: connector::fixed_point(
+                v2(
+                    wr.x + wr.w * (0.5 + d.x * 0.5),
+                    wr.y + wr.h * (0.5 + d.y * 0.5),
+                ),
+                wr,
+            ),
+            inside: false,
+        });
+        let route = self.arrow_route;
+        let rough = self.sketch;
+        let aid = {
+            let mut tx = self.tx();
+            let id = tx.alloc_id();
+            let mut a = Node::new(
+                id,
+                NodeKind::Connector {
+                    points: vec![V2::ZERO, V2::ZERO],
+                    start,
+                    end: None,
+                    route,
+                    start_head: Head::None,
+                    end_head: Head::Arrow,
+                },
+                Rect::new(world.x, world.y, 0.0, 0.0),
+            );
+            a.style.rough = rough.map(|r| Rough {
+                seed: (id.0 as u32).wrapping_mul(2654435761) | 1,
+                ..r
+            });
+            tx.insert(a, None, None)
+        };
+        self.selection = vec![aid];
+        self.gesture = Gesture::ConnectorEnd {
+            id: aid,
+            end: 1,
+            start: world,
+        };
+        true
     }
 
     /// Duplicate the selected shape in direction `dir` and connect the two with an arrow.
@@ -428,7 +494,6 @@ impl Editor {
             id,
             caret: 0,
             anchor: None,
-            original: String::new(),
         });
         self.tool = Tool::Select;
     }

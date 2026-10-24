@@ -458,7 +458,7 @@ fn text_tool_types_edits_and_removes_empty() {
     assert_eq!(te.anchor, Some(0));
     assert!(te.caret > 0);
     e.handle(InputEvent::Text(">".into()));
-    // Typing replaced the whole selection, but Escape discards it.
+    // Typing replaced the whole selection, and Escape keeps it.
     let NodeKind::Text { text, .. } = &e.doc.get(id).unwrap().kind else {
         panic!()
     };
@@ -467,7 +467,7 @@ fn text_tool_types_edits_and_removes_empty() {
     let NodeKind::Text { text, .. } = &e.doc.get(id).unwrap().kind else {
         panic!()
     };
-    assert_eq!(text, "Hellor\nworl");
+    assert_eq!(text, ">");
 
     // Empty text boxes disappear without leaving history.
     let before = e.history.undo_len();
@@ -477,6 +477,291 @@ fn text_tool_types_edits_and_removes_empty() {
     key(&mut e, Key::Escape, Modifiers::NONE);
     assert_eq!(e.doc.nodes.len(), 1);
     assert_eq!(e.history.undo_len(), before);
+}
+
+#[test]
+fn ctrl_arrows_jump_over_words_and_shift_selects_them() {
+    let mut e = ed();
+    let kind = NodeKind::Text {
+        text: "Man is smart".into(),
+        font_size: 16.0,
+        auto_width: true,
+        align: TextAlign::Left,
+    };
+    let id = e.add_node(
+        Node::new(NodeId(0), kind, Rect::new(100.0, 100.0, 120.0, 24.0)),
+        None,
+    );
+    let ctrl = Modifiers {
+        ctrl: true,
+        ..Modifiers::NONE
+    };
+    let ctrl_shift = Modifiers {
+        ctrl: true,
+        ..Modifiers::SHIFT
+    };
+    e.start_text_edit(id, None); // selects all
+    key(&mut e, Key::Right, Modifiers::NONE); // collapse to the end
+    assert_eq!(e.text_edit.as_ref().unwrap().caret, 12);
+
+    // Ctrl+Left walks back one word at a time: smart, is, Man.
+    key(&mut e, Key::Left, ctrl);
+    assert_eq!(e.text_edit.as_ref().unwrap().caret, 7);
+    key(&mut e, Key::Left, ctrl);
+    assert_eq!(e.text_edit.as_ref().unwrap().caret, 4);
+    key(&mut e, Key::Left, ctrl);
+    assert_eq!(e.text_edit.as_ref().unwrap().caret, 0);
+    // Ctrl+Right jumps over the word and the space that follows it: "Man ".
+    key(&mut e, Key::Right, ctrl);
+    assert_eq!(e.text_edit.as_ref().unwrap().caret, 4);
+    key(&mut e, Key::Right, ctrl);
+    assert_eq!(e.text_edit.as_ref().unwrap().caret, 7);
+    key(&mut e, Key::Right, ctrl);
+    assert_eq!(e.text_edit.as_ref().unwrap().caret, 12);
+
+    // The same keys with Shift extend the selection by one word.
+    key(&mut e, Key::Left, ctrl);
+    key(&mut e, Key::Left, ctrl);
+    key(&mut e, Key::Left, ctrl);
+    assert_eq!(e.text_edit.as_ref().unwrap().caret, 0);
+    key(&mut e, Key::Right, ctrl_shift);
+    assert_eq!(e.text_selection(), Some((0, 4)), "extends over \"Man \"");
+    key(&mut e, Key::Right, ctrl_shift);
+    assert_eq!(e.text_selection(), Some((0, 7)), "extends over \"is \"");
+}
+
+#[test]
+fn hover_over_selection_handles_shows_resize_cursors() {
+    let mut e = ed();
+    let a = e.add_node(
+        Node::new(
+            NodeId(0),
+            NodeKind::Rect,
+            Rect::new(100.0, 100.0, 100.0, 100.0),
+        ),
+        None,
+    );
+    assert_eq!(e.hover_cursor(), None, "no selection, no handle cursor");
+    e.select(vec![a]);
+    e.pointer = v2(150.0, 150.0);
+    assert_eq!(e.hover_cursor(), None, "the middle is not a handle");
+
+    // Corners: ⤢ on the nw/se pair, ⤡ on the ne/sw pair.
+    e.pointer = v2(100.0, 100.0);
+    assert_eq!(e.hover_cursor(), Some(CursorShape::NwSe));
+    e.pointer = v2(200.0, 200.0);
+    assert_eq!(e.hover_cursor(), Some(CursorShape::NwSe));
+    e.pointer = v2(200.0, 100.0);
+    assert_eq!(e.hover_cursor(), Some(CursorShape::NeSw));
+    e.pointer = v2(100.0, 200.0);
+    assert_eq!(e.hover_cursor(), Some(CursorShape::NeSw));
+    // Sides: ↕ on the top/bottom handles (they change the height), ⟷ on the
+    // left/right ones (they change the width).
+    e.pointer = v2(150.0, 100.0);
+    assert_eq!(e.hover_cursor(), Some(CursorShape::Ns));
+    e.pointer = v2(150.0, 200.0);
+    assert_eq!(e.hover_cursor(), Some(CursorShape::Ns));
+    e.pointer = v2(100.0, 150.0);
+    assert_eq!(e.hover_cursor(), Some(CursorShape::Ew));
+    e.pointer = v2(200.0, 150.0);
+    assert_eq!(e.hover_cursor(), Some(CursorShape::Ew));
+
+    // The shape stays while the resize drag runs.
+    down(&mut e, 100.0, 150.0, 0.0);
+    mv(&mut e, 40.0, 150.0, 16.0);
+    assert!(matches!(e.gesture, Gesture::Resize { .. }));
+    assert_eq!(e.hover_cursor(), Some(CursorShape::Ew));
+    up(&mut e, 40.0, 150.0, 32.0);
+    e.pointer = v2(150.0, 150.0);
+    assert_eq!(e.hover_cursor(), None);
+}
+
+#[test]
+fn hovering_unselected_shape_shows_resize_handle_cursor() {
+    let mut e = ed();
+    let (a, b) = two_rects(&mut e);
+    e.select(vec![a]);
+    // Handles of the other, unselected shape: b is 50x50 at (400, 300).
+    e.hover = Some(b);
+    // Corners.
+    e.pointer = v2(400.0, 300.0);
+    assert_eq!(e.hover_cursor(), Some(CursorShape::NwSe));
+    e.pointer = v2(450.0, 350.0);
+    assert_eq!(e.hover_cursor(), Some(CursorShape::NwSe));
+    e.pointer = v2(450.0, 300.0);
+    assert_eq!(e.hover_cursor(), Some(CursorShape::NeSw));
+    e.pointer = v2(400.0, 350.0);
+    assert_eq!(e.hover_cursor(), Some(CursorShape::NeSw));
+    // Sides: ↕ on the top/bottom handles, ⟷ on the left/right ones.
+    e.pointer = v2(425.0, 300.0);
+    assert_eq!(e.hover_cursor(), Some(CursorShape::Ns));
+    e.pointer = v2(425.0, 350.0);
+    assert_eq!(e.hover_cursor(), Some(CursorShape::Ns));
+    e.pointer = v2(400.0, 325.0);
+    assert_eq!(e.hover_cursor(), Some(CursorShape::Ew));
+    e.pointer = v2(450.0, 325.0);
+    assert_eq!(e.hover_cursor(), Some(CursorShape::Ew));
+    e.pointer = v2(425.0, 325.0);
+    assert_eq!(e.hover_cursor(), None, "no cursor in the middle of b");
+
+    // No cursor over handles of a locked shape.
+    e.edit("Lock", |tx| {
+        tx.node_mut(b).unwrap().locked = true;
+    });
+    e.pointer = v2(450.0, 325.0);
+    assert_eq!(e.hover_cursor(), None);
+    e.edit("Unlock", |tx| {
+        tx.node_mut(b).unwrap().locked = false;
+    });
+}
+
+#[test]
+fn press_hover_knob_and_drag_connects_two_unselected_shapes() {
+    let mut e = ed();
+    let (a, b) = two_rects(&mut e);
+    // b's left-side quick-connect knob sits 22px left of its edge (425 -> 396).
+    e.hover = Some(b);
+    down(&mut e, 378.0, 325.0, 0.0);
+    assert!(
+        matches!(e.gesture, Gesture::ConnectorEnd { .. }),
+        "knob press starts the drag-out gesture"
+    );
+    assert_eq!(e.selection.len(), 1);
+    let c = e.selection[0];
+    assert_ne!(c, a);
+    assert_ne!(c, b, "the arrow is selected, not the shapes");
+    let start_of = |e: &Editor, id: NodeId| match &e.doc.get(id).unwrap().kind {
+        NodeKind::Connector { start, .. } => start.as_ref().map(|bd| bd.node),
+        _ => None,
+    };
+    assert_eq!(
+        start_of(&e, c),
+        Some(b),
+        "the arrow starts at the hovered shape"
+    );
+    // Drag the free end onto `a` and release.
+    mv(&mut e, 150.0, 150.0, 16.0);
+    if let NodeKind::Connector {
+        end: Some(endb), ..
+    } = &e.doc.get(c).unwrap().kind
+    {
+        assert_eq!(endb.node, a, "the end binds to the shape under the drag");
+    } else {
+        panic!("connector should land bound to a");
+    }
+    up(&mut e, 150.0, 150.0, 32.0);
+    assert_eq!(start_of(&e, c), Some(b));
+    // Undo removes the arrow in one step, leaving both shapes untouched.
+    e.undo();
+    assert!(e.doc.get(c).is_none(), "arrow deleted");
+    assert!(e.doc.get(a).is_some() && e.doc.get(b).is_some());
+}
+
+#[test]
+fn press_on_hovered_unselected_handle_resizes_without_selecting() {
+    let mut e = ed();
+    let (a, b) = two_rects(&mut e);
+    // b grows 50px wider by dragging its right-side handle.
+    e.hover = Some(b);
+    down(&mut e, 450.0, 325.0, 0.0);
+    assert!(matches!(e.gesture, Gesture::Resize { .. }));
+    mv(&mut e, 500.0, 325.0, 16.0);
+    assert!(
+        e.selection.is_empty(),
+        "hover resize does not change selection"
+    );
+    up(&mut e, 500.0, 325.0, 32.0);
+    let rb = rect_of(&e, b);
+    assert_eq!(rb.w, 100.0);
+    assert_eq!(rb.h, 50.0, "side handle only changes the width");
+    assert!(
+        rect_of(&e, a).min().dist(v2(100.0, 100.0)) < 1e-9,
+        "a untouched"
+    );
+}
+
+#[test]
+fn resize_magnet_shows_guides_on_sibling_anchor() {
+    let mut e = ed();
+    let (a, b) = two_rects(&mut e);
+    e.select(vec![b]);
+    // Drag b's left edge toward a's right edge (x = 200): magnet + guide.
+    down(&mut e, 400.0, 325.0, 0.0);
+    mv(&mut e, 195.0, 325.0, 16.0);
+    let r = rect_of(&e, b);
+    assert_eq!(r.x, 200.0, "left edge magnetized onto a's right edge");
+    assert_eq!(r.right(), 450.0, "the opposite edge stays put");
+    assert!(
+        e.guides
+            .iter()
+            .any(|g| matches!(g, snap::Guide::V { x, .. } if *x == 200.0)),
+        "vertical guide indicates the snapped position, guides={:?}",
+        e.guides
+    );
+    // Sitting exactly placed keeps the hint line visible (absorption state).
+    mv(&mut e, 200.0, 325.0, 32.0);
+    let _ = a;
+    assert!(
+        e.guides
+            .iter()
+            .any(|g| matches!(g, snap::Guide::V { x, .. } if *x == 200.0)),
+        "guide shown while the edge rests on the target"
+    );
+    // Moving away clears the magnet and its guides.
+    mv(&mut e, 260.0, 325.0, 48.0);
+    assert!(e.guides.is_empty(), "no guides away from anchors");
+    up(&mut e, 260.0, 325.0, 64.0);
+}
+
+#[test]
+fn creating_magnetizes_to_sibling_anchors() {
+    let mut e = ed();
+    e.add_node(
+        Node::new(
+            NodeId(0),
+            NodeKind::Rect,
+            Rect::new(100.0, 100.0, 100.0, 100.0),
+        ),
+        None,
+    );
+    // Right-side magnet: the dragged end lands exactly on the sibling's right edge.
+    press(&mut e, 'r');
+    drag(&mut e, (180.0, 120.0), (196.0, 160.0), 0.0);
+    let b = e.selection[0];
+    let nb = rect_of(&e, b);
+    assert_eq!(
+        nb.right(),
+        200.0,
+        "dragged edge magnetized to a's right edge"
+    );
+    assert_eq!(nb.x, 180.0, "start corner stays put");
+    assert!(e.doc.get(b).unwrap().parent.is_none());
+
+    // Left-side magnet drawing the other way.
+    e.undo();
+    e.select(Vec::new());
+    press(&mut e, 'r');
+    drag(&mut e, (240.0, 120.0), (206.0, 160.0), 0.0);
+    let nb = rect_of(&e, e.selection[0]);
+    assert_eq!(nb.x, 200.0, "left edge magnetized drawing leftwards");
+}
+
+#[test]
+fn creating_inside_frame_magnetizes_to_frame_children() {
+    let mut e = ed();
+    press(&mut e, 'r');
+    drag(&mut e, (120.0, 120.0), (160.0, 160.0), 0.0);
+    press(&mut e, 'f');
+    drag(&mut e, (100.0, 100.0), (400.0, 300.0), 500.0);
+    // A second rect drawn inside the frame magnetizes to the first child.
+    press(&mut e, 'r');
+    drag(&mut e, (180.0, 120.0), (166.0, 220.0), 900.0);
+    let nb = rect_of(&e, e.selection[0]);
+    assert_eq!(
+        nb.x, 160.0,
+        "left edge magnetized onto the sibling's right edge"
+    );
+    assert_eq!(nb.right(), 180.0, "start corner stays put");
 }
 
 // ---------------------------------------------------------------- M4: select, move, resize, snap
@@ -499,6 +784,51 @@ fn two_rects(e: &mut Editor) -> (NodeId, NodeId) {
         None,
     );
     (a, b)
+}
+
+#[test]
+fn marquee_selects_children_of_grazed_frame_but_not_the_frame() {
+    let mut e = ed();
+    press(&mut e, 'r');
+    drag(&mut e, (120.0, 120.0), (160.0, 160.0), 0.0);
+    let inner = e.selection[0];
+    press(&mut e, 'f');
+    drag(&mut e, (100.0, 100.0), (400.0, 300.0), 500.0);
+    let frame = e.selection[0];
+    assert!(e.doc.get(frame).unwrap().is_frame());
+    assert_eq!(e.doc.get(inner).unwrap().parent, Some(frame));
+    press(&mut e, 'r');
+    drag(&mut e, (300.0, 200.0), (350.0, 250.0), 900.0);
+    let child = e.selection[0];
+    assert_eq!(e.doc.get(child).unwrap().parent, Some(frame));
+    press(&mut e, 'v'); // back to Select for the marquee drags
+    e.select(Vec::new());
+
+    // The marquee only grazes the frame (it is not fully enclosed), so the
+    // frame itself is not selected — the children it crosses are.
+    drag(&mut e, (40.0, 40.0), (330.0, 230.0), 2000.0);
+    assert!(!e.selection.contains(&frame), "grazed frame not selected");
+    assert!(e.selection.contains(&inner));
+    assert!(e.selection.contains(&child));
+
+    // A marquee over just one child of the frame selects only that child
+    // (starting outside the frame: dragging from its body moves the frame).
+    e.select(Vec::new());
+    drag(&mut e, (495.0, 260.0), (290.0, 190.0), 3000.0);
+    assert_eq!(e.selection, vec![child]);
+
+    // Enclosing the whole frame selects the frame itself.
+    e.select(Vec::new());
+    drag(&mut e, (50.0, 50.0), (450.0, 350.0), 4000.0);
+    assert_eq!(e.selection, vec![frame]);
+
+    // A locked child stays out of the marquee.
+    e.edit("Lock", |tx| {
+        tx.node_mut(child).unwrap().locked = true;
+    });
+    e.select(Vec::new());
+    drag(&mut e, (495.0, 260.0), (290.0, 190.0), 5000.0);
+    assert!(e.selection.is_empty(), "locked child not selected");
 }
 
 #[test]

@@ -2,7 +2,8 @@
 //! constraints, text, fills, stroke and layer properties. Edits are coalesced per field so a
 //! drag on a number is one undo step, and edits inside instances become overrides.
 
-use super::{UiState, c32, from32, section, title_text};
+use super::{InspectorTab, UiState, c32, from32, section, title_text};
+use crate::editor::shortcuts;
 use crate::editor::vector_ops::BoolOp;
 use crate::editor::{AppRequest, Editor};
 use crate::geom::v2;
@@ -140,6 +141,10 @@ pub fn panel(ui: &mut Ui, ed: &mut Editor, st: &mut UiState) {
         .auto_shrink(false)
         .show(ui, |ui| {
             ui.spacing_mut().item_spacing.y = 5.0;
+            // Capture the visible panel width once, before any wide row can inflate
+            // egui's content rect (the panel's clip rect itself extends into the
+            // frame margins and over-reports).
+            let vis = ui.available_width();
             section(ui, "Design");
             ui.add_space(2.0);
             let ids = ed.top_selection();
@@ -154,51 +159,87 @@ pub fn panel(ui: &mut Ui, ed: &mut Editor, st: &mut UiState) {
             separator(ui);
             align_row(ui, ed, &ids);
             separator(ui);
-            geometry(ui, ed, &ids, &first);
+            tabs(ui, st, vis);
+            ui.add_space(2.0);
+            match st.inspector_tab {
+                InspectorTab::Style => {
+                    if crate::render::draw::is_area(&first)
+                        && !matches!(first.kind, NodeKind::Stroke { .. })
+                    {
+                        fills(ui, ed, &ids, &first);
+                        separator(ui);
+                    }
+                    if !matches!(
+                        first.kind,
+                        NodeKind::Text { .. } | NodeKind::Stroke { .. } | NodeKind::Group
+                    ) {
+                        stroke(ui, ed, &ids, &first);
+                        separator(ui);
+                    }
+                    if matches!(first.kind, NodeKind::Connector { .. }) {
+                        arrow_section(ui, ed, &ids, &first);
+                        separator(ui);
+                    }
+                    if matches!(first.kind, NodeKind::Sticky { .. }) {
+                        sticky_section(ui, ed, &ids, &first);
+                        separator(ui);
+                    }
+                    layer(ui, ed, &ids, &first);
+                    if !matches!(
+                        first.kind,
+                        NodeKind::Text { .. }
+                            | NodeKind::Stroke { .. }
+                            | NodeKind::Group
+                            | NodeKind::Sticky { .. }
+                    ) {
+                        separator(ui);
+                        sketch_section(ui, ed, &ids, &first);
+                    }
+                    separator(ui);
+                    style_actions(ui, ed, vis);
+                }
+                InspectorTab::Text => {
+                    if matches!(first.kind, NodeKind::Text { .. }) {
+                        text_section(ui, ed, &ids, &first);
+                    } else {
+                        ui.label(
+                            RichText::new("Select a text layer to edit its text.")
+                                .color(theme::pal(ui).secondary),
+                        );
+                    }
+                }
+                InspectorTab::Arrange => arrange_section(ui, ed, st, vis, &ids, &first),
+            }
+            // Selection-structural sections stay below the tabs in every view.
             child_layout(ui, ed, &ids, &first);
             if first.is_frame() && ids.len() == 1 {
                 auto_layout(ui, ed, &ids, &first);
             }
-            if matches!(first.kind, NodeKind::Text { .. }) {
-                separator(ui);
-                text_section(ui, ed, &ids, &first);
-            }
-            if crate::render::draw::is_area(&first)
-                && !matches!(first.kind, NodeKind::Stroke { .. })
-            {
-                separator(ui);
-                fills(ui, ed, &ids, &first);
-            }
-            if !matches!(
-                first.kind,
-                NodeKind::Text { .. } | NodeKind::Stroke { .. } | NodeKind::Group
-            ) {
-                separator(ui);
-                stroke(ui, ed, &ids, &first);
-            }
-            if matches!(first.kind, NodeKind::Connector { .. }) {
-                separator(ui);
-                arrow_section(ui, ed, &ids, &first);
-            }
-            if matches!(first.kind, NodeKind::Sticky { .. }) {
-                separator(ui);
-                sticky_section(ui, ed, &ids, &first);
-            }
-            separator(ui);
-            layer(ui, ed, &ids, &first);
-            if !matches!(
-                first.kind,
-                NodeKind::Text { .. }
-                    | NodeKind::Stroke { .. }
-                    | NodeKind::Group
-                    | NodeKind::Sticky { .. }
-            ) {
-                separator(ui);
-                sketch_section(ui, ed, &ids, &first);
-            }
             separator(ui);
             export_section(ui, ed, st);
         });
+}
+
+/// The draw.io-style inspector tabs: Style | Text | Arrange.
+fn tabs(ui: &mut Ui, st: &mut UiState, vis: f32) {
+    let list = [
+        ("Style", InspectorTab::Style),
+        ("Text", InspectorTab::Text),
+        ("Arrange", InspectorTab::Arrange),
+    ];
+    let n = list.len() as f32;
+    ui.horizontal(|ui| {
+        ui.spacing_mut().item_spacing.x = 4.0;
+        let w = (vis - 4.0 * (n - 1.0)) / n;
+        for (name, tab) in list {
+            let active = st.inspector_tab == tab;
+            let txt = RichText::new(name).size(theme::BODY);
+            let btn = egui::Button::new(if active { txt.strong() } else { txt.weak() });
+            if ui.add_sized([w, 22.0], btn).clicked() {
+                st.inspector_tab = tab;
+            }
+        }
+    });
 }
 
 /// FigJam/Excalidraw-style sticky colours.
@@ -619,7 +660,103 @@ fn align_row(ui: &mut Ui, ed: &mut Editor, _ids: &[NodeId]) {
     });
 }
 
-fn geometry(ui: &mut Ui, ed: &mut Editor, ids: &[NodeId], first: &Node) {
+/// The Arrange tab, as in draw.io: z-order, size and position with the
+/// aspect lock, shape parameters, flip, grid snap, grouping and locking.
+fn arrange_section(
+    ui: &mut Ui,
+    ed: &mut Editor,
+    st: &mut UiState,
+    vis: f32,
+    ids: &[NodeId],
+    first: &Node,
+) {
+    // Paint order at a glance; also reachable through ⌘⇧] etc.
+    let w = (vis - 4.0) * 0.5;
+    let mut order = |ui: &mut Ui, l: &str, a: shortcuts::Action| {
+        ui.spacing_mut().item_spacing.x = 4.0;
+        if ui.add_sized([w, 20.0], egui::Button::new(l)).clicked() {
+            ed.run(a);
+        }
+    };
+    ui.horizontal(|ui| {
+        order(ui, "To Front", shortcuts::Action::ToFront);
+        order(ui, "To Back", shortcuts::Action::ToBack);
+    });
+    ui.horizontal(|ui| {
+        order(ui, "Bring Forward", shortcuts::Action::Forward);
+        order(ui, "Send Backward", shortcuts::Action::Backward);
+    });
+    drop(order);
+    separator(ui);
+    geometry(ui, ed, st, ids, first);
+    separator(ui);
+    // Flip.
+    row(ui, "Flip", |ui| {
+        if ui.button("Horizontal").clicked() {
+            ed.run(shortcuts::Action::FlipH);
+        }
+        if ui.button("Vertical").clicked() {
+            ed.run(shortcuts::Action::FlipV);
+        }
+    });
+    separator(ui);
+    // draw.io's Align > Snap to Grid: round everything to the nearest grid line.
+    if ui.button("Snap to Grid").clicked() {
+        const G: f64 = crate::editor::snap::GRID_STEP;
+        let ids: Vec<NodeId> = ed.top_selection();
+        ed.edit("Snap to grid", |tx| {
+            for id in ids {
+                if let Some(n) = tx.node_mut(id) {
+                    n.rect.x = (n.rect.x / G).round() * G;
+                    n.rect.y = (n.rect.y / G).round() * G;
+                }
+            }
+        });
+    }
+    separator(ui);
+    ui.horizontal(|ui| {
+        ui.spacing_mut().item_spacing.x = 4.0;
+        if ui
+            .add_sized([w, 20.0], egui::Button::new("Group"))
+            .clicked()
+        {
+            ed.run(shortcuts::Action::Group);
+        }
+        if ui
+            .add_sized([w, 20.0], egui::Button::new("Ungroup"))
+            .clicked()
+        {
+            ed.run(shortcuts::Action::Ungroup);
+        }
+    });
+    if ui
+        .add_sized([vis, 20.0], egui::Button::new("Lock/Unlock"))
+        .clicked()
+    {
+        ed.run(shortcuts::Action::ToggleLock);
+    }
+}
+
+fn style_actions(ui: &mut Ui, ed: &mut Editor, vis: f32) {
+    ui.horizontal(|ui| {
+        ui.spacing_mut().item_spacing.x = 4.0;
+        let w = (vis - 4.0) * 0.5;
+        if ui
+            .add_sized([w, 20.0], egui::Button::new("Copy Style"))
+            .clicked()
+        {
+            ed.run(shortcuts::Action::CopyProps);
+        }
+        if ui
+            .add_sized([w, 20.0], egui::Button::new("Paste Style"))
+            .clicked()
+        {
+            ed.run(shortcuts::Action::PasteProps);
+        }
+    });
+}
+
+fn geometry(ui: &mut Ui, ed: &mut Editor, st: &mut UiState, ids: &[NodeId], first: &Node) {
     if ids.len() == 1 {
         let r = first.rect;
         ui.horizontal(|ui| {
@@ -631,16 +768,43 @@ fn geometry(ui: &mut Ui, ed: &mut Editor, ids: &[NodeId], first: &Node) {
             }
         });
         ui.horizontal(|ui| {
-            if let Some(v) = num_field(ui, ed, "W  ", r.w, 1.0, 0.0..=1e6, 92.0) {
-                resize(ed, ids[0], v2(v, r.h));
+            if let Some(v) = num_field(ui, ed, "W  ", r.w, 1.0, 0.0..=1e6, 80.0) {
+                let h = if st.lock_aspect && st.aspect_ratio > 0.0 {
+                    v / st.aspect_ratio
+                } else {
+                    r.h
+                };
+                resize(ed, ids[0], v2(v, h));
             }
             let text = matches!(first.kind, NodeKind::Text { .. });
             ui.add_enabled_ui(!text, |ui| {
-                if let Some(v) = num_field(ui, ed, "H  ", r.h, 1.0, 0.0..=1e6, 92.0) {
-                    resize(ed, ids[0], v2(r.w, v));
+                if let Some(v) = num_field(ui, ed, "H  ", r.h, 1.0, 0.0..=1e6, 80.0) {
+                    let w = if st.lock_aspect && st.aspect_ratio > 0.0 {
+                        v * st.aspect_ratio
+                    } else {
+                        r.w
+                    };
+                    resize(ed, ids[0], v2(w, v));
                 }
             });
         });
+        // Keep width and height proportional while editing, as in draw.io.
+        let mut lock = st.lock_aspect;
+        if ui.checkbox(&mut lock, "Constrain proportions").changed() {
+            st.lock_aspect = lock;
+            if lock && r.h.abs() > 1e-9 {
+                st.aspect_ratio = r.w / r.h;
+            }
+        }
+        // A copied size (draw.io's Copy Size) can be stamped onto the selection.
+        if let Some((cw, ch)) = st.copied_size
+            && ui.button("Apply Size").clicked()
+        {
+            resize(ed, ids[0], v2(cw, ch));
+        }
+        if ids.len() == 1 && ui.button("Copy Size").clicked() {
+            st.copied_size = Some((r.w, r.h));
+        }
     }
     // Shape parameters.
     match first.kind {
