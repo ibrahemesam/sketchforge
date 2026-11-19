@@ -10,7 +10,7 @@ use crate::connector::{self, BIND_DISTANCE_PX};
 use crate::geom::{Rect, V2, v2};
 use crate::history::Tx;
 use crate::model::rough::Rough;
-use crate::model::{Binding, Head, Node, NodeId, NodeKind, Route};
+use crate::model::{Binding, ExtraLabel, Head, LineJump, Node, NodeId, NodeKind, Route};
 
 /// Laser trail points fade over this long (ms), as in Excalidraw.
 pub const LASER_DECAY_MS: f64 = 1000.0;
@@ -47,6 +47,61 @@ pub fn update_connector(tx: &mut Tx, id: NodeId) {
         return;
     };
     set_world_points(tx, id, &pts);
+}
+
+/// Switch selected connector ends between fixed points and floating perimeter hits.
+/// A switch back to fixed keeps the endpoint's current position as the remembered point.
+pub fn set_connector_endpoint_mode(ed: &mut Editor, ids: &[NodeId], which: usize, floating: bool) {
+    let changes: Vec<(NodeId, V2)> = ids
+        .iter()
+        .filter_map(|id| {
+            let binding = match &ed.doc.get(*id)?.kind {
+                NodeKind::Connector { start, end, .. } => {
+                    if which == 0 {
+                        start.as_ref()
+                    } else {
+                        end.as_ref()
+                    }
+                }
+                _ => return None,
+            }?
+            .to_owned();
+            let pts = connector::resolve(&ed.doc, *id)?;
+            let p = *pts.get(if which == 0 { 0 } else { pts.len() - 1 })?;
+            let wr = ed.doc.world_rect(binding.node)?;
+            let f = connector::fixed_point(p, wr);
+            Some((*id, v2(f.x.clamp(0.0, 1.0), f.y.clamp(0.0, 1.0))))
+        })
+        .collect();
+    if changes.is_empty() {
+        return;
+    }
+    ed.begin(if floating {
+        "Use floating endpoints"
+    } else {
+        "Use fixed endpoints"
+    });
+    {
+        let mut tx = ed.tx();
+        for (id, fixed) in changes {
+            if let Some(n) = tx.node_mut(id)
+                && let NodeKind::Connector { start, end, .. } = &mut n.kind
+            {
+                let binding = if which == 0 { start } else { end };
+                if let Some(b) = binding {
+                    b.floating = floating;
+                    b.inside = false;
+                    if !floating {
+                        b.fixed = fixed;
+                    }
+                }
+            }
+        }
+        for id in ids {
+            update_connector(&mut tx, *id);
+        }
+    }
+    ed.commit();
 }
 
 /// Store world points into a connector, refitting its box.
@@ -92,12 +147,19 @@ impl Editor {
 
     /// Connectors that must be re-routed because something in `changed` moved or resized.
     pub(super) fn reroute_connectors(&mut self, changed: &std::collections::HashSet<NodeId>) {
+        // World rects of everything that moved, for the obstacle check below.
+        let moved: Vec<Rect> = changed
+            .iter()
+            .filter_map(|id| self.doc.world_rect(*id))
+            .collect();
         let affected: Vec<NodeId> = self
             .doc
             .nodes
             .values()
             .filter_map(|n| match &n.kind {
-                NodeKind::Connector { start, end, .. } => {
+                NodeKind::Connector {
+                    start, end, route, ..
+                } => {
                     let hit = |b: &Option<Binding>| {
                         b.is_some_and(|b| {
                             changed.contains(&b.node)
@@ -109,10 +171,25 @@ impl Editor {
                                     .any(|a| changed.contains(a))
                         })
                     };
-                    (hit(start)
+                    if hit(start)
                         || hit(end)
-                        || (changed.contains(&n.id) && (start.is_some() || end.is_some())))
-                    .then_some(n.id)
+                        || (changed.contains(&n.id) && (start.is_some() || end.is_some()))
+                    {
+                        return Some(n.id);
+                    }
+                    // Elbow routes also avoid unrelated shapes, so a shape
+                    // moving into the route's neighborhood reroutes it too.
+                    // The connector's world rect spans its points.
+                    if *route == Route::Elbow
+                        && !moved.is_empty()
+                        && let Some(wr) = self.doc.world_rect(n.id)
+                    {
+                        let corridor = wr.inflate(connector::ELBOW_PADDING);
+                        if moved.iter().any(|r| r.intersects(&corridor)) {
+                            return Some(n.id);
+                        }
+                    }
+                    None
                 }
                 _ => None,
             })
@@ -130,13 +207,9 @@ impl Editor {
         self.end_text_edit();
         self.begin("Add arrow");
         let start_target = connector::bind_target(&self.doc, world, self.bind_dist(), &[]);
-        let start_binding = start_target.map(|t| Binding {
-            node: t,
-            fixed: connector::fixed_point(world, self.doc.world_rect(t).unwrap()),
-            inside: false,
-        });
+        let start_binding = start_target.map(|t| self.binding_at(world, t));
         let route = self.arrow_route;
-        let rough = self.sketch;
+        let default = self.connector_default_for(start_binding.map(|b| b.node));
         let id = {
             let mut tx = self.tx();
             let id = tx.alloc_id();
@@ -149,13 +222,15 @@ impl Editor {
                     route,
                     start_head: Head::None,
                     end_head: Head::Arrow,
+                    jump: LineJump::None,
+                    jump_size: 6.0,
                 },
                 Rect::new(world.x, world.y, 0.0, 0.0),
             );
-            n.style.rough = rough.map(|r| Rough {
-                seed: (id.0 as u32).wrapping_mul(2654435761) | 1,
-                ..r
-            });
+            if let Some(ds) = default {
+                n.style = ds.style;
+                n.text_style = ds.text_style;
+            }
             tx.insert(n, None, None)
         };
         self.selection = vec![id];
@@ -164,6 +239,24 @@ impl Editor {
             end: 1,
             start: world,
         };
+    }
+
+    /// Binding for `world` on `target`, snapped to a fixed point when the pointer
+    /// is close enough. The stored fraction keeps the end on that point when the
+    /// target is resized.
+    fn binding_at(&self, world: V2, target: NodeId) -> Binding {
+        let wr = self.doc.world_rect(target).unwrap();
+        let (p, snapped) = connector::snap_fixed_state(
+            world,
+            wr,
+            connector::FIXED_SNAP_PX / self.camera.zoom.max(0.01),
+        );
+        Binding {
+            node: target,
+            fixed: connector::fixed_point(p, wr),
+            inside: false,
+            floating: !snapped,
+        }
     }
 
     /// Drag a connector end to `world`, binding to whatever shape is under it.
@@ -185,11 +278,7 @@ impl Editor {
             p = other + v2(a.cos(), a.sin()) * d.len();
         }
         pts[idx] = p;
-        let binding = target.map(|t| Binding {
-            node: t,
-            fixed: connector::fixed_point(world, self.doc.world_rect(t).unwrap()),
-            inside: false,
-        });
+        let binding = target.map(|t| self.binding_at(world, t));
         let mut tx = self.tx();
         if let Some(n) = tx.node_mut(id)
             && let NodeKind::Connector { start, end: e, .. } = &mut n.kind
@@ -241,7 +330,8 @@ impl Editor {
                 ..
             })
         );
-        if pts.len() == 2 && !elbow {
+        let labeled = self.doc.get(id).is_some_and(|n| !n.label.is_empty());
+        if pts.len() == 2 && !elbow && !labeled {
             out.push((2, s((pts[0] + pts[1]) * 0.5)));
         }
         out
@@ -258,6 +348,15 @@ impl Editor {
         };
         let id = self.selection[0];
         if end == 2 {
+            // With a label present, the midpoint belongs to the label: a press
+            // there selects or drags the edge instead of silently bending it.
+            if self
+                .doc
+                .get(id)
+                .is_some_and(|n| n.is_connector() && !n.label.is_empty())
+            {
+                return false;
+            }
             // Bend: insert a middle point and make the arrow curved.
             self.begin("Bend arrow");
             let mut pts = self.connector_points(id).unwrap();
@@ -293,6 +392,158 @@ impl Editor {
         update_connector(&mut tx, id);
     }
 
+    /// Move a connector label so its box center lands on `center` (world).
+    /// The label keeps the closest point on the route as its anchor and stores
+    /// the rest as an offset, so it can sit on the line or away from it.
+    /// `idx` picks the label: 0 is the main label, higher indices are extras.
+    pub(super) fn set_connector_label_center(&mut self, id: NodeId, idx: usize, center: V2) {
+        let Some(wr) = self.doc.world_rect(id) else {
+            return;
+        };
+        let Some((points, route)) = self.doc.get(id).and_then(|n| match &n.kind {
+            NodeKind::Connector { points, route, .. } => Some((points.clone(), *route)),
+            _ => None,
+        }) else {
+            return;
+        };
+        let local = center - wr.min();
+        let Some((t, anchor)) = connector::closest_point(&points, route, local) else {
+            return;
+        };
+        let offset = local - anchor;
+        let on_line = offset.len() < 0.5;
+        let pos = if on_line && (t - 0.5).abs() < 0.01 {
+            None
+        } else {
+            Some(t)
+        };
+        let mut tx = self.tx();
+        let Some(n) = tx.node_mut(id) else {
+            return;
+        };
+        if idx == 0 {
+            n.label_offset = (!on_line).then_some(offset);
+            n.label_pos = pos;
+        } else if let Some(extra) = n.labels.get_mut(idx - 1) {
+            extra.offset = (!on_line).then_some(offset);
+            extra.pos = pos;
+        }
+    }
+
+    /// Add an extra label to a connector (draw.io's Add Label). The new label
+    /// starts centered on the line with placeholder text; the editor opens it
+    /// with the placeholder selected, so typing replaces it. One undo step
+    /// for the add, then the usual Edit text step for the typing.
+    pub fn add_connector_label(&mut self, id: NodeId) {
+        let is_connector = self.doc.get(id).is_some_and(|n| n.is_connector());
+        if !is_connector {
+            return;
+        }
+        self.edit("Add label", |tx| {
+            if let Some(n) = tx.node_mut(id) {
+                n.labels.push(ExtraLabel::new("Label"));
+            }
+        });
+        let idx = self.doc.get(id).map_or(1, |n| n.label_count()) - 1;
+        self.start_text_edit_label(id, idx, None);
+    }
+
+    /// Swap each selected connector's source and target, matching draw.io's
+    /// Reverse (its `turnShapes` edge branch): bindings and waypoints swap,
+    /// arrowheads and label positions stay bound to the line's own ends, so
+    /// both visually move to the opposite end while the path stays put.
+    /// One undo step.
+    pub fn reverse_connectors(&mut self, ids: &[NodeId]) {
+        let targets: Vec<NodeId> = ids
+            .iter()
+            .copied()
+            .filter(|id| self.doc.get(*id).is_some_and(|n| n.is_connector()))
+            .collect();
+        if targets.is_empty() {
+            return;
+        }
+        self.begin("Reverse connector");
+        for id in targets {
+            let mut tx = self.tx();
+            let Some(n) = tx.node_mut(id) else { continue };
+            let NodeKind::Connector {
+                points, start, end, ..
+            } = &mut n.kind
+            else {
+                continue;
+            };
+            points.reverse();
+            std::mem::swap(start, end);
+        }
+        self.commit();
+    }
+
+    /// Put connector labels back on the middle of their lines, including a
+    /// connector's extra labels. One undo step.
+    pub fn reset_connector_label_positions(&mut self, ids: &[NodeId]) {
+        let targets: Vec<NodeId> = ids
+            .iter()
+            .copied()
+            .filter(|id| {
+                self.doc.get(*id).is_some_and(|n| {
+                    n.is_connector()
+                        && ((n.label_pos.is_some() || n.label_offset.is_some())
+                            || n.labels
+                                .iter()
+                                .any(|l| l.pos.is_some() || l.offset.is_some()))
+                })
+            })
+            .collect();
+        if targets.is_empty() {
+            return;
+        }
+        self.begin("Reset label positions");
+        for id in targets {
+            if let Some(n) = self.tx().node_mut(id) {
+                n.label_pos = None;
+                n.label_offset = None;
+                for l in &mut n.labels {
+                    l.pos = None;
+                    l.offset = None;
+                }
+            }
+        }
+        self.commit();
+    }
+
+    /// Drop manually bent points from straight and curved connectors. Elbow
+    /// routes are generated from their endpoints, so they have nothing to reset.
+    pub fn reset_connector_waypoints(&mut self, ids: &[NodeId]) {
+        let targets: Vec<NodeId> = ids
+            .iter()
+            .copied()
+            .filter(|id| {
+                self.doc.get(*id).is_some_and(|n| match &n.kind {
+                    NodeKind::Connector { points, route, .. } => {
+                        *route != Route::Elbow && points.len() > 2
+                    }
+                    _ => false,
+                })
+            })
+            .collect();
+        if targets.is_empty() {
+            return;
+        }
+        self.begin("Reset waypoints");
+        for id in targets {
+            let Some(pts) = self.connector_points(id) else {
+                continue;
+            };
+            let Some(last) = pts.last().copied() else {
+                continue;
+            };
+            let simple = [pts[0], last];
+            let mut tx = self.tx();
+            set_world_points(&mut tx, id, &simple);
+        }
+        self.commit();
+    }
+
     // ---------------------------------------------------------------------- quick connect
 
     /// Screen positions of the quick-connect knobs around a single selected shape.
@@ -309,6 +560,34 @@ impl Editor {
         let id = self.hover.filter(|h| !self.selection.contains(h))?;
         let knobs = self.knobs_for(id);
         (!knobs.is_empty()).then_some((id, knobs))
+    }
+
+    /// A press landing on a knob itself. The knobs sit just outside their shape, so
+    /// the press never sets `hover` for it — this finds the owning shape from the
+    /// press position instead (draw.io's behavior: press anywhere near the arrow
+    /// anchor and drag).
+    pub(super) fn knob_hit(&self, pos: V2) -> Option<(NodeId, usize)> {
+        let mut best: Option<(f64, NodeId, usize)> = None;
+        for id in self.doc.paint_order() {
+            if self.selection.contains(&id) {
+                continue; // selected shapes already offer quick knobs.
+            }
+            for (dir, p) in self.knobs_for(id) {
+                let d = p.dist(pos);
+                if d <= 9.0 && best.is_none_or(|(b, _, _)| d < b) {
+                    best = Some((d, id, dir));
+                }
+            }
+        }
+        best.map(|(_, id, dir)| (id, dir))
+    }
+
+    /// A drag-to-bind connector gesture is in flight (draw.io's arrow linking).
+    pub fn is_connecting(&self) -> bool {
+        matches!(
+            self.gesture,
+            Gesture::ConnectorEnd { .. } | Gesture::ConnectorMid { .. }
+        )
     }
 
     /// Knob positions around one connectable shape, just outside its edges.
@@ -360,9 +639,10 @@ impl Editor {
                 wr,
             ),
             inside: false,
+            floating: false,
         });
         let route = self.arrow_route;
-        let rough = self.sketch;
+        let default = self.connector_default_for(Some(id));
         let aid = {
             let mut tx = self.tx();
             let id = tx.alloc_id();
@@ -375,13 +655,15 @@ impl Editor {
                     route,
                     start_head: Head::None,
                     end_head: Head::Arrow,
+                    jump: LineJump::None,
+                    jump_size: 6.0,
                 },
                 Rect::new(world.x, world.y, 0.0, 0.0),
             );
-            a.style.rough = rough.map(|r| Rough {
-                seed: (id.0 as u32).wrapping_mul(2654435761) | 1,
-                ..r
-            });
+            if let Some(ds) = default {
+                a.style = ds.style;
+                a.text_style = ds.text_style;
+            }
             tx.insert(a, None, None)
         };
         self.selection = vec![aid];
@@ -406,6 +688,7 @@ impl Editor {
         let o = self.doc.parent_origin(parent);
         let route = self.arrow_route;
         let rough = n.style.rough;
+        let default = self.connector_default_for(Some(src));
         let (copy, arrow) = self.edit("Quick connect", |tx| {
             let cid = tx.alloc_id();
             let mut c = n.clone();
@@ -434,22 +717,31 @@ impl Editor {
                         node: src,
                         fixed: fix(fixed_a),
                         inside: false,
+                        floating: false,
                     }),
                     end: Some(Binding {
                         node: cid,
                         fixed: fix(fixed_b),
                         inside: false,
+                        floating: false,
                     }),
                     route,
                     start_head: Head::None,
                     end_head: Head::Arrow,
+                    jump: LineJump::None,
+                    jump_size: 6.0,
                 },
                 Rect::default(),
             );
-            a.style.rough = rough.map(|r| Rough {
-                seed: r.seed.wrapping_add(31),
-                ..r
-            });
+            if let Some(ds) = default {
+                a.style = ds.style;
+                a.text_style = ds.text_style;
+            } else {
+                a.style.rough = rough.map(|r| Rough {
+                    seed: r.seed.wrapping_add(31),
+                    ..r
+                });
+            }
             tx.insert(a, None, None);
             update_connector(tx, aid);
             (cid, aid)
@@ -468,7 +760,6 @@ impl Editor {
         let parent = self.frame_at(world, &[]);
         let o = self.doc.parent_origin(parent);
         let color = self.sticky_color;
-        let rough = self.sketch;
         let id = {
             let mut tx = self.tx();
             let id = tx.alloc_id();
@@ -486,12 +777,12 @@ impl Editor {
                 ),
             );
             n.style.set_fill(Some(color));
-            let _ = rough;
             tx.insert(n, parent, None)
         };
         self.selection = vec![id];
         self.text_edit = Some(super::TextEdit {
             id,
+            label: 0,
             caret: 0,
             anchor: None,
         });
@@ -530,11 +821,17 @@ impl Editor {
             .collect()
     }
 
-    /// Whether something on the canvas is animating (the laser trail is fading).
+    /// Whether something on the canvas is animating (a fading laser trail or a
+    /// visible connector with flow animation playing).
     pub fn animating(&self, now: f64) -> bool {
-        self.laser
+        let laser = self
+            .laser
             .last()
-            .is_some_and(|(_, t)| now - t < LASER_DECAY_MS)
+            .is_some_and(|(_, t)| now - t < LASER_DECAY_MS);
+        laser
+            || self.doc.nodes.values().any(|n| {
+                n.is_connector() && n.flow.enabled && n.visible && self.doc.layer_of(n.id).visible
+            })
     }
 
     /// Drop faded laser points (call with the current time before drawing).
@@ -545,30 +842,37 @@ impl Editor {
 
     // ---------------------------------------------------------------------- sketch style
 
-    /// Toggle the hand-drawn style on the selection (or the default for new shapes).
+    /// Toggle the hand-drawn style on the selection, or the page-wide default
+    /// when nothing is selected. An explicit element choice overrides the page
+    /// setting without discarding the stored rough parameters.
     pub fn toggle_sketch(&mut self) {
         let ids = self.top_selection();
         if ids.is_empty() {
-            self.sketch = match self.sketch {
-                Some(_) => None,
-                None => Some(Rough::default()),
-            };
+            let on = !self.doc.settings.sketch;
+            self.edit_settings("Toggle sketch", |s| s.sketch = on);
             self.status = format!(
-                "Hand-drawn style {} for new shapes",
-                if self.sketch.is_some() { "on" } else { "off" }
+                "Hand-drawn style {} for the diagram",
+                if on { "on" } else { "off" }
             );
             return;
         }
-        let on = ids
-            .iter()
-            .any(|id| self.doc.get(*id).is_some_and(|n| n.style.rough.is_none()));
+        let on = ids.iter().any(|id| {
+            self.doc.get(*id).is_some_and(|n| {
+                !n.style
+                    .sketch
+                    .unwrap_or(n.style.rough.is_some() || self.doc.settings.sketch)
+            })
+        });
         self.edit(if on { "Hand-drawn" } else { "Clean lines" }, |tx| {
             for id in ids {
                 let Some(n) = tx.node_mut(id) else { continue };
-                n.style.rough = on.then(|| Rough {
-                    seed: (id.0 as u32).wrapping_mul(2654435761) | 1,
-                    ..Rough::default()
-                });
+                n.style.sketch = Some(on);
+                if on && n.style.rough.is_none() {
+                    n.style.rough = Some(Rough {
+                        seed: (id.0 as u32).wrapping_mul(2654435761) | 1,
+                        ..Rough::default()
+                    });
+                }
             }
         });
     }

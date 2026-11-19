@@ -33,6 +33,7 @@ pub fn layout(
     let output = ctx.run_ui(input, |ui| {
         canvas = ui::draw(ui, ed, st);
     });
+    st.canvas_rect = (canvas.width() > 1.0).then_some(canvas);
     ed.viewport = v2(
         canvas.width().max(1.0) as f64,
         canvas.height().max(1.0) as f64,
@@ -207,7 +208,7 @@ pub fn capture(
         &ctx,
         l,
         ed,
-        !st.show_grid_off,
+        ed.doc.settings.grid,
     );
     // The canvas size is known now; let the caller frame the camera.
     prepare(ed);
@@ -220,7 +221,7 @@ pub fn capture(
         &ctx,
         l,
         ed,
-        !st.show_grid_off,
+        ed.doc.settings.grid,
     );
     let l = layout(&ctx, input(), ed, st);
     painter.paint(
@@ -231,7 +232,7 @@ pub fn capture(
         &ctx,
         l,
         ed,
-        !st.show_grid_off,
+        ed.doc.settings.grid,
     );
     gpu.read(&tex)
 }

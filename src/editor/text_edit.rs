@@ -2,14 +2,14 @@
 //! text styling (bold, italic, underline, strikethrough, size, color).
 
 use super::{Editor, Key, TextEdit};
-use crate::model::{Color, NodeId, NodeKind, TextSpan};
+use crate::model::{Color, NodeId, NodeKind, Paint, TextSpan};
 use crate::text;
 
 impl Editor {
-    fn text_len(&self, id: NodeId) -> usize {
+    fn text_len(&self, id: NodeId, idx: usize) -> usize {
         self.doc
             .get(id)
-            .and_then(|n| n.edited_text())
+            .and_then(|n| n.edited_label(idx))
             .map_or(0, |t| t.chars().count())
     }
 
@@ -29,7 +29,7 @@ impl Editor {
         let n_new = s.chars().count();
         let mut caret = te.caret;
         if let Some(n) = self.tx().node_mut(te.id)
-            && let Some((text, style)) = n.edited_text_and_style_mut()
+            && let Some((text, style)) = n.edited_label_and_style_mut(te.label)
         {
             // Replacement text takes the style of the first replaced character.
             let mut inherit: Option<TextSpan> = None;
@@ -60,6 +60,7 @@ impl Editor {
         }
         self.text_edit = Some(TextEdit {
             id: te.id,
+            label: te.label,
             caret,
             anchor: None,
         });
@@ -75,7 +76,7 @@ impl Editor {
             return;
         }
         if let Some(n) = self.tx().node_mut(te.id)
-            && let Some((text, style)) = n.edited_text_and_style_mut()
+            && let Some((text, style)) = n.edited_label_and_style_mut(te.label)
         {
             let (ba, bb) = (byte_at(text, a), byte_at(text, b));
             text.replace_range(ba..bb, "");
@@ -83,6 +84,7 @@ impl Editor {
         }
         self.text_edit = Some(TextEdit {
             id: te.id,
+            label: te.label,
             caret: a,
             anchor: None,
         });
@@ -105,7 +107,7 @@ impl Editor {
     /// Caret index one line up/down, keeping the x position.
     fn vertical_caret(&self, down: bool) -> Option<usize> {
         let te = self.text_edit.as_ref()?;
-        let l = text::layout_node(self.doc.get(te.id)?)?;
+        let l = text::layout_node_label(self.doc.get(te.id)?, te.label)?;
         let li = l.line_of(te.caret);
         let (x, _, _) = l.caret(te.caret);
         let target = if down {
@@ -128,7 +130,7 @@ impl Editor {
         let Some(te) = self.text_edit.clone() else {
             return false;
         };
-        let len = self.text_len(te.id);
+        let len = self.text_len(te.id, te.label);
         let cmd = self.mods.command();
         match key {
             // Escape keeps the changes that were typed and closes the editor; an
@@ -160,7 +162,7 @@ impl Editor {
                         let chars = self
                             .doc
                             .get(te.id)
-                            .and_then(|n| n.edited_text())
+                            .and_then(|n| n.edited_label(te.label))
                             .map_or_else(Vec::new, |t| t.chars().collect());
                         word_caret(&chars, te.caret, forward)
                     }
@@ -210,10 +212,9 @@ impl Editor {
                 .iter()
                 .copied()
                 .filter(|id| {
-                    matches!(
-                        self.doc.get(*id).map(|n| &n.kind),
-                        Some(NodeKind::Text { .. })
-                    )
+                    self.doc
+                        .get(*id)
+                        .is_some_and(|n| n.supports_label() || n.kind.text().is_some())
                 })
                 .collect(),
         };
@@ -225,7 +226,7 @@ impl Editor {
             self.begin(&format!("Change {field}"));
         }
         for id in &ids {
-            let len = self.text_len(*id);
+            let len = self.text_len(*id, 0);
             let mut tx = self.tx();
             let n = tx.node_mut(*id).unwrap();
             let text_kind = n.kind.text().is_some();
@@ -238,6 +239,9 @@ impl Editor {
             if let Some(i) = probe.italic {
                 n.text_style.italic = i;
             }
+            if let Some(sc) = probe.script {
+                n.text_style.script = sc;
+            }
             if let Some(c) = probe.color {
                 if text_kind {
                     n.style.set_fill(Some(c));
@@ -245,11 +249,30 @@ impl Editor {
                     n.label_color = Some(c);
                 }
             }
-            if let Some(z) = probe.size
-                && let NodeKind::Text { font_size, .. } | NodeKind::Sticky { font_size, .. } =
-                    &mut n.kind
-            {
-                *font_size = z;
+            if let Some(dark) = probe.color_dark {
+                if text_kind {
+                    let light = n
+                        .style
+                        .fills
+                        .last()
+                        .map_or(Color::INK, |p| p.preview_color());
+                    match n.style.fills.last_mut() {
+                        Some(Paint::Solid { dark: d, .. }) => *d = Some(dark),
+                        _ => n.style.fills = vec![Paint::solid_pair(light, dark)],
+                    }
+                } else {
+                    n.label_color_dark = Some(dark);
+                }
+            }
+            if let Some(z) = probe.size {
+                let label = n.supports_label();
+                match &mut n.kind {
+                    NodeKind::Text { font_size, .. } | NodeKind::Sticky { font_size, .. } => {
+                        *font_size = z;
+                    }
+                    _ if label => n.label_size = Some(z),
+                    _ => {}
+                }
             }
             // Drop span values that the whole-layer change supersedes.
             for sp in &mut n.text_style.spans {
@@ -262,8 +285,14 @@ impl Editor {
                 if probe.color.is_some() {
                     sp.color = None;
                 }
+                if probe.color_dark.is_some() {
+                    sp.color_dark = None;
+                }
                 if probe.size.is_some() {
                     sp.size = None;
+                }
+                if probe.script.is_some() {
+                    sp.script = None;
                 }
             }
             if probe.underline.is_some() || probe.strike.is_some() {
@@ -299,10 +328,9 @@ impl Editor {
             .iter()
             .copied()
             .filter(|id| {
-                matches!(
-                    self.doc.get(*id).map(|n| &n.kind),
-                    Some(NodeKind::Text { .. })
-                )
+                self.doc
+                    .get(*id)
+                    .is_some_and(|n| n.supports_label() || n.kind.text().is_some())
             })
             .collect();
         if ids.is_empty() {
@@ -321,7 +349,17 @@ impl Editor {
                 n.text_style.spans.clear();
                 n.text_style.bold = false;
                 n.text_style.italic = false;
+                n.text_style.script = crate::model::TextScript::Normal;
+                n.text_style.align = None;
                 n.text_style.normalize();
+                if n.supports_label() {
+                    n.label_color = None;
+                    n.label_size = None;
+                    n.label_valign = None;
+                    n.text_bg = None;
+                    n.text_border = None;
+                    n.text_shadow = false;
+                }
             }
             self.fit_text(*id);
         }
@@ -339,7 +377,11 @@ impl Editor {
             .map(|t| t.id)
             .or_else(|| self.selection.first().copied())?;
         let n = self.doc.get(id)?;
-        let font_size = n.kind.font_size().unwrap_or(text::LABEL_FONT_SIZE);
+        let font_size = n
+            .kind
+            .font_size()
+            .or(n.label_size)
+            .unwrap_or(text::LABEL_FONT_SIZE);
         let at = match (self.text_selection(), &self.text_edit) {
             (Some((a, _)), _) => a,
             (None, Some(te)) => te.caret.saturating_sub(1),
@@ -371,6 +413,28 @@ impl Editor {
     pub fn toggle_strike(&mut self) {
         let on = !self.current_char_style().is_some_and(|s| s.strike);
         self.style_text("font", |s| s.strike = Some(on));
+    }
+    /// Toggle superscript on the selected characters, or on the whole text
+    /// layer when nothing is selected. Applying it over subscript replaces it.
+    pub fn toggle_superscript(&mut self) {
+        let next = if self
+            .current_char_style()
+            .is_some_and(|s| s.script.is_super())
+        {
+            crate::model::TextScript::Normal
+        } else {
+            crate::model::TextScript::Super
+        };
+        self.style_text("script", |s| s.script = Some(next));
+    }
+    /// Toggle subscript the same way as superscript.
+    pub fn toggle_subscript(&mut self) {
+        let next = if self.current_char_style().is_some_and(|s| s.script.is_sub()) {
+            crate::model::TextScript::Normal
+        } else {
+            crate::model::TextScript::Sub
+        };
+        self.style_text("script", |s| s.script = Some(next));
     }
 }
 

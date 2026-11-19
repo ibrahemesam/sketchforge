@@ -394,7 +394,8 @@ fn m4_select_move_resize_snap() {
     assert!(close(px(&multi, v2(740.0, 400.0)), Color::WHITE, 2));
     assert!(close(px(&multi, v2(740.0 - 4.0, 400.0)), ACCENT, 60));
 
-    // Drag b so its left edge approaches a's right edge (280) and its top a's top (80): snap.
+    // Drag b so its center lands near a's center (180, 150): center-to-center
+    // row/column alignment is the only element magnetism for moves.
     e.select(vec![b]);
     e.handle(InputEvent::PointerDown {
         pos: v2(500.0, 350.0),
@@ -408,7 +409,7 @@ fn m4_select_move_resize_snap() {
         time_ms: 2016.0,
     });
     e.handle(InputEvent::PointerMove {
-        pos: v2(363.5, 133.2),
+        pos: v2(184.0, 153.0),
         pressure: None,
         time_ms: 2032.0,
     });
@@ -417,18 +418,18 @@ fn m4_select_move_resize_snap() {
     let rb = e.doc.world_rect(b).unwrap();
     assert_eq!(
         (rb.x, rb.y),
-        (280.0, 80.0),
-        "snapped to a's right and top edges"
+        (100.0, 100.0),
+        "center snapped onto a's center row and column"
     );
     assert!(!e.guides.is_empty());
     assert!(
-        count(&snapping, Rect::new(279.0, 20.0, 2.0, 400.0), |p| close(
+        count(&snapping, Rect::new(178.0, 60.0, 4.0, 180.0), |p| close(
             p, GUIDE, 40
         )) > 20,
-        "vertical guide drawn"
+        "center guide drawn"
     );
     e.handle(InputEvent::PointerUp {
-        pos: v2(363.5, 133.2),
+        pos: v2(184.0, 153.0),
         button: Button::Primary,
         time_ms: 2048.0,
     });
@@ -601,7 +602,7 @@ fn ui_theme_choice_switches_chrome_and_canvas() {
         } else {
             (scene::CANVAS_BG_LIGHT, scene::GRID_DOT_LIGHT)
         };
-        let p = img.get_pixel(1000, 600).0;
+        let p = img.get_pixel(600, 600).0;
         close(p, bg, 3) || close(p, dot, 4)
     };
     assert!(canvas(&light, false), "light canvas");
@@ -692,4 +693,30 @@ fn skipped_first_frame_keeps_egui_textures_in_sync() {
         });
         painter.paint(&g.device, &g.queue, &view, size, &ctx, l, &e, true);
     }
+}
+
+#[test]
+fn svg_export_resolves_page_and_shape_placeholders() {
+    let mut e = Editor::default();
+    let mut n = Node::new(NodeId(0), NodeKind::Rect, Rect::new(0.0, 0.0, 200.0, 60.0));
+    n.label = "Owner: %owner% on %page% (%pagenumber%/%pagecount%)".into();
+    let id = e.add_node(n, None);
+    e.doc
+        .nodes
+        .get_mut(&id)
+        .unwrap()
+        .metadata
+        .insert("owner".into(), "Ada".into());
+    e.refresh_page_contexts();
+
+    // SVG text becomes outlines, so compare against the same document with
+    // the placeholders already written out. A resolved export must match.
+    let mut plain = e.doc.clone();
+    plain.nodes.get_mut(&id).unwrap().label = "Owner: Ada on Page 1 (1/1)".into();
+    let placeholder_svg = svg::export(&e.doc, None, Some(Color::WHITE)).unwrap();
+    let plain_svg = svg::export(&plain, None, Some(Color::WHITE)).unwrap();
+    assert_eq!(
+        placeholder_svg, plain_svg,
+        "SVG export did not resolve the placeholder text"
+    );
 }

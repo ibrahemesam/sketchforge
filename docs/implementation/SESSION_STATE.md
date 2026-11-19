@@ -1,0 +1,376 @@
+# Sketch agent session state
+
+Last updated: 2026-11-18 (round 35).
+
+## Objective
+
+Evolve sketch-rs into a draw.io-parity diagram editor. Current spec: the draw.io
+format sidebar (`drawio_features_opencode_spec.md`, in
+`/home/ibrahem/mnt/Files/Downloads/`), then the milestone roadmap in
+`docs/implementation/implementation-roadmap.md`.
+
+## Current state
+
+Branch `agent/drawio-features` at `5de2f5b` plus extensive uncommitted changes.
+Nothing committed or pushed; do not commit unless asked.
+
+The full sidebar spec was implemented and verified in round 6 (see
+`.opencode/MEMORY.md`). Round 7 closed the transparent connector label gap.
+Round 8 closed reverse connector. Round 9 fixed the user-reported design panel
+resize bug. Round 10 closed line jumps (ADR-015). Round 11 fixed the three
+user-reported FIXMEs (font persistence, magnetism scope, marquee containment).
+Round 12 closed CON-11, multiple labels per connector (see ADR-008 extension).
+Round 13 closed CON-21, auto-route around all obstacles: the elbow router now
+treats every bindable, visible shape near the route as an obstacle, not only
+the two bound shapes. Obstacles are the shapes' world boxes with a fixed
+clearance (OBSTACLE_PADDING 10), culled to the route's search neighborhood so
+the A* grid stays bounded, and their edges become grid lines the search paths
+around. A shape moved into a connector's route neighborhood reroutes that
+connector in the same transaction, so the avoidance is one undo step with the
+move. Straight and curved routes are unchanged, matching draw.io where only
+orthogonal routing avoids shapes. Round 14 closed M3 page layers (see ADR-009): every
+page starts with a Background layer, old pages get one through the v4 to v5 format
+migration, a node stores its layer id and children inherit the nearest ancestor's so
+one subtree paints on one layer, paint order buckets the root list by layer (canvas,
+hit testing, and SVG, PNG, and PDF export all walk it), and the Layers dialog plus the
+MCP layer tools cover add, rename, duplicate, delete with shapes, reorder, hide, show,
+lock, move the selection to a layer, and select all on layer, each one undo step.
+Round 15 closed M4 shape registry, search, and libraries (see ADR-010): the
+Library tab now has fuzzy registry search over 30 definitions in six
+categories, a persisted scratchpad of pinned and recent shapes, drag-out
+insertion with a ghost preview, and quick add on empty-canvas double-click
+under Select. Registry entries are ordinary nodes built by pure geometry
+builders over existing kinds and paths, plain entries take the page shape
+default on insert and in previews, and insertion is one undoable layer-aware
+step that joins the frame under the point or a named parent. Autosize in the
+Arrange tab and on Alt+F hugs groups and frames deepest-first without moving
+children. MCP gains search_shapes and insert_shape with layer and parent
+arguments. Custom shape XML, public galleries, a parametric shape editor, and
+a property bag stay deferred.
+Round 16 closed M5 draw.io import and export (see ADR-011): the adapter parses
+mxfile and mxGraphModel XML with roxmltree, decodes compressed payloads, refuses
+encrypted ones, and maps pages, layers, groups, frames, styles, labels, edges,
+extra edge labels, and registry shapes to native content with a report of
+approximations, drops, and warnings. The app shows the report in a dismissible
+window, appends imported pages with their layers to the current project, and
+creates a project from the home screen. Export writes every page as one
+uncompressed .drawio file from the inspector, the CLI, or the export API. A
+checked-in two-page fixture drives unit and integration tests, and geometry
+round-trips within 0.01 world units. Pen paths and freehand strokes export as
+basic shapes or edges, a documented limitation. Opening the exported file in
+draw.io itself was not run in this environment; the reimport test and the
+documented mxfile structure support it. IO-17 (VSDX, Gliffy, Lucidchart),
+IO-18 (HTML embed), and DOC-15 (embedded diagram data in PNG, SVG, HTML, or
+PDF) stayed blocked or deferred at that point. Round 26 later added the PNG and
+SVG part of DOC-15.
+Round 17 closed M6 diagram data, links, tags, find, and placeholders (see
+ADR-013): nodes carry an ordered metadata map, a custom link, a tooltip, and a
+tag list, all optional and skipped while empty. The Data tab edits them, the
+Edit Data dialog covers shape and page properties, and a transient page context
+resolves percent placeholders at paint and export time from shape, ancestor,
+and page metadata plus page name, page number, page count, file name, and date
+values. A missing value renders a visible fallback, a double percent escapes a
+literal percent, and the saved text stays a template. Cmd/Ctrl click and the
+Data tab Open Link follow page and external links; page targets switch pages,
+and external targets are limited to http, https, and mailto with a confirmation
+before the platform opener runs. Find searches labels, connector labels, text
+and sticky content, frame names, tags, tooltips, and metadata keys across pages,
+with case sensitivity, optional regular expressions, next and previous stepping,
+and replace as one undo step per page that skips locked and hidden nodes. The
+draw.io adapter reads and writes UserObject attributes and a sketch-data
+sidecar, so the metadata fixture round-trips its data.
+Round 18 closed M7 templates and diagram packs (see ADR-010): a template
+library is a validated JSON file with a format name and version, named
+templates carrying a category, description, keywords, and an optional SVG
+thumbnail, and pages of ordinary nodes with root order, diagram settings, and
+layers. A node may name the registry shape it came from; when the running
+build lacks it, insertion reports the shape and skips only that node while
+repairing bindings, child references, and instance links. Fifteen bundled
+packs cover flowchart, UML class, ER, BPMN, network, floor plan, org chart,
+kanban, timeline, Gantt, C4, SysML, charts, Venn, and a three-page project
+plan, all pure builders over native kinds and registry shapes with no images,
+icons, network requests, or executable content. The browser opens from the
+Library tab or the command palette, groups by library, searches and filters
+by category, previews a page as vector content, and inserts one page on the
+open page or every page as new pages under one undo step, keeping a layer
+when its name matches a page layer. A custom folder saved in options loads
+every JSON library beside the packs, reports unreadable files, and the open
+page saves back as a template with a thumbnail. MCP gains list_templates and
+insert_template with page and page-set modes.
+Round 19 closed M8 data and text generation (see the ADR-011 extension): the
+new generate module turns local text into an ordinary document that insertion
+adds through the same subtree path as libraries and templates. Mermaid
+flowcharts and sequence diagrams become nodes, shapes, and bound connectors
+with subgraphs, labelled edges, self-loops, participants, lifelines, and
+messages; unsupported directives are reported as warnings rather than
+failures. CSV detects the delimiter, honours quoted fields, and lays rows out
+as a grid, a vertical or horizontal flow, or a vertical or horizontal tree
+with an optional header and a one-based label column. SQL CREATE TABLE and
+ALTER TABLE statements become table frames with column rows, primary and
+foreign key markers, and foreign-key connectors. JSON graph input accepts
+nodes and edges with from or source and to or target, keeps coordinates only
+when every node has them, and otherwise lays the graph out deterministically,
+warning about dangling edges. The Insert menu, the command palette, and the
+MCP generate_diagram tool share one dialog and one parser set; a diagram
+lands on the open page as one undo step or as a new page. AI generation
+(GEN-04) stays blocked, as does GEN-10 vendor stencil licensing.
+Round 20 closed UIX-11, the search omnibox (see the ADR-010 and ADR-013
+extensions): the Ctrl+K command palette now searches registry shapes and the
+text inside the diagram from the same field. Shape entries carry the category
+and insert an ordinary node at the viewport center in one undo step. Text
+entries reuse the find engine's fields, matching rules, labels, and previews,
+switch to the owning page, select the node, and zoom to it. Text hits cap at 40,
+dedupe per node field, and appear only for a non-empty query, so opening the
+palette does not list every label. Commands, tools, pages, layers, templates,
+generators, and library items stay in the same ranked list.
+Round 21 closed CAN-15, fixed connection points: the eight anchors, four
+corners and four edge midpoints, are a pure helper over a world box, and the
+overlay draws them as small crosses on the hovered bindable shape or on the
+shape a connector end is being dragged over while the page's connection points
+setting is on. A dropped end within 12 screen pixels of an anchor stores that
+anchor's normalized fraction through one wrapper shared by both end drags and
+new arrows, so the end keeps the same corner or midpoint when the shape moves
+or resizes. The old four-circle candidate overlay is gone.
+Round 22 closed CAN-16, rulers and manual guides: a page stores a Rulers flag
+and a list of manual guides, each an axis plus a world position. The Diagram
+tab gains a Rulers checkbox and a Clear Guides button. Rulers draw as 18 px
+strips along the canvas top and left with 1-2-5 tick spacing and labels;
+dragging out of a ruler creates a guide, dragging the line moves it, dropping
+it on the matching ruler deletes it, and each gesture is one undo step, with a
+drop on the ruler recorded as Delete guide. Committed guides outrank center
+alignment, equal spacing, and grid snapping for moves, and a resize snaps only
+the dragged edge. Guides paint as blue lines in the canvas overlay and the
+whole set persists with the page.
+Round 23 closed TXT-20, superscript and subscript: a text style and each text span
+carry a script value of normal, super, or sub. The Text tab gains x² and x₂ toggles
+after S; with no text selection they set the node's base, and inside a text selection
+they override the selected characters. Applying one script replaces the other, and
+pressing the active toggle returns the range to normal. Superscript and subscript
+glyphs draw at 0.7 of the base size with baseline shifts of -0.35 em and 0.15 em;
+line boxes keep the base size, rich and bidirectional layout share the metrics, clear
+formatting resets the base, and the page file round-trips the base plus per-span
+values.
+Round 24 closed SHP-19, rotation completion: a node stores a clockwise angle and a
+Keep label upright flag. A circular handle above the selection's top-right corner turns
+an unlocked shape or empty frame in 15 degree steps, or 1 degree with Shift; the
+Arrange tab adds an exact Angle field and a Rotate shape only by 90 degrees button.
+Dragging and the quarter-turn button turn the label with the shape unless the flag is
+set, while the exact field follows the flag. Rotated shapes hit test through their
+transform, the overlay draws the handle, and both values join undo and redo, survive
+save and reload, and reach PNG, SVG, and draw.io export. Groups, frames with children,
+and connectors have no handle, and draw.io export has no upright-label style.
+Round 25 closed CON-19, per-shape default connection style: a non-group shape can
+store the style for connectors started from it. The Style tab copies a selected
+connector's style to the shape its line starts from, and the Arrange tab can copy
+the page connector default to selected shapes or clear their source default. Each
+command is one undo step. New arrows, including quick-connect arrows, use the
+source default before the page default; existing connectors keep their own style.
+The value travels in the page file and in the draw.io UserObject sidecar (ADR-008).
+Round 26 closed the PNG and SVG part of DOC-15, embedded recoverable diagram data.
+An opt-in Export tab checkbox and a CLI flag add a versioned native bundle to those
+files. The bundle carries the project name, active page id, every page and camera,
+and the bytes of image assets the pages use. SVG stores base64 text in a metadata
+element with id sketch-rs-data; PNG stores it in a tEXt chunk. Import checks that
+carrier first and rebuilds native pages instead of tracing the rendered artwork.
+Files exported without the option keep their existing paths. PDF, HTML, and
+draw.io-native metadata remain absent.
+Round 27 fixed a user-reported dark-theme bug. Connector lines, arrowheads, solid heads, and
+transparent connector labels now lift to at least 4.5:1 contrast against the dark canvas at
+render time. The mapping keeps the authored alpha and hue. White painted pages keep the
+stored colors in dark theme, and a theme change rebuilds cached pieces. Saved documents and
+PNG, SVG, and PDF exports keep the authored colors.
+Round 28 closed CON-16, flow animation for connectors. Each node carries an optional flow
+setting with enabled, duration, timing, and direction. The renderer advances a dash offset
+from the editor clock, and flowing connectors rebuild their meshes each frame instead of
+coming from the scene cache. The Arrow section in the inspector edits all four values in
+one undoable step. draw.io import and export map flowAnimation, flowAnimationDuration,
+flowAnimationTimingFunction, and flowAnimationDirection, and import still reads the older
+flowDuration key. Exports and saved documents keep authored dash values; only the
+interactive canvas animates.
+
+## Verified this round
+
+- The failure came first. `flow_dashes_move_with_time` produced identical mesh
+  vertices at 0 ms and 250 ms before the dash offset was wired into tessellation.
+  The log is `.artifacts/connector-flow/failure.log`.
+- `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`, and
+  `git diff --check`: clean. `cargo build --release`: OK.
+- `cargo test`: 427 tests pass (338 lib + 89 integration). Eleven new
+  `tests/flow.rs` tests cover motion, stable output when disabled, export-time
+  dash state, old JSON compatibility, timing and direction math, scene cache
+  rebuilding, undo and redo, draw.io round trips, legacy duration import, native
+  JSON persistence, and rendered frame differences.
+- Headless GPU frames from the interactive canvas renderer used a real flowing
+  connector. The 0 ms and 225 ms frames differ in 3286.85 pixels; the same pair
+  with flow disabled differs in 0 pixels. Evidence is in
+  `.artifacts/connector-flow/frames/`, with `frame-evidence.log` and the pair and
+  diff images.
+- Docs checker: `python3 .artifacts/check_parity_docs.py` passed with 0 failures;
+  output copied to `.artifacts/connector-flow/round28-docs-check.txt`.
+- `docs/screenshots` restored after the final test run.
+
+Round 29 closed UIX-04, collapsible and searchable format sections. Option files
+now carry a compact map of collapsed section keys, with missing keys defaulting
+to expanded. The format panel has a session-only filter field: a query keeps
+matching sections open, hides nonmatching rows, and restores saved collapse
+state when cleared. A no-match query reports that no properties matched; this
+required replacing an early return in the global-tab branch so the message is
+reachable when nothing is selected. Six focused inspector tests and the options
+round-trip test cover the behavior. The first options test failed because the
+saved JSON omitted the map; its failure is kept in
+`.artifacts/round29/failure.log`. Runtime on Xvfb `:99` used a release build and
+a temporary store root so user options were untouched: the filter field accepted
+queries, a chevron wrote a collapsed key, the key survived a restart, and one
+click after restart expanded the section again. Screenshots, clipboard readbacks,
+options snapshots, and a recorded session are in `.artifacts/round29/`.
+
+An accidental whole-file overwrite hit `src/ui/inspector.rs` during this round.
+The exact pre-overwrite source was recovered from snapshot blob
+`069a40b62c1ee4fc0acf103b99364f70191e3726` and passed `cargo check` before any
+test code was added. Use targeted edits for that file, never a whole-file write.
+
+Round 30 closed CON-17, fixed versus floating connector endpoints. A binding
+now carries a `floating` flag that defaults to false, so saved documents keep
+the old fixed behavior. A floating end focuses the bound shape's rect center
+while a fixed end keeps its normalized point. draw.io import treats a missing
+exit or entry coordinate as floating, and export writes those keys only for
+fixed ends. The Arrow section has Start and End rows with Fixed and Floating
+buttons; switching back to fixed preserves the current point, and the whole
+change is one undo step. Four tests cover the panel, geometry, import and
+export, and undo/redo. The first failure had no endpoint controls; live Xvfb
+evidence later recorded five passing assertions with saved state snapshots and
+a verified 1366x768 video in `.artifacts/round30/`.
+
+Round 31 closed CON-13, connector head size and offset. A node now carries
+defaulted start and end head sizes and offsets, with draw.io's marker size 6 as
+the neutral value. Head geometry scales around that value and positive
+perimeter spacing moves each tip into the line, so old documents keep their
+current rendering. draw.io import and export map startSize, endSize,
+sourcePerimeterSpacing, and targetPerimeterSpacing in both directions and write
+only non-default values. The Arrow section exposes head size and head offset
+with separate start and end fields, and each edit joins the coalesced undo and
+redo path. Seven tests cover geometry, JSON defaults and non-defaults, draw.io
+round trips, panel text, and undo and redo. The first panel test failed before
+the controls existed; a focused offset test also caught and fixed a reversed
+start sign. Live Xvfb evidence recorded six passing assertions, saved seven
+state snapshots, measured canvas changes, and exported all four style keys in
+`.artifacts/round31/`.
+
+Round 32 closed STY-22, adaptive colors for light and dark mode. A page stores an
+adaptive mode of auto, simple, or none. Round 32 first described Auto as
+computing a dark variant for a fixed color. Round 34 corrected that behavior: Auto
+keeps authored colors and explicit dark pairs, Simple flips only neutral black
+and white, and None draws the page light. Light values stay authoritative in the
+saved document. Fills, strokes, gradient stops, text styles, labels, and page
+backgrounds can carry optional dark values that resolve at the document boundary
+through `Document::with_appearance`. The renderer and its cache use the resolved
+appearance, draw.io import and export map `light-dark()` and `adaptiveColors`,
+PNG and SVG exports bake a requested appearance, and the CLI accepts
+`--appearance light|dark`. The Diagram tab edits the mode, dark page background,
+and dark color values through real state and undo. Dark-theme text stays readable
+because the renderer lifts low-contrast glyphs without rewriting shape fills.
+Focused tests, live Xvfb evidence with three passing assertions, and light and
+dark export pairs are in `.artifacts/round32/`. Nothing committed or pushed.
+
+Round 33 closed STY-21, global style schemes. Ten named schemes are shared by the
+global Style tab and the selected-element Style tab, because the global tab is not
+reachable while elements are selected. Page scope restyles eligible elements and sets
+the page scheme, background, and grid. Selection scope restyles only selected
+subtrees and leaves page settings untouched. A SchemeReport previews and then reports
+changed, locked, hidden, out-of-scope, and unstyleable elements; locked, hidden, and
+group nodes are skipped. The restyle keeps rich text, metadata, component instance
+overrides, per-corner radii, and adaptive color pairs. apply_scheme_scoped joins
+undo and redo as one edit, and the page file stores the scheme. draw.io export writes
+sketchScheme on mxGraphModel and import validates the name against SCHEMES. The first
+failure showed the old apply_scheme restyling locked nodes and dropping dark values;
+it is in `.artifacts/round33/failure.log`. Focused editor, draw.io, and inspector
+tests pass. The scheme cards overlapped because egui Grid reported zero minimum width
+for the custom-painted cards; explicit horizontal rows fixed it, with before and
+after rectangle logs in `.artifacts/round33/`. Live Xvfb `:101` evidence includes a
+verified 532.77 s video, five passing assertions, state checks for both scopes and
+undo/redo, and a CLI export containing sketchScheme="Classic". Final checks and the
+docs check are recorded in `.artifacts/round33/`. Nothing committed or pushed.
+
+Round 34 closed STY-13 and DOC-13, shape shadow and the page-wide Shadow
+setting. A page stores `settings.shadow`; a node stores an optional
+`style.shadow`, so an explicit per-element value overrides the page value. Draw
+ops put a translucent copy of the fill and stroke at (3, 4). SVG export bounds
+and scene culling use `draw_bounds_with_shadow`, while hit testing uses the
+no-shadow bounds. draw.io import and export map `shadow=1` and `shadow=0`, and
+the Diagram and Style tabs edit both values through undo. The first failure
+showed an absent shadow in the SVG bounds; it is in `.artifacts/round34/failure.log`.
+
+The user-reported color regression failed first: a green fill resolved to blue
+in the dark theme. Auto now keeps authored colors and explicit dark variants.
+Scheme restyling no longer generates complements from saved dark values. Text
+visibility moved into the renderer: it lifts low-contrast glyphs against the
+actual text background or dark canvas and leaves text-shadow glyphs alone. The
+failures and fixed runs are in `.artifacts/round34/`. Focused shadow tests, 368
+lib tests, and the skip run of all test binaries pass. The verified 168.9 s live
+video has two passing assertions in
+`.artifacts/round34/live2/evidence-20261118-225810-1dbabe/report.md`. Dark
+canvas pixels kept the green, orange, and white fills, and the SVG viewBox grew
+from `142x92` to `145x96` with page shadow on. Nothing committed or pushed.
+
+Round 35 closed STY-14, the glass effect. A node stores `style.glass` as a
+defaulted bool that native JSON omits when false. The renderer paints a
+three-stop white gradient over the fill after the shadow and below the label,
+using the shape's own path so rounded corners follow it. The Style tab Effects
+section exposes Glass beside Shadow and edits the flag through the same
+undoable apply path. draw.io import reads `glass=1` and `glass=0`, while export
+writes only `glass=1` because false is the default. The first draw.io test
+failed before the mapping; the log is in `.artifacts/round35/failure.log`.
+Five focused tests pass, including native JSON, draw ops, panel text and
+undo/redo. The final skip run passes 473 tests. Live Xvfb `:103` evidence has
+a verified 89.87 s video with four passing assertions. Clicking the checkbox
+removed the canvas gradient, undo restored it, PNG export kept it, and a CLI
+draw.io export and reimport carried the flag. Nothing committed or pushed.
+
+## Blockers
+
+GEN-04 AI generation stays blocked: it needs a hosted model, credentials,
+network access, and privacy terms. GEN-10 vendor cloud stencils stay blocked on
+trademark and asset licensing. M9 collaboration stays blocked without a server,
+conflict model, and permissions. Custom-folder selection uses the rfd picker,
+which does not display under bare Xvfb without a desktop portal; the load and
+error paths are tested directly. Bare Xvfb has no window manager, so some
+synthetic keys do not reach winit dialogs and keyboard-only dialog paths are
+covered by egui `run_ui` tests. Note: `/tmp/opencode` is wiped between days; the
+MCP helper and scratch projects must be recreated (the helper source is recorded
+in `.opencode/MEMORY.md`).
+
+## Exact next task
+
+Round 36 should close STY-23, the style property editor. Capture a failure
+first. Verify the filter, real property edits, undo and redo, page persistence
+and draw.io behavior. Do not restart CON-09, CON-13, CON-17, UIX-04, STY-13,
+STY-14, STY-21, or STY-22: their commands, editor tests, and runtime evidence
+are already in the working tree. M9 collaboration stays blocked without a
+server, conflict model, and permissions. GEN-04 AI generation and GEN-10 vendor
+stencils also stay blocked. IO-17, IO-18, IO-19, and IO-20 remain blocked or
+deferred, as do the HTML and PDF parts of DOC-15.
+
+## Commands
+
+- Checks: `cargo fmt --check && cargo clippy --all-targets -- -D warnings &&
+  cargo test && git diff --check && cargo build --release`
+- `cargo test` rewrites `docs/screenshots/`; restore with
+  `git checkout -- docs/screenshots`.
+- Docs checker: `python3 .artifacts/check_parity_docs.py`. It resolves
+  backticked identifiers in `feature-inventory.md` against HEAD, so working-tree
+  field names must not be backticked there.
+- Runtime: `Xvfb :99 -screen 0 1366x768x24 -nolisten tcp -ac`, then
+  `env -u WAYLAND_DISPLAY -u WAYLAND_SOCKET SKETCH_RS_MCP_PORT=29981
+  DISPLAY=:99 ./target/release/sketch-rs <project>`; confirm `using X11
+  backend` in the log. MCP helper `/tmp/opencode/mcp.py` (streamable HTTP at
+  `/mcp`, session id header, keep-alive SSE frames must be skipped). Kill test
+  apps by exact PID (`pgrep -x sketch-rs`), never `pkill -f`. Launch
+  long-lived processes with the harness background flag, not `&`.
+- xdotool on `:99` drives real input; clicks need 0.7 s+ spacing or they pair
+  into double-clicks (real double-clicks need
+  `xdotool click --repeat 2 --delay 90 1`), and MCP state reads lag UI actions
+  by seconds, so poll until stable or read the saved project file for positions.
+  Panel buttons shift when the panel scrolls; re-screenshot before clicking.
+- For dark strokes on the dark canvas, the MCP `get_screenshot` tool renders a
+  node or whole page to a light-background PNG and returns it as image content;
+  prefer it over dark-canvas screenshots for line and route evidence.

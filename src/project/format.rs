@@ -6,13 +6,17 @@
 //! unit-testable on its own.
 
 use crate::geom::Camera;
-use crate::model::{Document, Node, NodeId};
+use crate::model::{DiagramSettings, Document, Node, NodeId};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
 pub const PROJECT_FORMAT: &str = "sketch-rs-project";
 pub const PAGE_FORMAT: &str = "sketch-rs-page";
+/// JSON bundle embedded in SVG and PNG exports so they can be reopened as native pages.
+pub const BUNDLE_FORMAT: &str = "sketch-rs-bundle";
+/// Recovered bundle: project name, pages, and the active page id.
+pub type PageBundle = (String, Vec<PageData>, Option<String>);
 /// The single-file format of Sketch 0.1 (`.sketch-rs`), version 1. It migrates to a page.
 pub const LEGACY_FORMAT: &str = "sketch-rs";
 /// Tags from before the app was renamed from paper-rs to Sketch. Files carrying them still
@@ -22,8 +26,10 @@ pub const OLD_PAGE_FORMAT: &str = "paper-rs-page";
 pub const OLD_LEGACY_FORMAT: &str = "paper-rs";
 
 pub const PROJECT_VERSION: u32 = 1;
+pub const BUNDLE_VERSION: u32 = 1;
 /// v1: legacy single file. v2: page file inside a project. v3: fill layers (`fills`).
-pub const PAGE_VERSION: u32 = 3;
+/// v4: page-scoped diagram settings. v5: page-scoped layers.
+pub const PAGE_VERSION: u32 = 5;
 
 #[derive(Debug)]
 pub enum FormatError {
@@ -134,13 +140,90 @@ struct PageFile {
     name: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     camera: Option<Camera>,
+    /// Defaults keep v3 and older pages loading unchanged.
+    #[serde(default)]
+    settings: DiagramSettings,
+    /// Defaults keep v4 and older pages loading unchanged.
+    #[serde(default)]
+    layers: Vec<crate::model::Layer>,
+    #[serde(default)]
+    next_layer: u64,
     next_id: u64,
     root: Vec<NodeId>,
     nodes: Vec<Node>,
 }
 
+impl PageFile {
+    fn from_page(p: &PageData) -> Self {
+        let mut nodes: Vec<Node> = p.doc.nodes.values().cloned().collect();
+        nodes.sort_by_key(|n| n.id);
+        PageFile {
+            format: PAGE_FORMAT.into(),
+            version: PAGE_VERSION,
+            id: p.id.clone(),
+            name: p.name.clone(),
+            camera: p.camera,
+            settings: p.doc.settings.clone(),
+            layers: p.doc.layers.clone(),
+            next_layer: p.doc.next_layer,
+            next_id: p.doc.next_id,
+            root: p.doc.root.clone(),
+            nodes,
+        }
+    }
+
+    fn into_page(self) -> Result<PageData, FormatError> {
+        let max_id = self.nodes.iter().map(|n| n.id.0).max().unwrap_or(0);
+        let max_layer = self
+            .nodes
+            .iter()
+            .filter_map(|n| n.layer)
+            .map(|l| l.0)
+            .max()
+            .unwrap_or(0);
+        let nodes: HashMap<NodeId, Node> = self.nodes.into_iter().map(|n| (n.id, n)).collect();
+        let doc = Document {
+            name: self.name.clone(),
+            nodes,
+            root: self.root,
+            next_id: self.next_id.max(max_id + 1),
+            layers: self.layers,
+            next_layer: self.next_layer.max(max_layer + 1).max(2),
+            settings: self.settings,
+            context: Default::default(),
+        };
+        doc.validate().map_err(FormatError::Invalid)?;
+        Ok(PageData {
+            id: self.id,
+            name: self.name,
+            doc,
+            camera: self.camera,
+        })
+    }
+}
+
+/// Original image bytes, so image fills survive a trip through SVG or PNG.
+#[derive(Serialize, Deserialize)]
+struct BundleAsset {
+    ext: String,
+    data: String,
+}
+
+#[derive(Serialize, Deserialize)]
+struct BundleFile {
+    format: String,
+    version: u32,
+    name: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    active_page: Option<String>,
+    pages: Vec<PageFile>,
+    #[serde(default)]
+    assets: BTreeMap<String, BundleAsset>,
+}
+
 /// Page migrations, indexed by source version: `PAGE_STEPS[0]` turns v1 into v2.
-const PAGE_STEPS: &[fn(Value) -> Value] = &[page_v1_to_v2, page_v2_to_v3];
+const PAGE_STEPS: &[fn(Value) -> Value] =
+    &[page_v1_to_v2, page_v2_to_v3, page_v3_to_v4, page_v4_to_v5];
 /// Formats accepted as older versions of a page.
 const PAGE_ALIASES: &[&str] = &[LEGACY_FORMAT, OLD_LEGACY_FORMAT, OLD_PAGE_FORMAT];
 
@@ -173,20 +256,27 @@ fn page_v2_to_v3(mut v: Value) -> Value {
     v
 }
 
+/// v3 → v4: page settings appear. Missing settings deserialize to the defaults,
+/// so the change only needs to record the version.
+fn page_v3_to_v4(v: Value) -> Value {
+    v
+}
+
+/// v4 → v5: page layers appear. Every page starts with the Background layer
+/// and its content rides on it through the node-layer default, matching
+/// draw.io's "everything starts on one layer".
+fn page_v4_to_v5(mut v: Value) -> Value {
+    if v.get("layers").is_none() {
+        v["layers"] = json!([{ "id": 1, "name": "Background" }]);
+    }
+    if v.get("next_layer").is_none() {
+        v["next_layer"] = json!(2);
+    }
+    v
+}
+
 pub fn page_to_json(p: &PageData) -> String {
-    let mut nodes: Vec<Node> = p.doc.nodes.values().cloned().collect();
-    nodes.sort_by_key(|n| n.id);
-    let f = PageFile {
-        format: PAGE_FORMAT.into(),
-        version: PAGE_VERSION,
-        id: p.id.clone(),
-        name: p.name.clone(),
-        camera: p.camera,
-        next_id: p.doc.next_id,
-        root: p.doc.root.clone(),
-        nodes,
-    };
-    serde_json::to_string_pretty(&f).expect("page serializes")
+    serde_json::to_string_pretty(&PageFile::from_page(p)).expect("page serializes")
 }
 
 /// Parse a page file (or a legacy `.sketch-rs` document) of any supported version.
@@ -194,21 +284,56 @@ pub fn page_from_json(s: &str) -> Result<PageData, FormatError> {
     let v: Value = serde_json::from_str(s).map_err(FormatError::Json)?;
     let v = migrate(v, PAGE_FORMAT, PAGE_VERSION, PAGE_ALIASES, PAGE_STEPS)?;
     let f: PageFile = serde_json::from_value(v).map_err(FormatError::Json)?;
-    let max_id = f.nodes.iter().map(|n| n.id.0).max().unwrap_or(0);
-    let nodes: HashMap<NodeId, Node> = f.nodes.into_iter().map(|n| (n.id, n)).collect();
-    let doc = Document {
-        name: f.name.clone(),
-        nodes,
-        root: f.root,
-        next_id: f.next_id.max(max_id + 1),
+    f.into_page()
+}
+
+/// Serialize every page, plus the image assets they reference, for embedding in an export.
+pub fn pages_to_json(name: &str, pages: &[PageData], active: Option<&str>) -> String {
+    let mut ids: Vec<String> = pages
+        .iter()
+        .flat_map(|p| crate::assets::used_by(&p.doc))
+        .collect();
+    ids.sort();
+    ids.dedup();
+    let mut assets = BTreeMap::new();
+    for id in ids {
+        if let Some(a) = crate::assets::get(&id) {
+            assets.insert(
+                id,
+                BundleAsset {
+                    ext: a.ext.to_string(),
+                    data: crate::assets::base64(&a.bytes),
+                },
+            );
+        }
+    }
+    let f = BundleFile {
+        format: BUNDLE_FORMAT.into(),
+        version: BUNDLE_VERSION,
+        name: name.to_string(),
+        active_page: active.map(str::to_string),
+        pages: pages.iter().map(PageFile::from_page).collect(),
+        assets,
     };
-    doc.validate().map_err(FormatError::Invalid)?;
-    Ok(PageData {
-        id: f.id,
-        name: f.name,
-        doc,
-        camera: f.camera,
-    })
+    serde_json::to_string_pretty(&f).expect("page bundle serializes")
+}
+
+/// Recover the project name, pages and active page from an embedded bundle.
+pub fn pages_from_json(s: &str) -> Result<PageBundle, FormatError> {
+    let v: Value = serde_json::from_str(s).map_err(FormatError::Json)?;
+    let v = migrate(v, BUNDLE_FORMAT, BUNDLE_VERSION, &[], &[])?;
+    let f: BundleFile = serde_json::from_value(v).map_err(FormatError::Json)?;
+    for (id, a) in &f.assets {
+        let bytes = crate::assets::base64_decode(&a.data)
+            .ok_or_else(|| FormatError::Invalid(format!("bad image data for {id}")))?;
+        crate::assets::register(&bytes).map_err(FormatError::Invalid)?;
+    }
+    let pages = f
+        .pages
+        .into_iter()
+        .map(PageFile::into_page)
+        .collect::<Result<Vec<_>, _>>()?;
+    Ok((f.name, pages, f.active_page))
 }
 
 /// Check the format tag and run the migration chain up to `current`.
@@ -328,7 +453,125 @@ mod tests {
         assert_eq!(r.style.fill(), Some(crate::model::Color::rgb(255, 0, 0)));
         assert_eq!(r.style.corner_radius, 2.0);
         assert!(p.doc.get(NodeId(2)).unwrap().style.fills.is_empty());
-        assert!(page_to_json(&p).contains("\"version\": 3"));
+        assert!(page_to_json(&p).contains("\"version\": 5"));
+    }
+
+    #[test]
+    fn page_roundtrip_preserves_diagram_settings() {
+        use crate::model::{DefaultStyle, ManualGuide, Orientation, PaperSize, Style, TextScript};
+        let ed = demo::showcase();
+        let mut doc = ed.doc.clone();
+        doc.settings.grid = false;
+        doc.settings.grid_size = 22.0;
+        doc.settings.grid_color = Some(crate::model::Color::rgb(0x33, 0x66, 0x99));
+        doc.settings.rulers = true;
+        doc.settings.manual_guides =
+            vec![ManualGuide::vertical(120.0), ManualGuide::horizontal(45.5)];
+        doc.settings.background_enabled = true;
+        doc.settings.background_color = crate::model::Color::rgb(0xf0, 0xe8, 0xd8);
+        doc.settings.shadow = true;
+        doc.settings.sketch = true;
+        doc.settings.rounded = true;
+        doc.settings.scheme = Some("Sage".into());
+        doc.settings.connection_arrows = false;
+        doc.settings.autosave = false;
+        doc.settings.paper = PaperSize::A4;
+        doc.settings.orientation = Orientation::Portrait;
+        doc.settings
+            .metadata
+            .insert("owner".into(), "design".into());
+        doc.settings.shape_default = Some(DefaultStyle::new(
+            Style::with_fill(crate::model::Color::rgb(1, 2, 3)),
+            crate::model::TextStyle::default(),
+        ));
+        let tid = doc
+            .root
+            .iter()
+            .copied()
+            .find(|id| doc.get(*id).is_some_and(|n| n.kind.text().is_some()))
+            .expect("demo has a text node");
+        let tn = doc.nodes.get_mut(&tid).unwrap();
+        tn.text_style.script = TextScript::Super;
+        tn.style.rotation = 90.0;
+        tn.style.label_upright = true;
+        tn.connector_default = Some(DefaultStyle::new(
+            Style {
+                stroke: Some(crate::model::Color::rgb(0x11, 0x22, 0x33)),
+                ..Style::default()
+            },
+            crate::model::TextStyle::default(),
+        ));
+        let len = tn.kind.text().unwrap().chars().count();
+        tn.text_style
+            .apply_range(0, len.min(1), |s| s.script = Some(TextScript::Sub));
+        let p = PageData {
+            id: "abc".into(),
+            name: doc.name.clone(),
+            doc,
+            camera: None,
+        };
+        let s = page_to_json(&p);
+        let back = page_from_json(&s).unwrap();
+        assert_eq!(back, p);
+        let back_t = back.doc.get(tid).unwrap();
+        assert_eq!(back_t.text_style.script, TextScript::Super);
+        assert_eq!(back_t.style.rotation, 90.0);
+        assert!(back_t.style.label_upright);
+        assert_eq!(
+            back_t.text_style.spans.first().and_then(|s| s.script),
+            Some(TextScript::Sub)
+        );
+        assert_eq!(
+            back_t.connector_default,
+            p.doc.get(tid).unwrap().connector_default
+        );
+        assert_eq!(back.doc.settings.grid_size, 22.0);
+        assert!(back.doc.settings.rulers);
+        assert_eq!(
+            back.doc.settings.manual_guides,
+            vec![ManualGuide::vertical(120.0), ManualGuide::horizontal(45.5)]
+        );
+        assert_eq!(back.doc.settings.metadata.get("owner").unwrap(), "design");
+        assert_eq!(
+            back.doc.settings.shape_default,
+            p.doc.settings.shape_default
+        );
+    }
+
+    #[test]
+    fn page_view_is_a_session_only_view_option() {
+        let mut doc = demo::showcase().doc;
+        doc.settings.page_view = true;
+        let p = PageData {
+            id: "abc".into(),
+            name: doc.name.clone(),
+            doc,
+            camera: None,
+        };
+        let s = page_to_json(&p);
+        assert!(
+            !s.contains("page_view"),
+            "page view must not reach the file"
+        );
+        assert!(!page_from_json(&s).unwrap().doc.settings.page_view);
+    }
+
+    #[test]
+    fn v3_pages_load_with_default_settings() {
+        let ed = demo::showcase();
+        let p = PageData {
+            id: "abc".into(),
+            name: "Plan".into(),
+            doc: ed.doc.clone(),
+            camera: None,
+        };
+        let mut v: serde_json::Value = serde_json::from_str(&page_to_json(&p)).unwrap();
+        v["version"] = json!(3);
+        v.as_object_mut().unwrap().remove("settings");
+        let back = page_from_json(&v.to_string()).unwrap();
+        assert_eq!(back.doc.settings, crate::model::DiagramSettings::default());
+        assert_eq!(back.doc.nodes, ed.doc.nodes);
+        assert!(page_to_json(&back).contains("\"version\": 5"));
     }
 
     #[test]
@@ -360,5 +603,63 @@ mod tests {
         let m = Manifest::new("Hello");
         let old_manifest = m.to_json().replace(PROJECT_FORMAT, OLD_PROJECT_FORMAT);
         assert_eq!(Manifest::from_json(&old_manifest).unwrap(), m);
+    }
+
+    #[test]
+    fn embedded_bundle_roundtrips_pages_and_image_assets() {
+        let first = PageData {
+            id: "p1".into(),
+            name: "First".into(),
+            doc: Document {
+                name: "First".into(),
+                ..demo::showcase().doc
+            },
+            camera: Some(Camera::default()),
+        };
+        let img = image::RgbaImage::from_fn(4, 3, |x, y| {
+            image::Rgba([(x * 60) as u8, (y * 80) as u8, 20, 255])
+        });
+        let asset = crate::assets::register_rgba(&img);
+        let mut doc = Document::default();
+        let mut node = Node::new(
+            NodeId(1),
+            crate::model::NodeKind::Rect,
+            crate::geom::Rect::new(0.0, 0.0, 10.0, 10.0),
+        );
+        node.style.fills = vec![crate::model::Paint::Image {
+            asset: asset.clone(),
+            mode: crate::model::ImageMode::Fill,
+            opacity: 1.0,
+        }];
+        doc.nodes.insert(node.id, node);
+        doc.root.push(NodeId(1));
+        doc.next_id = 2;
+        let second = PageData {
+            id: "p2".into(),
+            name: "Second".into(),
+            doc: Document {
+                name: "Second".into(),
+                ..doc
+            },
+            camera: None,
+        };
+        let pages = vec![first, second];
+        let json = pages_to_json("Board", &pages, Some("p2"));
+        assert!(json.contains(BUNDLE_FORMAT));
+        let (name, back, active) = pages_from_json(&json).unwrap();
+        assert_eq!(name, "Board");
+        assert_eq!(active.as_deref(), Some("p2"));
+        assert_eq!(back.len(), 2);
+        assert_eq!(back[0], pages[0]);
+        assert_eq!(back[1].name, "Second");
+        assert_eq!(back[1].doc.nodes.len(), 1);
+        let Some(crate::model::Paint::Image {
+            asset: restored, ..
+        }) = back[1].doc.nodes[&NodeId(1)].style.fills.first()
+        else {
+            panic!("image fill was not restored");
+        };
+        assert_eq!(restored, &asset);
+        assert!(crate::assets::get(restored).is_some());
     }
 }

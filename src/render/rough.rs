@@ -1057,7 +1057,15 @@ fn ops_to_path(ops: &[Op]) -> VPath {
 }
 
 /// Hand-drawn draw ops for a node at world rect `wr`.
-pub fn node_ops(n: &Node, wr: Rect, opacity: f64, r: &Rough) -> Vec<DrawOp> {
+pub fn node_ops(
+    n: &Node,
+    wr: Rect,
+    opacity: f64,
+    r: &Rough,
+    jump_pts: &[V2],
+    dark: bool,
+    now_ms: f64,
+) -> Vec<DrawOp> {
     let sw = n.style.stroke_width.max(0.0);
     let fill_color: Option<Color> = n.style.fills.last().map(|p| p.preview_color());
     let stroke = n.style.stroke;
@@ -1082,8 +1090,8 @@ pub fn node_ops(n: &Node, wr: Rect, opacity: f64, r: &Rough) -> Vec<DrawOp> {
         FillStyle::Zigzag => Style::Zigzag,
         FillStyle::Dots => Style::Dots,
     };
-    o.fill = fill_color.is_some() && super::draw::is_area(n);
-    o.stroke = stroke.is_some() && sw > 0.0;
+    o.fill = fill_color.is_some() && super::draw::is_area(n) && n.style.fill_enabled;
+    o.stroke = stroke.is_some() && n.style.stroke_enabled && sw > 0.0;
     let sets: Vec<OpSet> = match &n.kind {
         NodeKind::Rect | NodeKind::Frame { .. } if rounded => {
             let rad = n.style.corner_radius.min(wr.w.min(wr.h) * 0.5);
@@ -1129,16 +1137,49 @@ pub fn node_ops(n: &Node, wr: Rect, opacity: f64, r: &Rough) -> Vec<DrawOp> {
                 g_path(&segs_of(&path), &o)
             }
         }
-        NodeKind::Connector { points, route, .. } => {
+        NodeKind::Connector {
+            points,
+            route,
+            jump,
+            jump_size,
+            ..
+        } => {
             let pts: Vec<V2> = points.iter().map(|p| wr.min() + *p).collect();
             o.fill = false;
-            match route {
-                crate::model::Route::Curved if pts.len() >= 3 => g_curve(&pts, &o),
-                crate::model::Route::Elbow => {
+            // Transparent labels cut the line behind their text; sketch the
+            // remaining runs as a path. Without a gap the routes keep their
+            // dedicated sketch shapes. Jumps take precedence and sketch as a
+            // plain path too.
+            let gaps = crate::text::label_gap_rects(n);
+            let half = crate::connector::jump_half_size(*jump_size, sw.max(0.5));
+            let jumped = (!jump_pts.is_empty() && *jump != crate::model::LineJump::None)
+                .then(|| {
+                    crate::connector::jumped_line_path(&pts, *route, jump_pts, *jump, half, &gaps)
+                })
+                .flatten();
+            let cut = (!gaps.is_empty())
+                .then(|| crate::connector::cut_line_path(&pts, *route, &gaps))
+                .flatten();
+            match jumped.or(cut) {
+                Some(p) => {
                     o.preserve_vertices = true;
-                    g_path(&segs_of(&crate::connector::line_path(&pts, *route)), &o)
+                    g_path(&segs_of(&p), &o)
                 }
-                _ => g_linear_path(&pts, &o),
+                None => {
+                    if !gaps.is_empty() {
+                        // The whole line hides behind the labels.
+                        Vec::new()
+                    } else {
+                        match route {
+                            crate::model::Route::Curved if pts.len() >= 3 => g_curve(&pts, &o),
+                            crate::model::Route::Elbow => {
+                                o.preserve_vertices = true;
+                                g_path(&segs_of(&crate::connector::line_path(&pts, *route)), &o)
+                            }
+                            _ => g_linear_path(&pts, &o),
+                        }
+                    }
+                }
             }
         }
         // Text, ink, groups, sticky notes: no hand-drawn form.
@@ -1157,22 +1198,37 @@ pub fn node_ops(n: &Node, wr: Rect, opacity: f64, r: &Rough) -> Vec<DrawOp> {
         Vec::new()
     };
     let mut out = Vec::new();
-    if matches!(n.kind, NodeKind::Connector { .. }) {
+    let connector = matches!(n.kind, NodeKind::Connector { .. });
+    let (dash, dash_offset) = if connector && n.flow.enabled {
+        let pattern = n.flow.dash_pattern(&n.style.dash, sw.max(0.5));
+        let offset = n.flow.dash_offset(now_ms, &pattern);
+        (pattern, offset)
+    } else {
+        (dash, 0.0)
+    };
+    if connector {
         // Heads stay crisp; the line wobbles.
-        super::draw::connector_ops(n, wr, opacity, &mut out, true);
+        super::draw::connector_ops(n, wr, opacity, &mut out, true, jump_pts, dark, now_ms);
     }
     for s in sets {
         let path = ops_to_path(&s.ops);
         match s.kind {
             SetKind::Path => {
                 if let Some(c) = stroke {
+                    let color = rgba(c, opacity);
+                    let color = if dark && connector {
+                        super::draw::contrast_for_dark(color)
+                    } else {
+                        color
+                    };
                     out.push(DrawOp::Stroke {
                         path,
-                        color: rgba(c, opacity),
+                        color,
                         width: o.stroke_width,
                         cap: Cap::Round,
                         join: Join::Round,
                         dash: dash.clone(),
+                        dash_offset,
                     });
                 }
             }
@@ -1199,6 +1255,7 @@ pub fn node_ops(n: &Node, wr: Rect, opacity: f64, r: &Rough) -> Vec<DrawOp> {
                         cap: Cap::Round,
                         join: Join::Round,
                         dash: Vec::new(),
+                        dash_offset: 0.0,
                     });
                 }
             }

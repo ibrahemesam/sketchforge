@@ -80,6 +80,7 @@ impl Editor {
             .collect();
         self.active_page = active_i;
         self.meta_dirty = false;
+        self.refresh_page_contexts();
     }
 
     pub fn active_page_id(&self) -> &str {
@@ -124,6 +125,8 @@ impl Editor {
             self.pending_fit = true;
         }
         self.meta_dirty = true; // the active page is remembered in the manifest
+        self.sync_page_settings();
+        self.refresh_page_contexts();
         self.revision += 1;
         self.doc_stamp = super::next_stamp();
     }
@@ -147,12 +150,48 @@ impl Editor {
         at
     }
 
-    /// Append an empty page without leaving the current one (agents adding pages).
+    /// Append empty page without leaving the current one (agents adding pages).
     pub fn add_page_in_background(&mut self, name: Option<&str>) -> usize {
         let at = self.pages.len();
         self.insert_empty_page(at, name);
+        self.refresh_page_contexts();
         self.revision += 1;
         at
+    }
+
+    /// Append pages that already have content, keeping their documents, layers
+    /// and cameras. Names are made unique; page ids are regenerated so imported
+    /// ids can never collide with files in this project. Switches to the first
+    /// appended page.
+    pub fn append_pages(&mut self, pages: Vec<PageData>) -> usize {
+        if pages.is_empty() {
+            return self.active_page;
+        }
+        let first = self.pages.len();
+        for p in pages {
+            let base = p.name.trim();
+            let base = if base.is_empty() { "Page" } else { base };
+            let name = self.unique_page_name(base);
+            let mut slot = PageSlot::new(&name);
+            slot.id = new_id();
+            // Never saved: force autosave to write these pages.
+            slot.saved_gen = u64::MAX;
+            slot.stash = Some(Box::new(PageStash {
+                doc: Document {
+                    name: name.clone(),
+                    ..p.doc
+                },
+                history: History::default(),
+                camera: p.camera.unwrap_or_default(),
+                selection: Vec::new(),
+                needs_fit: p.camera.is_none(),
+            }));
+            self.pages.push(slot);
+        }
+        self.meta_dirty = true;
+        self.revision += 1;
+        self.switch_page(first);
+        first
     }
 
     fn insert_empty_page(&mut self, at: usize, name: Option<&str>) {
@@ -222,6 +261,7 @@ impl Editor {
         } else if let Some(s) = &mut self.pages[i].stash {
             s.doc.name = name.to_string();
         }
+        self.refresh_page_contexts();
         self.meta_dirty = true;
         self.revision += 1;
     }
@@ -242,6 +282,7 @@ impl Editor {
         if self.active_page > i {
             self.active_page -= 1;
         }
+        self.refresh_page_contexts();
         self.meta_dirty = true;
         self.revision += 1;
         self.status = format!("Deleted {}", removed.name);
@@ -257,6 +298,7 @@ impl Editor {
         let p = self.pages.remove(from);
         self.pages.insert(to, p);
         self.active_page = self.pages.iter().position(|p| p.id == active_id).unwrap();
+        self.refresh_page_contexts();
         self.meta_dirty = true;
         self.revision += 1;
     }
@@ -334,6 +376,7 @@ impl Editor {
         self.commit();
         swap(self, &mut s);
         self.saved_marker = saved_marker;
+        self.sync_page_settings();
         self.pages[i].stash = Some(s);
         self.revision += 1;
         self.doc_stamp = super::next_stamp();

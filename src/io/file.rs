@@ -1,7 +1,7 @@
 //! The `.sketch-rs` document format: versioned, pretty-printed JSON.
 
 use crate::geom::Camera;
-use crate::model::{Document, Node, NodeId};
+use crate::model::{DiagramSettings, Document, Node, NodeId};
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 
@@ -27,6 +27,10 @@ struct FileV1 {
     next_id: u64,
     root: Vec<NodeId>,
     nodes: Vec<Node>,
+    /// Page/diagram settings added after v1 shipped. Older readers ignore
+    /// unknown fields, and missing settings load as defaults.
+    #[serde(default, skip_serializing_if = "DiagramSettings::is_default")]
+    settings: DiagramSettings,
 }
 
 #[derive(Debug)]
@@ -68,6 +72,7 @@ pub fn to_string(doc: &Document, camera: Option<&Camera>) -> String {
         next_id: doc.next_id,
         root: doc.root.clone(),
         nodes,
+        settings: doc.settings.clone(),
     };
     serde_json::to_string_pretty(&f).expect("document serializes")
 }
@@ -103,7 +108,18 @@ mod tests {
 
     #[test]
     fn roundtrip_demo_document() {
-        let ed = demo::showcase();
+        let mut ed = demo::showcase();
+        ed.doc.settings.grid = false;
+        ed.doc.settings.grid_size = 12.5;
+        ed.doc.settings.rulers = true;
+        ed.doc.settings.manual_guides = vec![
+            crate::model::ManualGuide::vertical(33.0),
+            crate::model::ManualGuide::horizontal(77.5),
+        ];
+        ed.doc
+            .settings
+            .metadata
+            .insert("owner".into(), "Micky".into());
         let cam = Camera {
             pan: crate::geom::v2(3.0, 4.0),
             zoom: 0.5,
@@ -133,6 +149,106 @@ mod tests {
         let broken =
             r#"{"format":"sketch-rs","version":1,"name":"x","next_id":1,"root":[5],"nodes":[]}"#;
         assert!(matches!(from_str(broken), Err(FileError::Invalid(_))));
+    }
+
+    #[test]
+    fn connector_labels_round_trip() {
+        use crate::geom::{Rect, v2};
+        use crate::model::{Color, Head, LineJump, NodeKind, Route, TextAlign};
+
+        let mut ed = demo::showcase();
+        let id = ed.add_node(
+            Node::new(
+                NodeId(900),
+                NodeKind::Connector {
+                    points: vec![v2(0.0, 0.0), v2(120.0, 40.0)],
+                    start: None,
+                    end: None,
+                    route: Route::Straight,
+                    start_head: Head::None,
+                    end_head: Head::Arrow,
+                    jump: LineJump::None,
+                    jump_size: 6.0,
+                },
+                Rect::new(0.0, 0.0, 120.0, 40.0),
+            ),
+            None,
+        );
+        ed.edit("label", |tx| {
+            let n = tx.node_mut(id).unwrap();
+            n.label = "yes".into();
+            n.label_size = Some(14.0);
+            n.label_color = Some(Color::rgb(0x11, 0x22, 0x33));
+            n.label_wrap = false;
+            n.label_opacity = 0.8;
+            n.label_pos = Some(0.25);
+            n.label_offset = Some(v2(12.0, -8.0));
+            n.text_bg = Some(Color::WHITE);
+            n.text_border = Some(Color::INK);
+            n.text_style.align = Some(TextAlign::Right);
+        });
+        let s = to_string(&ed.doc, None);
+        let (doc, _) = from_str(&s).unwrap();
+        let n = doc.get(id).unwrap();
+        assert_eq!(n.label, "yes");
+        assert_eq!(n.label_size, Some(14.0));
+        assert_eq!(n.label_color, Some(Color::rgb(0x11, 0x22, 0x33)));
+        assert!(!n.label_wrap);
+        assert_eq!(n.label_opacity, 0.8);
+        assert_eq!(n.label_pos, Some(0.25));
+        assert_eq!(n.label_offset, Some(v2(12.0, -8.0)));
+        assert_eq!(n.text_bg, Some(Color::WHITE));
+        assert_eq!(n.text_border, Some(Color::INK));
+        assert_eq!(n.text_style.align, Some(TextAlign::Right));
+    }
+
+    #[test]
+    fn extra_connector_labels_round_trip() {
+        use crate::geom::{Rect, v2};
+        use crate::model::{ExtraLabel, Head, LineJump, NodeKind, Route};
+
+        let mut ed = demo::showcase();
+        let id = ed.add_node(
+            Node::new(
+                NodeId(901),
+                NodeKind::Connector {
+                    points: vec![v2(0.0, 0.0), v2(120.0, 40.0)],
+                    start: None,
+                    end: None,
+                    route: Route::Straight,
+                    start_head: Head::None,
+                    end_head: Head::Arrow,
+                    jump: LineJump::None,
+                    jump_size: 6.0,
+                },
+                Rect::new(0.0, 0.0, 120.0, 40.0),
+            ),
+            None,
+        );
+        ed.edit("labels", |tx| {
+            let n = tx.node_mut(id).unwrap();
+            n.label = "main".into();
+            n.labels.push(ExtraLabel {
+                text: "second".into(),
+                pos: Some(0.75),
+                offset: Some(v2(0.0, 20.0)),
+            });
+            n.labels.push(ExtraLabel::new("third"));
+        });
+        let s = to_string(&ed.doc, None);
+        let (doc, _) = from_str(&s).unwrap();
+        let n = doc.get(id).unwrap();
+        assert_eq!(n.label_count(), 3);
+        assert_eq!(n.label_text(0), Some("main"));
+        assert_eq!(n.label_text(1), Some("second"));
+        assert_eq!(n.label_text(2), Some("third"));
+        assert_eq!(n.labels[0].pos, Some(0.75));
+        assert_eq!(n.labels[0].offset, Some(v2(0.0, 20.0)));
+        assert_eq!(n.labels[1].pos, None);
+        assert_eq!(n.labels[1].offset, None);
+        // A document saved before extras keeps exactly one label.
+        let s = to_string(&ed.doc, None);
+        assert!(from_str(&s).is_ok());
     }
 
     #[test]

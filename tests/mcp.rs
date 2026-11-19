@@ -4,8 +4,9 @@
 use rmcp::ServiceExt;
 use rmcp::model::{CallToolRequestParams, CallToolResult, ContentBlock};
 use serde_json::{Value, json};
+use sketch_rs::geom::Rect;
 use sketch_rs::mcp::{self, Out, exec};
-use sketch_rs::model::{Color, NodeKind, Paint, Sizing};
+use sketch_rs::model::{Color, LayerId, NodeKind, Paint, Sizing};
 use sketch_rs::project::Store;
 
 fn store() -> Store {
@@ -685,4 +686,234 @@ fn agent_design_screenshot() {
         "artboard hugs its content: {:?}",
         ab_node.rect
     );
+}
+
+#[test]
+fn registry_tools_search_insert_into_a_layer_and_a_parent() {
+    let mut h = host();
+    let hits = call(&mut h, "search_shapes", json!({"query": "cylinder"}));
+    assert_eq!(hits["count"], 1);
+    assert_eq!(hits["shapes"][0]["id"], "database");
+    assert_eq!(hits["shapes"][0]["category"], "Network");
+    let uml = call(
+        &mut h,
+        "search_shapes",
+        json!({"query": "", "category": "UML"}),
+    );
+    assert_eq!(uml["count"], 4);
+
+    let layer = call(
+        &mut h,
+        "layer_ops",
+        json!({"ops": [{"op": "add", "name": "Shapes"}]}),
+    );
+    let layer = layer["results"][0]["layer"].as_u64().unwrap();
+    let got = call(
+        &mut h,
+        "insert_shape",
+        json!({"shape": "Queue", "x": 40, "y": 20, "width": 200, "height": 120, "layer": "Shapes"}),
+    );
+    let id = num(&got["id"]);
+    let n = h.ed.doc.get(id).unwrap();
+    assert_eq!(n.name, "Queue");
+    assert_eq!(n.rect, Rect::new(40.0, 20.0, 200.0, 120.0));
+    assert_eq!(n.layer, Some(LayerId(layer)));
+    assert_eq!(got["shape"], "queue");
+
+    let ab = call(
+        &mut h,
+        "create_artboard",
+        json!({"name": "Frame", "styles": {"width": "400px", "height": "300px"}}),
+    );
+    let ab_id = ab["id"].clone();
+    let in_ab = call(
+        &mut h,
+        "insert_shape",
+        json!({"shape": "database", "parentId": ab_id}),
+    );
+    let child = num(&in_ab["id"]);
+    assert_eq!(h.ed.doc.get(child).unwrap().parent, Some(num(&ab_id)));
+
+    assert!(exec::call(&mut h, "insert_shape", &json!({"shape": "nope"})).is_err());
+}
+
+#[test]
+fn templates_list_and_insert_as_content_or_pages() {
+    let mut h = host();
+    let listed = call(&mut h, "list_templates", json!({"query": "bpmn"}));
+    assert_eq!(listed["count"], 1, "{listed}");
+    assert_eq!(listed["templates"][0]["id"], "bpmn-process");
+    assert_eq!(listed["templates"][0]["category"], "BPMN 2.0");
+    assert_eq!(listed["templates"][0]["pages"].as_array().unwrap().len(), 1);
+    let all = call(&mut h, "list_templates", json!({}));
+    assert!(all["count"].as_u64().unwrap() >= 15);
+    let uml = call(&mut h, "list_templates", json!({"category": "UML"}));
+    assert_eq!(uml["count"], 1);
+
+    let inserted = call(
+        &mut h,
+        "insert_template",
+        json!({"template": "bpmn-process", "x": 300, "y": 200}),
+    );
+    let ids = inserted["nodeIds"].as_array().unwrap();
+    assert!(!ids.is_empty());
+    assert!(inserted["missingShapes"].as_array().unwrap().is_empty());
+    assert!(h.ed.doc.nodes.len() > 5);
+    assert_eq!(h.ed.selection.len(), ids.len());
+    assert!(h.ed.doc.validate().is_ok());
+    h.ed.undo();
+    assert!(
+        h.ed.doc.nodes.is_empty(),
+        "one undo step removes the template"
+    );
+
+    let pages = call(
+        &mut h,
+        "insert_template",
+        json!({"template": "Project plan", "asPages": true}),
+    );
+    assert_eq!(pages["pages"], 3);
+    assert_eq!(pages["firstPage"], 2);
+    assert_eq!(h.ed.pages.len(), 4);
+    assert!(exec::call(&mut h, "insert_template", &json!({"template": "nope"})).is_err());
+    assert!(
+        exec::call(
+            &mut h,
+            "insert_template",
+            &json!({"template": "bpmn-process", "page": 9})
+        )
+        .is_err()
+    );
+}
+
+#[test]
+fn generated_diagrams_insert_as_content_or_pages_and_report_errors() {
+    let mut h = host();
+    let csv = call(
+        &mut h,
+        "generate_diagram",
+        json!({
+            "source": "csv",
+            "text": "name;role\nAda;Engineer\nGrace;Admiral\n",
+            "layout": "grid",
+            "header": true,
+            "labelColumn": 1,
+        }),
+    );
+    assert_eq!(csv["source"], "csv");
+    assert_eq!(csv["mode"], "content");
+    assert_eq!(csv["nodes"], 2);
+    assert!(csv["warnings"].as_array().unwrap().is_empty());
+    assert!(csv["nodeIds"].as_array().unwrap().len() >= 2);
+    assert!(h.ed.doc.validate().is_ok());
+    assert_eq!(
+        h.ed.selection.len(),
+        csv["nodeIds"].as_array().unwrap().len()
+    );
+    h.ed.undo();
+    assert!(
+        h.ed.doc.nodes.is_empty(),
+        "one undo step removes the import"
+    );
+
+    let page = call(
+        &mut h,
+        "generate_diagram",
+        json!({
+            "source": "mermaid",
+            "text": "sequenceDiagram\n participant A as Alice\n participant B as Bob\n A->>B: Hello\n",
+            "asPage": true,
+        }),
+    );
+    assert_eq!(page["mode"], "page");
+    assert_eq!(page["page"], 2);
+    assert_eq!(h.ed.pages.len(), 2);
+    assert!(h.ed.doc.validate().is_ok());
+
+    let sql = call(
+        &mut h,
+        "generate_diagram",
+        json!({
+            "source": "sql",
+            "text": "CREATE TABLE teams (id INTEGER PRIMARY KEY);\nCREATE TABLE users (id INTEGER PRIMARY KEY, team_id INTEGER REFERENCES teams(id));",
+            "x": 40,
+            "y": 60,
+        }),
+    );
+    assert_eq!(sql["source"], "sql");
+    assert!(sql["warnings"].as_array().unwrap().is_empty());
+    assert!(h.ed.doc.nodes.len() > 4);
+
+    let graph = call(
+        &mut h,
+        "generate_diagram",
+        json!({
+            "source": "json",
+            "text": "{\"nodes\":[{\"id\":\"a\"},{\"id\":\"b\"}],\"edges\":[{\"from\":\"a\",\"to\":\"b\"},{\"from\":\"b\",\"to\":\"missing\"}]}",
+            "layout": "horizontal",
+        }),
+    );
+    assert_eq!(graph["nodes"], 3, "two shapes and one connector");
+    assert!(
+        graph["warnings"][0]
+            .as_str()
+            .unwrap()
+            .contains("not a node")
+    );
+
+    assert!(
+        exec::call(
+            &mut h,
+            "generate_diagram",
+            &json!({"source": "yaml", "text": "a: b"})
+        )
+        .is_err()
+    );
+    let err = exec::call(
+        &mut h,
+        "generate_diagram",
+        &json!({"source": "mermaid", "text": "not a diagram"}),
+    )
+    .unwrap_err();
+    assert!(err.contains("expected a Mermaid"), "{err}");
+    let err = exec::call(
+        &mut h,
+        "generate_diagram",
+        &json!({"source": "csv", "text": "a,b", "layout": "spiral"}),
+    )
+    .unwrap_err();
+    assert!(err.contains("unknown layout"), "{err}");
+    let err = exec::call(
+        &mut h,
+        "generate_diagram",
+        &json!({"source": "json", "text": "{\"nodes\":"}),
+    )
+    .unwrap_err();
+    assert!(err.contains("invalid JSON at line 1"), "{err}");
+}
+
+#[test]
+fn node_info_reports_links_tooltips_tags_and_metadata() {
+    use sketch_rs::model::Node;
+    let mut h = host();
+    let id = h.ed.add_node(
+        Node::new(
+            sketch_rs::model::NodeId(0),
+            NodeKind::Rect,
+            Rect::new(0.0, 0.0, 100.0, 60.0),
+        ),
+        None,
+    );
+    let n = h.ed.doc.nodes.get_mut(&id).unwrap();
+    n.link = "https://example.com".into();
+    n.tooltip = "Docs".into();
+    n.tags = vec!["web".into(), "nav".into()];
+    n.metadata.insert("owner".into(), "Ada".into());
+
+    let key = format!("{}:{}", h.ed.active_page_id(), id.0);
+    let info = call(&mut h, "get_node_info", json!({"nodeId": key}));
+    assert_eq!(info["link"], "https://example.com");
+    assert_eq!(info["tooltip"], "Docs");
+    assert_eq!(info["tags"], json!(["web", "nav"]));
+    assert_eq!(info["metadata"]["owner"], "Ada");
 }

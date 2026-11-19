@@ -3,3 +3,5 @@ target/
 *.asar
 app.asar.unpacked/
 .artifacts/
+.opencode/
+Life.drawio

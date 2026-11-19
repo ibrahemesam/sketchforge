@@ -38,6 +38,13 @@ impl V2 {
     pub fn round(self) -> V2 {
         v2(self.x.round(), self.y.round())
     }
+    /// Rotate this point around `center` by `angle` radians. Positive angles
+    /// turn clockwise on the y-down canvas.
+    pub fn rotate_about(self, center: V2, angle: f64) -> V2 {
+        let (s, c) = angle.sin_cos();
+        let d = self - center;
+        center + v2(d.x * c - d.y * s, d.x * s + d.y * c)
+    }
 }
 
 impl Add for V2 {

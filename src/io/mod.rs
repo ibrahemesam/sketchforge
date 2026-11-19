@@ -1,5 +1,7 @@
 pub mod atomic;
 pub mod clipboard;
+pub mod drawio;
+pub mod embed;
 pub mod excalidraw;
 pub mod export;
 pub mod file;

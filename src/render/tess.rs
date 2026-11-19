@@ -7,7 +7,7 @@ use super::mesh::{
 use crate::geom::{Rect, V2, v2};
 use crate::model::{Cap, Join, Stop, sample_stops};
 use crate::text;
-use crate::vector::{VPath, dash_polyline};
+use crate::vector::{VPath, dash_polyline_with_offset};
 use lyon::tessellation::{
     BuffersBuilder, FillOptions, FillRule, FillTessellator, FillVertex, LineCap, LineJoin,
     StrokeOptions, StrokeTessellator, StrokeVertex, VertexBuffers,
@@ -124,7 +124,11 @@ impl Tess {
                 cap,
                 join,
                 dash,
-            } => (None, self.stroke(path, *color, *width, *cap, *join, dash)),
+                dash_offset,
+            } => (
+                None,
+                self.stroke(path, *color, *width, *cap, *join, dash, *dash_offset),
+            ),
             DrawOp::Glyphs {
                 face,
                 size,
@@ -150,6 +154,7 @@ impl Tess {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn stroke(
         &mut self,
         path: &VPath,
@@ -158,6 +163,7 @@ impl Tess {
         cap: Cap,
         join: Join,
         dash: &[f64],
+        dash_offset: f64,
     ) -> Mesh {
         if color[3] <= 0.0 || width <= 0.0 {
             return Mesh::default();
@@ -181,7 +187,7 @@ impl Tess {
             let mut p = VPath::new();
             for poly in path.flatten(self.tol) {
                 let scaled: Vec<f64> = dash.to_vec();
-                for d in dash_polyline(&poly.pts, poly.closed, &scaled) {
+                for d in dash_polyline_with_offset(&poly.pts, poly.closed, &scaled, dash_offset) {
                     p.append(&VPath::polyline(&d, false));
                 }
             }
@@ -204,7 +210,13 @@ impl Tess {
         }
     }
 
-    fn glyphs(&mut self, face: u8, size: f64, color: [f32; 4], glyphs: &[(u16, V2)]) -> Mesh {
+    fn glyphs(
+        &mut self,
+        face: crate::text::FaceId,
+        size: f64,
+        color: [f32; 4],
+        glyphs: &[(u16, V2)],
+    ) -> Mesh {
         let mut m = Mesh::default();
         if size * self.zoom < 2.5 {
             // Too small to read: a faint bar per glyph run ("greeking").

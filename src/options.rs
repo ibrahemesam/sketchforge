@@ -1,6 +1,7 @@
 //! App-wide options stored as `options.json` next to the projects folder.
 
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
 pub const FILE: &str = "options.json";
@@ -14,13 +15,21 @@ pub enum ThemeChoice {
     Dark,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Options {
     pub theme: ThemeChoice,
     /// Canvas grid spacing in world units (draw.io's Grid size). Keep this a
     /// multiple of anything snapping treats as a hard floor; 10 is the default.
     pub grid_size: f64,
+    /// Folder scanned for custom template libraries (M7). None when the user
+    /// has not chosen one; the bundled packs always load.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub template_folder: Option<PathBuf>,
+    /// Inspector section keys mapped to `false` when collapsed. Missing keys
+    /// are expanded, so older option files keep their current layout.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub inspector_sections: BTreeMap<String, bool>,
 }
 
 impl Default for Options {
@@ -28,6 +37,8 @@ impl Default for Options {
         Options {
             theme: ThemeChoice::default(),
             grid_size: 10.0,
+            template_folder: None,
+            inspector_sections: BTreeMap::new(),
         }
     }
 }
@@ -93,6 +104,8 @@ mod tests {
         let o = Options {
             theme: ThemeChoice::Light,
             grid_size: 20.0,
+            template_folder: Some(PathBuf::from("/tmp/templates")),
+            inspector_sections: BTreeMap::new(),
         };
         o.save(&r).unwrap();
         assert_eq!(Options::load(&r), o);
@@ -108,6 +121,24 @@ mod tests {
         assert_eq!(Options::load(&r), Options::default());
         std::fs::write(Options::path_in(&r), b"{\"theme\":\"nope\"}").unwrap();
         assert_eq!(Options::load(&r), Options::default());
+        std::fs::remove_dir_all(r).ok();
+    }
+
+    #[test]
+    fn section_states_survive_options_round_trip() {
+        let r = root("sections");
+        std::fs::create_dir_all(&r).unwrap();
+        std::fs::write(
+            Options::path_in(&r),
+            br#"{"theme":"dark","grid_size":10.0,"inspector_sections":{"fill":false,"arrange":true}}"#,
+        )
+        .unwrap();
+        let o = Options::load(&r);
+        o.save(&r).unwrap();
+        let saved = std::fs::read_to_string(Options::path_in(&r)).unwrap();
+        let reloaded: Options = serde_json::from_str(&saved).unwrap();
+        assert_eq!(reloaded.inspector_sections.get("fill"), Some(&false));
+        assert_eq!(reloaded.inspector_sections.get("arrange"), Some(&true));
         std::fs::remove_dir_all(r).ok();
     }
 }

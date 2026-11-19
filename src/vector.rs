@@ -60,6 +60,48 @@ impl VPath {
         self.segs.extend_from_slice(&o.segs);
     }
 
+    /// The point the pen sits at after the segments so far (None after a close
+    /// or on an empty path).
+    pub fn last_point(&self) -> Option<V2> {
+        for s in self.segs.iter().rev() {
+            match s {
+                Seg::M(p) | Seg::L(p) => return Some(*p),
+                Seg::Q(_, p) => return Some(*p),
+                Seg::C(_, _, p) => return Some(*p),
+                Seg::Z => continue,
+            }
+        }
+        None
+    }
+
+    /// Elliptical arc from angle `a0` to `a1` (radians; 0 is right, positive is
+    /// clockwise in the y-down canvas). Appends quarter-or-smaller cubic
+    /// approximations, moving to the start point only when the pen is not
+    /// already there, so consecutive arcs stay one subpath.
+    pub fn arc_to(&mut self, cx: f64, cy: f64, rx: f64, ry: f64, a0: f64, a1: f64) -> &mut Self {
+        let pt = |a: f64| v2(cx + a.cos() * rx, cy + a.sin() * ry);
+        let tan = |a: f64| v2(-rx * a.sin(), ry * a.cos());
+        let cur = self.last_point();
+        let start = pt(a0);
+        if cur.is_none_or(|c| c.dist(start) > 1e-6) {
+            self.move_to(start);
+        }
+        let sweep = a1 - a0;
+        let n = (sweep.abs() / (std::f64::consts::FRAC_PI_2))
+            .ceil()
+            .max(1.0) as usize;
+        for i in 0..n {
+            let s = a0 + sweep * (i as f64) / n as f64;
+            let e = a0 + sweep * ((i + 1) as f64) / n as f64;
+            let d = e - s;
+            let c = (4.0 / 3.0) * (d / 4.0).tan();
+            let p0 = pt(s);
+            let p3 = pt(e);
+            self.cubic_to(p0 + tan(s) * c, p3 - tan(e) * c, p3);
+        }
+        self
+    }
+
     /// Polyline from points.
     pub fn polyline(pts: &[V2], closed: bool) -> VPath {
         let mut p = VPath::new();
@@ -585,6 +627,18 @@ pub fn to_subpaths(path: &VPath, origin: V2) -> Vec<SubPath> {
 
 /// Split a polyline into dashes (pattern lengths alternate on/off).
 pub fn dash_polyline(pts: &[V2], closed: bool, pattern: &[f64]) -> Vec<Vec<V2>> {
+    dash_polyline_with_offset(pts, closed, pattern, 0.0)
+}
+
+/// Split a polyline into dashes, starting `offset` world units into the pattern.
+/// The offset wraps around one full on/off cycle and keeps the first dash aligned
+/// with the route start when it is zero.
+pub fn dash_polyline_with_offset(
+    pts: &[V2],
+    closed: bool,
+    pattern: &[f64],
+    offset: f64,
+) -> Vec<Vec<V2>> {
     let pat: Vec<f64> = pattern.iter().map(|x| x.max(0.01)).collect();
     if pat.is_empty() || pts.len() < 2 {
         return vec![pts.to_vec()];
@@ -593,10 +647,20 @@ pub fn dash_polyline(pts: &[V2], closed: bool, pattern: &[f64]) -> Vec<Vec<V2>> 
     if closed {
         seq.push(pts[0]);
     }
-    let mut out = Vec::new();
+    let cycle: f64 = pat.iter().sum();
     let mut idx = 0;
-    let mut left = pat[0];
-    let mut on = true;
+    let mut skip = if offset.is_finite() && cycle > 0.0 {
+        offset.rem_euclid(cycle)
+    } else {
+        0.0
+    };
+    while skip >= pat[idx] {
+        skip -= pat[idx];
+        idx = (idx + 1) % pat.len();
+    }
+    let mut out = Vec::new();
+    let mut left = pat[idx] - skip;
+    let mut on = idx % 2 == 0;
     let mut cur: Vec<V2> = vec![seq[0]];
     for w in seq.windows(2) {
         let (mut a, b) = (w[0], w[1]);
@@ -684,6 +748,19 @@ mod tests {
         assert_eq!(d.len(), 2);
         assert!((d[0][1].x - 2.0).abs() < 1e-9);
         assert!((d[1][0].x - 5.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn dash_offset_starts_inside_the_pattern() {
+        let line = [v2(0.0, 0.0), v2(50.0, 0.0)];
+        let d = dash_polyline_with_offset(&line, false, &[10.0, 10.0], 5.0);
+        assert!((d[0][0].x - 0.0).abs() < 1e-9);
+        assert!((d[0][1].x - 5.0).abs() < 1e-9, "first run is clipped");
+        assert!((d[1][0].x - 15.0).abs() < 1e-9, "gap follows the run");
+        assert!((d[1][1].x - 25.0).abs() < 1e-9);
+
+        let wrapped = dash_polyline_with_offset(&line, false, &[10.0, 10.0], 25.0);
+        assert_eq!(wrapped[0][1].x, d[0][1].x, "offset wraps each cycle");
     }
 
     #[test]

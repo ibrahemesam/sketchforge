@@ -1,6 +1,6 @@
 //! Paints, blend modes, stroke and text styling, layout and constraint properties.
 
-use super::node::{Color, NodeId};
+use super::node::{Color, NodeId, TextAlign};
 use crate::geom::{V2, v2};
 use serde::{Deserialize, Serialize};
 
@@ -15,6 +15,8 @@ fn is_one(x: &f64) -> bool {
 pub struct Stop {
     pub pos: f64,
     pub color: Color,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub dark: Option<Color>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
@@ -37,6 +39,8 @@ pub enum ImageMode {
 pub enum Paint {
     Solid {
         color: Color,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        dark: Option<Color>,
     },
     Linear {
         stops: Vec<Stop>,
@@ -61,18 +65,50 @@ pub enum Paint {
 
 impl Paint {
     pub fn solid(c: Color) -> Paint {
-        Paint::Solid { color: c }
+        Paint::Solid {
+            color: c,
+            dark: None,
+        }
+    }
+    /// A solid fill with an explicit dark-mode color.
+    pub fn solid_pair(light: Color, dark: Color) -> Paint {
+        Paint::Solid {
+            color: light,
+            dark: Some(dark),
+        }
     }
     pub fn linear(a: Color, b: Color) -> Paint {
         Paint::Linear {
-            stops: vec![Stop { pos: 0.0, color: a }, Stop { pos: 1.0, color: b }],
+            stops: vec![
+                Stop {
+                    pos: 0.0,
+                    color: a,
+                    dark: None,
+                },
+                Stop {
+                    pos: 1.0,
+                    color: b,
+                    dark: None,
+                },
+            ],
             from: v2(0.5, 0.0),
             to: v2(0.5, 1.0),
         }
     }
     pub fn radial(a: Color, b: Color) -> Paint {
         Paint::Radial {
-            stops: vec![Stop { pos: 0.0, color: a }, Stop { pos: 1.0, color: b }],
+            stops: vec![
+                Stop {
+                    pos: 0.0,
+                    color: a,
+                    dark: None,
+                },
+                Stop {
+                    pos: 1.0,
+                    color: b,
+                    dark: None,
+                },
+            ],
             center: v2(0.5, 0.5),
             radius: v2(0.5, 0.5),
         }
@@ -85,10 +121,14 @@ impl Paint {
             Paint::Image { .. } => "Image",
         }
     }
+    /// Whether this paint is a gradient (linear or radial).
+    pub fn is_gradient(&self) -> bool {
+        matches!(self, Paint::Linear { .. } | Paint::Radial { .. })
+    }
     /// A representative color (for swatches and simplified renderers).
     pub fn preview_color(&self) -> Color {
         match self {
-            Paint::Solid { color } => *color,
+            Paint::Solid { color, .. } => *color,
             Paint::Linear { stops, .. } | Paint::Radial { stops, .. } => {
                 stops.first().map_or(Color::BLACK, |s| s.color)
             }
@@ -99,6 +139,55 @@ impl Paint {
         match self {
             Paint::Linear { stops, .. } | Paint::Radial { stops, .. } => Some(stops),
             _ => None,
+        }
+    }
+
+    /// Repair numbers loaded from a file or typed into the advanced editor:
+    /// gradients keep at least two finite stops and images a sane opacity.
+    pub fn sanitize(&mut self) {
+        match self {
+            Paint::Solid { .. } => {}
+            Paint::Linear { stops, from, to }
+            | Paint::Radial {
+                stops,
+                center: from,
+                radius: to,
+            } => {
+                for s in stops.iter_mut() {
+                    if !s.pos.is_finite() {
+                        s.pos = 0.0;
+                    }
+                    s.pos = s.pos.clamp(0.0, 1.0);
+                }
+                stops.sort_by(|a, b| a.pos.total_cmp(&b.pos));
+                if stops.is_empty() {
+                    stops.push(Stop {
+                        pos: 0.0,
+                        color: Color::BLACK,
+                        dark: None,
+                    });
+                }
+                if stops.len() == 1 {
+                    let c = stops[0];
+                    stops.push(Stop {
+                        pos: 1.0,
+                        color: c.color,
+                        dark: c.dark,
+                    });
+                }
+                if !from.x.is_finite() || !from.y.is_finite() {
+                    *from = v2(0.5, 0.0);
+                }
+                if !to.x.is_finite() || !to.y.is_finite() {
+                    *to = v2(0.5, 1.0);
+                }
+            }
+            Paint::Image { opacity, .. } => {
+                if !opacity.is_finite() {
+                    *opacity = 1.0;
+                }
+                *opacity = opacity.clamp(0.0, 1.0);
+            }
         }
     }
 }
@@ -258,6 +347,36 @@ pub enum Join {
 
 // ---------------------------------------------------------------------------------- text
 
+/// Vertical script position for selected characters. `Normal` is the baseline;
+/// `Super` and `Sub` draw smaller glyphs raised or lowered from it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum TextScript {
+    #[default]
+    Normal,
+    Super,
+    Sub,
+}
+
+impl TextScript {
+    /// Drawn size relative to the character's own size.
+    pub fn scale(self) -> f64 {
+        match self {
+            TextScript::Normal => 1.0,
+            TextScript::Super | TextScript::Sub => 0.7,
+        }
+    }
+
+    /// Baseline shift in ems of the character's size; negative raises.
+    pub fn shift(self) -> f64 {
+        match self {
+            TextScript::Normal => 0.0,
+            TextScript::Super => -0.35,
+            TextScript::Sub => 0.15,
+        }
+    }
+}
+
 /// Style overrides for a range of characters `[start, end)` (char indices).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub struct TextSpan {
@@ -272,15 +391,25 @@ pub struct TextSpan {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub color: Option<Color>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub color_dark: Option<Color>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub underline: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub strike: Option<bool>,
+    /// Superscript or subscript override; None inherits the node's base script.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub script: Option<TextScript>,
 }
 
 /// Node-wide text attributes beyond size and alignment.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 #[serde(default)]
 pub struct TextStyle {
+    /// Font family name as exposed in the inspector's dropdown. None = Inter;
+    /// system families resolve their faces through the dynamic registry and
+    /// fall back to Inter when the family is missing on this machine.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub family: Option<String>,
     pub bold: bool,
     pub italic: bool,
     /// Line height as a multiple of the font size (None = font default).
@@ -288,8 +417,26 @@ pub struct TextStyle {
     pub line_height: Option<f64>,
     /// Extra advance per character, in px.
     pub letter_spacing: f64,
+    /// Horizontal alignment for shape labels (text layers keep theirs in the kind).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub align: Option<TextAlign>,
+    /// Base script position for the whole run; spans may override it.
+    #[serde(default, skip_serializing_if = "TextScript::is_normal")]
+    pub script: TextScript,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub spans: Vec<TextSpan>,
+}
+
+impl TextScript {
+    pub fn is_normal(&self) -> bool {
+        *self == TextScript::Normal
+    }
+    pub fn is_super(&self) -> bool {
+        *self == TextScript::Super
+    }
+    pub fn is_sub(&self) -> bool {
+        *self == TextScript::Sub
+    }
 }
 
 impl TextSpan {
@@ -299,8 +446,10 @@ impl TextSpan {
         self.italic = None;
         self.size = None;
         self.color = None;
+        self.color_dark = None;
         self.underline = None;
         self.strike = None;
+        self.script = None;
     }
 }
 
@@ -319,6 +468,19 @@ pub struct CharStyle {
     pub color: Color,
     pub underline: bool,
     pub strike: bool,
+    pub script: TextScript,
+}
+
+impl CharStyle {
+    /// Size the glyph draws at, after the script scale.
+    pub fn draw_size(&self) -> f64 {
+        self.size * self.script.scale()
+    }
+
+    /// Distance to move this glyph's baseline, in world units.
+    pub fn baseline_shift(&self) -> f64 {
+        self.size * self.script.shift()
+    }
 }
 
 impl TextStyle {
@@ -330,6 +492,7 @@ impl TextStyle {
             color,
             underline: false,
             strike: false,
+            script: self.script,
         };
         for sp in &self.spans {
             if i >= sp.start && i < sp.end {
@@ -350,6 +513,9 @@ impl TextStyle {
                 }
                 if let Some(u) = sp.strike {
                     s.strike = u;
+                }
+                if let Some(sc) = sp.script {
+                    s.script = sc;
                 }
             }
         }
@@ -424,8 +590,10 @@ impl TextStyle {
                 m.italic = s.italic.or(m.italic);
                 m.size = s.size.or(m.size);
                 m.color = s.color.or(m.color);
+                m.color_dark = s.color_dark.or(m.color_dark);
                 m.underline = s.underline.or(m.underline);
                 m.strike = s.strike.or(m.strike);
+                m.script = s.script.or(m.script);
                 // Later spans take precedence.
                 if s.bold.is_some() {
                     m.bold = s.bold;
@@ -439,27 +607,50 @@ impl TextStyle {
                 if s.color.is_some() {
                     m.color = s.color;
                 }
+                if s.color_dark.is_some() {
+                    m.color_dark = s.color_dark;
+                }
                 if s.underline.is_some() {
                     m.underline = s.underline;
                 }
                 if s.strike.is_some() {
                     m.strike = s.strike;
                 }
+                if s.script.is_some() {
+                    m.script = s.script;
+                }
             }
             let empty = m.bold.is_none()
                 && m.italic.is_none()
                 && m.size.is_none()
                 && m.color.is_none()
+                && m.color_dark.is_none()
                 && m.underline.is_none()
-                && m.strike.is_none();
+                && m.strike.is_none()
+                && m.script.is_none();
             if !any || empty {
                 continue;
             }
             match out.last_mut() {
                 Some(l)
                     if l.end == a
-                        && (l.bold, l.italic, l.size, l.color, l.underline, l.strike)
-                            == (m.bold, m.italic, m.size, m.color, m.underline, m.strike) =>
+                        && (
+                            l.bold,
+                            l.italic,
+                            l.size,
+                            l.color,
+                            l.underline,
+                            l.strike,
+                            l.script,
+                        ) == (
+                            m.bold,
+                            m.italic,
+                            m.size,
+                            m.color,
+                            m.underline,
+                            m.strike,
+                            m.script,
+                        ) =>
                 {
                     l.end = b
                 }
@@ -616,15 +807,56 @@ mod tests {
     }
 
     #[test]
+    fn script_spans_inherit_and_override() {
+        let mut t = TextStyle {
+            script: TextScript::Super,
+            ..Default::default()
+        };
+        let base = t.char_style(0, 10.0, Color::BLACK);
+        assert!(base.script.is_super());
+        assert!((base.draw_size() - 7.0).abs() < 1e-9);
+        assert!(base.baseline_shift() < 0.0);
+        t.apply_range(2, 4, |s| s.script = Some(TextScript::Sub));
+        assert!(t.char_style(3, 10.0, Color::BLACK).script.is_sub());
+        assert!(t.char_style(0, 10.0, Color::BLACK).script.is_super());
+        // An explicit Normal span overrides the raised base.
+        t.apply_range(2, 4, |s| s.script = Some(TextScript::Normal));
+        assert!(t.char_style(3, 10.0, Color::BLACK).script.is_normal());
+        let sub = CharStyle {
+            script: TextScript::Sub,
+            size: 10.0,
+            ..base
+        };
+        assert!(sub.baseline_shift() > 0.0);
+    }
+
+    #[test]
+    fn script_runs_split_and_merge_like_other_overrides() {
+        let mut t = TextStyle::default();
+        t.apply_range(0, 4, |s| s.bold = Some(true));
+        t.apply_range(2, 6, |s| s.script = Some(TextScript::Super));
+        assert_eq!(t.spans.len(), 3);
+        assert!(t.char_style(1, 12.0, Color::BLACK).bold);
+        assert!(t.char_style(2, 12.0, Color::BLACK).bold);
+        assert!(t.char_style(2, 12.0, Color::BLACK).script.is_super());
+        assert!(t.char_style(5, 12.0, Color::BLACK).script.is_super());
+        let mut cleared = t.spans[2].clone();
+        cleared.clear();
+        assert!(cleared.script.is_none());
+    }
+
+    #[test]
     fn gradient_sampling() {
         let s = [
             Stop {
                 pos: 0.0,
                 color: Color::BLACK,
+                dark: None,
             },
             Stop {
                 pos: 1.0,
                 color: Color::WHITE,
+                dark: None,
             },
         ];
         assert_eq!(sample_stops(&s, 0.5)[0], 0.5);

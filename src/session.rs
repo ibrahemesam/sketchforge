@@ -63,9 +63,10 @@ impl Session {
         self.open(ed, &p.dir)
     }
 
-    /// Note that time passed; returns true when a save is due now.
+    /// Note that time passed; returns true when a save is due now. Documents
+    /// with autosave turned off (Diagram tab) are only saved explicitly.
     pub fn autosave_due(&mut self, ed: &Editor, now: Instant) -> bool {
-        if self.project.is_none() || !ed.project_dirty() {
+        if self.project.is_none() || !ed.doc.settings.autosave || !ed.project_dirty() {
             self.dirty_since = None;
             return false;
         }
@@ -79,7 +80,8 @@ impl Session {
     }
 
     /// When the next autosave check should happen (for the event loop's wake-up timer).
-    pub fn next_deadline(&self) -> Option<Instant> {
+    pub fn next_deadline(&self, ed: &Editor) -> Option<Instant> {
+        ed.doc.settings.autosave.then_some(())?;
         self.dirty_since.map(|t| t + AUTOSAVE_DELAY)
     }
 
@@ -224,6 +226,17 @@ mod tests {
         assert_eq!(sess.save(&mut ed).unwrap(), 1);
         assert!(!ed.project_dirty());
         assert!(!sess.autosave_due(&ed, t0 + AUTOSAVE_DELAY * 3));
+
+        // Turning autosave off leaves the document dirty until an explicit save.
+        add_rect(&mut ed, 6.0);
+        ed.edit_settings("autosave off", |s| s.autosave = false);
+        assert!(!sess.autosave_due(&ed, t0 + AUTOSAVE_DELAY * 4));
+        assert!(ed.project_dirty());
+        assert!(sess.next_deadline(&ed).is_none());
+        ed.edit_settings("autosave on", |s| s.autosave = true);
+        assert!(!sess.autosave_due(&ed, t0 + AUTOSAVE_DELAY * 4));
+        assert!(sess.autosave_due(&ed, t0 + AUTOSAVE_DELAY * 6));
+        assert_eq!(sess.save(&mut ed).unwrap(), 1);
 
         // Reload from disk in a fresh editor.
         let dir = sess.project.as_ref().unwrap().dir.clone();

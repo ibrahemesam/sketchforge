@@ -10,11 +10,12 @@ use super::css::{self, Context, Styles};
 use super::html::{self, Element, Html};
 use super::{Out, ToolResult, tools};
 use crate::editor::Editor;
+use crate::generate::{Layout, Options, Source};
 use crate::geom::{Rect, V2, v2};
 use crate::history::Tx;
 use crate::model::{
-    AutoLayout, Binding, Color, Direction, Document, Head, ImageMode, Node, NodeId, NodeKind,
-    Paint, PathPoint, Route, Sizing, SubPath, TextAlign,
+    AutoLayout, Binding, Color, Direction, Document, Head, ImageMode, LayerId, LineJump, Node,
+    NodeId, NodeKind, Paint, PathPoint, Route, Sizing, SubPath, TextAlign,
 };
 use crate::project::{Project, Store};
 use crate::render::gpu::Headless;
@@ -251,6 +252,18 @@ pub fn call(host: &mut dyn Host, name: &str, args: &Value) -> ToolResult {
         "create_file" => create_file(host, &a),
         "get_font_family_info" => font_info(&a),
         "get_guide" => guide(&a),
+        "list_templates" => {
+            check_file(host, &a)?;
+            list_templates(host, &a)
+        }
+        "insert_template" => {
+            check_file(host, &a)?;
+            insert_template(host, &a)
+        }
+        "generate_diagram" => {
+            check_file(host, &a)?;
+            generate_diagram(host, &a)
+        }
         _ => {
             check_file(host, &a)?;
             let ed = host.editor();
@@ -265,6 +278,8 @@ pub fn call(host: &mut dyn Host, name: &str, args: &Value) -> ToolResult {
                 "get_node_info" => node_info(ed, &a),
                 "get_children" => children(ed, &a),
                 "get_tree_summary" => tree_summary(ed, &a),
+                "list_layers" => list_layers(ed, &a),
+                "layer_ops" => layer_ops(ed, &a),
                 "get_screenshot" => screenshot(host, &a),
                 "get_jsx" => jsx(host, &a),
                 "get_computed_styles" => computed_styles(ed, &a),
@@ -275,6 +290,8 @@ pub fn call(host: &mut dyn Host, name: &str, args: &Value) -> ToolResult {
                 "create_artboard" => create_artboard(ed, &a),
                 "write_html" => write_html(ed, &a),
                 "create_shape" => create_shape(ed, &a),
+                "search_shapes" => search_shapes(ed, &a),
+                "insert_shape" => insert_shape(ed, &a),
                 "update_styles" => update_styles(ed, &a),
                 "set_text_content" => set_text_content(ed, &a),
                 "rename_nodes" => rename_nodes(ed, &a),
@@ -427,6 +444,147 @@ fn rename_pages(ed: &mut Editor, a: &Args) -> ToolResult {
     text(json!({"renamed": done}))
 }
 
+/// Resolve a layer argument to its id: a numeric id string, or a name match.
+fn layer_from(doc: &Document, key: &str) -> Result<LayerId, String> {
+    if let Ok(n) = key.parse::<u64>()
+        && doc.layer_by_id(LayerId(n)).is_some()
+    {
+        return Ok(LayerId(n));
+    }
+    let by_name = doc.layers.iter().find(|l| l.name == key);
+    if let Some(l) = by_name {
+        return Ok(l.id);
+    }
+    let closest = doc
+        .layers
+        .iter()
+        .map(|l| format!("{}: {}", l.id.0, l.name))
+        .collect::<Vec<_>>()
+        .join(", ");
+    Err(format!("no layer `{key}` (have {closest})"))
+}
+
+fn list_layers(ed: &mut Editor, a: &Args) -> ToolResult {
+    let page = page_arg(ed, a)?;
+    let doc = ed.page_doc(page);
+    let layers: Vec<Value> = doc
+        .layers
+        .iter()
+        .map(|l| {
+            json!({
+                "id": l.id.0,
+                "name": l.name,
+                "visible": l.visible,
+                "locked": l.locked,
+                "memberCount": doc
+                    .layered_root()
+                    .into_iter()
+                    .filter(|rid| doc.effective_layer(*rid) == l.id)
+                    .count(),
+            })
+        })
+        .collect();
+    text(json!({"pageId": ed.pages[page].id, "layers": layers}))
+}
+
+fn layer_ops(ed: &mut Editor, a: &Args) -> ToolResult {
+    let page = page_arg(ed, a)?;
+    let ops = a.arr("ops")?.clone();
+    let mut results: Vec<Value> = Vec::new();
+    for opv in ops {
+        let op = Args(opv.as_object().ok_or("each op must be an object")?);
+        let kind = op.req_str("op")?.to_string();
+        let mut out = json!({"op": kind});
+        // All ops except `add` and `selectNodes` produce the touched layer id.
+        let layer_json = |_ed: &Editor, id: LayerId| json!(id.0);
+        match kind.as_str() {
+            "add" => {
+                let name = op.str("name").map(String::from);
+                let new_id = ed.with_page(page, |ed| {
+                    let id = ed.layer_add();
+                    if let Some(name) = &name {
+                        ed.layer_rename(id, name.clone());
+                    }
+                    id
+                });
+                out["layer"] = layer_json(ed, new_id);
+            }
+            "selectNodes" => {
+                let key = op.req_str("layer")?.to_string();
+                let ids = ed.with_page(page, |ed| {
+                    let id = layer_from(&ed.doc, &key)?;
+                    let sel: Vec<NodeId> = ed
+                        .doc
+                        .layered_root()
+                        .into_iter()
+                        .filter(|rid| {
+                            ed.doc.effective_layer(*rid) == id
+                                && ed.doc.is_effectively_visible(*rid)
+                                && !ed.doc.is_effectively_locked(*rid)
+                        })
+                        .collect();
+                    ed.select(sel.clone());
+                    Ok::<_, String>(sel)
+                })?;
+                out["selected"] = json!(
+                    ids.iter()
+                        .map(|id| node_key(ed, page, *id))
+                        .collect::<Vec<_>>()
+                );
+            }
+            other => {
+                let key = op.req_str("layer")?.to_string();
+                let r: Result<Option<LayerId>, String> = ed.with_page(page, |ed| {
+                    let id = layer_from(&ed.doc, &key)?;
+                    out["layer"] = layer_json(ed, id);
+                    match other {
+                        "rename" => {
+                            ed.layer_rename(id, op.req_str("name")?);
+                            Ok(Some(id))
+                        }
+                        "delete" => {
+                            ed.layer_delete(id);
+                            Ok(Some(id))
+                        }
+                        "duplicate" => Ok(ed.layer_duplicate(id)),
+                        "move" => {
+                            let index = op.num("index").ok_or("`move` needs `index`")? as usize;
+                            ed.layer_reorder(id, index);
+                            Ok(Some(id))
+                        }
+                        "show" | "hide" => {
+                            ed.layer_set_visible(id, other == "show");
+                            Ok(Some(id))
+                        }
+                        "lock" | "unlock" => {
+                            ed.layer_set_locked(id, other == "lock");
+                            Ok(Some(id))
+                        }
+                        "moveNodes" => {
+                            let keys = op.strs("nodeIds")?;
+                            if keys.is_empty() {
+                                return Err("`moveNodes` needs `nodeIds`".into());
+                            }
+                            let (_, ids) = resolve_all(ed, &keys, page)?;
+                            out["moved"] = json!(
+                                ids.iter()
+                                    .map(|id| node_key(ed, page, *id))
+                                    .collect::<Vec<_>>()
+                            );
+                            ed.move_selection_to_layer(&ids, id);
+                            Ok(Some(id))
+                        }
+                        _ => Err(format!("unknown layer op `{other}`")),
+                    }
+                });
+                r?;
+            }
+        }
+        results.push(out);
+    }
+    text(json!({"results": results}))
+}
+
 // ------------------------------------------------------------------------------ reading
 
 /// Node summary with parent-relative and world positions.
@@ -517,6 +675,9 @@ fn selection(ed: &mut Editor) -> ToolResult {
             if let Some(t) = ed.doc.get(*id).unwrap().kind.text() {
                 v["text"] = json!(t);
             }
+            if ed.doc.get(*id).unwrap().supports_label() {
+                v["label"] = json!(ed.doc.get(*id).unwrap().label);
+            }
             v
         })
         .collect();
@@ -531,6 +692,9 @@ fn node_info(ed: &mut Editor, a: &Args) -> ToolResult {
     v["pageId"] = json!(ed.pages[page].id);
     v["visible"] = json!(n.visible);
     v["locked"] = json!(n.locked);
+    let layer = doc.layer_of(id);
+    v["layer"] = json!(layer.id.0);
+    v["layerName"] = json!(layer.name);
     v["parentId"] = json!(n.parent.map_or(ROOT.to_string(), |p| node_key(ed, page, p)));
     v["childIds"] = json!(
         n.children
@@ -544,6 +708,32 @@ fn node_info(ed: &mut Editor, a: &Args) -> ToolResult {
     if n.supports_label() {
         v["label"] = json!(n.label);
     }
+    if n.is_connector() {
+        if let Some(p) = n.label_pos {
+            v["labelPosition"] = json!(p);
+        }
+        if let Some(o) = n.label_offset {
+            v["labelOffset"] = json!({"x": o.x, "y": o.y});
+        }
+        if !n.labels.is_empty() {
+            v["labelCount"] = json!(n.label_count());
+            v["labels"] = json!(
+                n.labels
+                    .iter()
+                    .map(|l| {
+                        let mut lv = json!({"text": l.text});
+                        if let Some(p) = l.pos {
+                            lv["position"] = json!(p);
+                        }
+                        if let Some(o) = l.offset {
+                            lv["offset"] = json!({"x": o.x, "y": o.y});
+                        }
+                        lv
+                    })
+                    .collect::<Vec<_>>()
+            );
+        }
+    }
     if let Some(ab) = artboard_of(doc, id) {
         v["artboardId"] = json!(node_key(ed, page, ab));
     }
@@ -552,6 +742,18 @@ fn node_info(ed: &mut Editor, a: &Args) -> ToolResult {
     }
     if n.instance.is_some() {
         v["instance"] = json!(true);
+    }
+    if !n.link.is_empty() {
+        v["link"] = json!(n.link);
+    }
+    if !n.tooltip.is_empty() {
+        v["tooltip"] = json!(n.tooltip);
+    }
+    if !n.tags.is_empty() {
+        v["tags"] = json!(n.tags);
+    }
+    if !n.metadata.is_empty() {
+        v["metadata"] = json!(n.metadata);
     }
     v["autoLayout"] = json!(n.layout.is_some());
     text(v)
@@ -580,7 +782,8 @@ fn tree_summary(ed: &mut Editor, a: &Args) -> ToolResult {
     let key = a.req_str("nodeId")?;
     let depth = a.num("depth").unwrap_or(3.0).clamp(1.0, 10.0) as usize;
     let (page, roots) = if key == ROOT {
-        (def, ed.page_doc(def).root.clone())
+        let doc = ed.page_doc(def);
+        (def, doc.layered_root())
     } else {
         let (p, id) = resolve(ed, key, def)?;
         (p, vec![id])
@@ -651,7 +854,10 @@ fn screenshot(host: &mut dyn Host, a: &Args) -> ToolResult {
             let (p, id) = resolve(ed, k, def)?;
             (p, vec![id])
         }
-        None => (def, ed.page_doc(def).root.clone()),
+        None => {
+            let doc = ed.page_doc(def);
+            (def, doc.layered_root())
+        }
     };
     let doc = ed.page_doc(page);
     let b = crate::io::svg::export_bounds(doc, &roots).ok_or("nothing to capture (empty)")?;
@@ -1089,6 +1295,8 @@ fn export(host: &mut dyn Host, a: &Args) -> ToolResult {
                 scope: Scope::Selection,
                 scale,
                 transparent: false,
+                appearance: Default::default(),
+                embed_data: false,
             };
             let item = Item {
                 name: name.clone(),
@@ -1138,6 +1346,8 @@ fn export_pdf(host: &mut dyn Host, a: &Args) -> ToolResult {
         scope: Scope::Selection,
         scale: 1.0,
         transparent: false,
+        appearance: Default::default(),
+        embed_data: false,
     };
     let files = crate::io::export::write(&spec, &items, &path, None)?;
     text(json!({"file": files.first(), "pages": items.len()}))
@@ -2280,7 +2490,6 @@ fn create_shape(ed: &mut Editor, a: &Args) -> ToolResult {
         head(a.str("endHead"), Head::Arrow)?,
     );
     let name = a.str("name").map(String::from);
-    let sketch = ed.sketch;
     let page_id = ed.pages[page].id.clone();
     let (id, ignored) = ed.with_page(page, |ed| {
         ed.edit("Add shape", |tx| -> Result<(NodeId, Vec<String>), String> {
@@ -2323,7 +2532,14 @@ fn create_shape(ed: &mut Editor, a: &Args) -> ToolResult {
                 n.rect = Rect::new(b.x - o.x, b.y - o.y, b.w.max(1.0), b.h.max(1.0));
                 if ty == "arrow" || start_node.is_some() || end_node.is_some() {
                     let local: Vec<V2> = pts.iter().map(|p| *p - b.min()).collect();
-                    let binding = |id: Option<NodeId>| id.map(|node| Binding { node, fixed: v2(0.5, 0.5), inside: false });
+                    let binding = |id: Option<NodeId>| {
+                        id.map(|node| Binding {
+                            node,
+                            fixed: v2(0.5, 0.5),
+                            inside: false,
+                            floating: false,
+                        })
+                    };
                     let style = n.style.clone();
                     n.kind = NodeKind::Connector {
                         points: local,
@@ -2332,6 +2548,8 @@ fn create_shape(ed: &mut Editor, a: &Args) -> ToolResult {
                         route,
                         start_head,
                         end_head: if ty == "line" { head(None, Head::None)? } else { end_head },
+                        jump: LineJump::None,
+                        jump_size: 6.0,
                     };
                     n.style = style;
                     n.name = name.clone().unwrap_or_else(|| "Arrow".into());
@@ -2347,11 +2565,6 @@ fn create_shape(ed: &mut Editor, a: &Args) -> ToolResult {
                     n.style.stroke_width = 2.0;
                 }
             }
-            if let Some(r) = sketch
-                && !matches!(n.kind, NodeKind::Text { .. } | NodeKind::Sticky { .. })
-            {
-                n.style.rough = Some(crate::model::rough::Rough { seed: (n.id.0 as u32).wrapping_mul(2_654_435_761).max(1), ..r });
-            }
             let ctx = Parent::of(tx.doc(), &page_id, parent).ctx();
             if parent.is_some() {
                 n.layout_child.absolute = ctx.parent_layout.is_some();
@@ -2365,6 +2578,14 @@ fn create_shape(ed: &mut Editor, a: &Args) -> ToolResult {
                 }
             }
             let id = tx.insert(n, parent, None);
+            if let Some(key) = a.str("layer").filter(|s| !s.is_empty()) {
+                let layer = layer_from(tx.doc(), key)?;
+                for sid in tx.doc().subtree(id) {
+                    if let Some(s) = tx.node_mut(sid) {
+                        s.layer = Some(layer);
+                    }
+                }
+            }
             fit_text(tx, id, false);
             crate::editor::whiteboard::update_connector(tx, id);
             Ok((id, ignored))
@@ -2375,6 +2596,209 @@ fn create_shape(ed: &mut Editor, a: &Args) -> ToolResult {
         v["ignoredStyles"] = json!(ignored);
     }
     text(v)
+}
+
+/// Search the native shape registry (ADR-010); empty query lists everything.
+/// Bundled packs plus every library file in the folder chosen in options.
+fn template_libraries(host: &mut dyn Host) -> Vec<crate::template::TemplateLibrary> {
+    let mut libs = vec![crate::template::TemplateLibrary::bundled()];
+    let folder = crate::options::Options::load(&host.store().root).template_folder;
+    if let Some(dir) = folder {
+        let (custom, _) = crate::template::TemplateLibrary::load_folder(&dir);
+        libs.extend(custom);
+    }
+    libs
+}
+
+fn list_templates(host: &mut dyn Host, a: &Args) -> ToolResult {
+    let query = a.str("query").unwrap_or("");
+    let category = a.str("category").map(|c| c.to_lowercase());
+    let mut templates = Vec::new();
+    for lib in template_libraries(host) {
+        for t in &lib.templates {
+            if !t.matches(query) {
+                continue;
+            }
+            if let Some(c) = &category
+                && t.category.to_lowercase() != *c
+            {
+                continue;
+            }
+            templates.push(json!({
+                "id": t.id,
+                "name": t.name,
+                "category": t.category,
+                "library": lib.name,
+                "description": t.description,
+                "keywords": t.keywords,
+                "pages": t.pages.iter().map(|p| p.name.clone()).collect::<Vec<_>>(),
+            }));
+        }
+    }
+    text(json!({"count": templates.len(), "templates": templates}))
+}
+
+fn insert_template(host: &mut dyn Host, a: &Args) -> ToolResult {
+    let key = a.req_str("template")?;
+    let libs = template_libraries(host);
+    let template = libs
+        .iter()
+        .flat_map(|l| l.templates.iter())
+        .find(|t| t.id == key)
+        .or_else(|| {
+            libs.iter()
+                .flat_map(|l| l.templates.iter())
+                .find(|t| t.name.eq_ignore_ascii_case(key))
+        })
+        .cloned()
+        .ok_or_else(|| format!("unknown template `{key}`"))?;
+    let as_pages = a.get("asPages").and_then(Value::as_bool).unwrap_or(false);
+    if as_pages {
+        let out = host.editor().insert_template_pages(&template);
+        let pages = template.pages.len();
+        return text(json!({
+            "template": template.id,
+            "name": template.name,
+            "mode": "pages",
+            "pages": pages,
+            "firstPage": out.page.map(|i| i + 1),
+            "missingShapes": out.missing,
+        }));
+    }
+    let page = a.num("page").unwrap_or(1.0).max(1.0) as usize - 1;
+    if page >= template.pages.len() {
+        return Err(format!(
+            "`{}` has {} page(s); page {} does not exist",
+            template.name,
+            template.pages.len(),
+            page + 1
+        ));
+    }
+    let at = match (a.num("x"), a.num("y")) {
+        (Some(x), Some(y)) => Some(v2(x, y)),
+        _ => None,
+    };
+    let out = host
+        .editor()
+        .insert_template_page(&template, page, at)
+        .ok_or_else(|| format!("could not insert page {} of `{}`", page + 1, template.name))?;
+    let ed = host.editor();
+    let ids: Vec<String> = out
+        .ids
+        .iter()
+        .map(|id| node_key(ed, ed.active_page, *id))
+        .collect();
+    text(json!({
+        "template": template.id,
+        "name": template.name,
+        "mode": "page",
+        "page": page + 1,
+        "nodeIds": ids,
+        "missingShapes": out.missing,
+    }))
+}
+
+fn generate_diagram(host: &mut dyn Host, a: &Args) -> ToolResult {
+    let raw_source = a.req_str("source")?;
+    let source = Source::parse_id(raw_source)
+        .ok_or_else(|| format!("unknown source `{raw_source}`; use mermaid, csv, sql, or json"))?;
+    let input = a.req_str("text")?;
+    let mut opts = Options::default();
+    if let Some(raw) = a.str("layout") {
+        opts.layout = Layout::parse_id(raw).ok_or_else(|| {
+            format!("unknown layout `{raw}`; use auto, grid, vertical, horizontal, vertical-tree, or horizontal-tree")
+        })?;
+    }
+    opts.header = a.get("header").and_then(Value::as_bool).unwrap_or(false);
+    opts.label_column = a
+        .num("labelColumn")
+        .map(|n| (n.max(1.0) as usize).saturating_sub(1));
+    let generated = crate::generate::generate(source, input, &opts)?;
+    let warnings = generated.report.warnings.clone();
+    let name = generated.name.clone();
+    let as_page = a.get("asPage").and_then(Value::as_bool).unwrap_or(false);
+    let at = match (a.num("x"), a.num("y")) {
+        (Some(x), Some(y)) => Some(v2(x, y)),
+        _ => None,
+    };
+    let out = host.editor().insert_generated(&generated, at, as_page);
+    let ed = host.editor();
+    let ids: Vec<String> = out
+        .ids
+        .iter()
+        .map(|id| node_key(ed, ed.active_page, *id))
+        .collect();
+    text(json!({
+        "source": source.id(),
+        "name": name,
+        "mode": if as_page { "page" } else { "content" },
+        "page": out.page.map(|i| i + 1),
+        "nodes": generated.doc.nodes.len(),
+        "nodeIds": ids,
+        "warnings": warnings,
+    }))
+}
+
+fn search_shapes(_ed: &mut Editor, a: &Args) -> ToolResult {
+    let q = a.str("query").unwrap_or("");
+    let cat = a.str("category").map(|c| c.to_lowercase());
+    let shapes: Vec<Value> = crate::registry::search(q)
+        .iter()
+        .filter(|d| {
+            cat.as_ref()
+                .is_none_or(|c| d.category.name().to_lowercase() == *c)
+        })
+        .map(|d| {
+            json!({
+                "id": d.id,
+                "name": d.name,
+                "category": d.category.name(),
+                "keywords": d.keywords,
+                "width": d.size.0,
+                "height": d.size.1,
+            })
+        })
+        .collect();
+    text(json!({"count": shapes.len(), "shapes": shapes}))
+}
+
+/// Insert a registry shape as a regular node, parented and layer-aware like
+/// any other insert.
+fn insert_shape(ed: &mut Editor, a: &Args) -> ToolResult {
+    let key = a.req_str("shape")?;
+    let def = crate::registry::by_id(key).ok_or_else(|| format!("unknown shape `{key}`"))?;
+    let page = page_arg(ed, a)?;
+    let mut parent = None;
+    if let Some(p) = a.str("parentId").filter(|p| !p.is_empty() && *p != ROOT) {
+        let (pg, id) = resolve(ed, p, page)?;
+        if !ed.page_doc(pg).get(id).unwrap().is_container() {
+            return Err("parentId must be a frame or group".into());
+        }
+        if pg != page {
+            return Err("parentId must be on the same page".into());
+        }
+        parent = Some(id);
+    }
+    let layer = match a.str("layer").filter(|l| !l.is_empty()) {
+        Some(k) => Some(layer_from(ed.page_doc(page), k)?),
+        None => None,
+    };
+    let (x, y) = (a.num("x").unwrap_or(0.0), a.num("y").unwrap_or(0.0));
+    let (w, h) = (
+        a.num("width").unwrap_or(def.size.0),
+        a.num("height").unwrap_or(def.size.1),
+    );
+    let at = v2(x + w * 0.5, y + h * 0.5);
+    let id = ed
+        .with_page(page, |ed| {
+            ed.insert_registry_shape(def.id, Some(at), Some((w, h)), parent, layer)
+        })
+        .ok_or("insert failed")?;
+    text(json!({
+        "id": node_key(ed, page, id),
+        "pageId": ed.pages[page].id,
+        "shape": def.id,
+    }))
 }
 
 fn update_styles(ed: &mut Editor, a: &Args) -> ToolResult {
@@ -2497,33 +2921,41 @@ fn set_text_content(ed: &mut Editor, a: &Args) -> ToolResult {
         "updates",
         "Set text",
         |u| {
-            Ok(u.get("textContent")
-                .and_then(Value::as_str)
-                .unwrap_or("")
-                .to_string())
+            let idx = u.get("labelIndex").and_then(Value::as_u64).unwrap_or(0) as usize;
+            Ok((
+                u.get("textContent")
+                    .and_then(Value::as_str)
+                    .unwrap_or("")
+                    .to_string(),
+                idx,
+            ))
         },
-        |tx, id, t| {
+        |tx, id, (t, idx)| {
+            let idx = *idx;
             let node = tx.node_mut(id).unwrap();
+            let name = node.name.clone();
+            let kind = node.kind.type_name().to_string();
             let old_len = node
-                .edited_text()
+                .edited_label(idx)
                 .map(|s| s.chars().count())
                 .ok_or_else(|| {
-                    format!(
-                        "{} is a {}, not a text layer",
-                        node.name,
-                        node.kind.type_name()
-                    )
+                    if idx == 0 {
+                        format!("{name} is a {kind}, not a text layer")
+                    } else {
+                        format!("{name} has no label index {idx}")
+                    }
                 })?;
-            *node.edited_text_mut().unwrap() = t.clone();
+            let (text, style) = node.edited_label_and_style_mut(idx).unwrap();
+            *text = t.clone();
             let len = t.chars().count();
-            for s in &mut node.text_style.spans {
+            for s in &mut style.spans {
                 if s.start == 0 && s.end >= old_len {
                     s.end = len;
                 }
                 s.start = s.start.min(len);
                 s.end = s.end.min(len);
             }
-            node.text_style.spans.retain(|s| s.end > s.start);
+            style.spans.retain(|s| s.end > s.start);
             fit_text(tx, id, false);
             relayout(tx, Some(id));
             Ok(())

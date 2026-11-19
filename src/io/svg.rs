@@ -57,6 +57,7 @@ pub fn export_bounds(doc: &Document, roots: &[NodeId]) -> Option<Rect> {
             if nd.is_group() || !doc.is_effectively_visible(id) {
                 continue;
             }
+            let resolved = crate::model::placeholders::resolve_node(nd, doc);
             // Children of clipping frames can't draw outside them.
             if doc.ancestors(id).iter().any(|a| {
                 matches!(
@@ -66,7 +67,11 @@ pub fn export_bounds(doc: &Document, roots: &[NodeId]) -> Option<Rect> {
             }) {
                 continue;
             }
-            rects.push(draw::draw_bounds(nd, wr));
+            rects.push(draw::draw_bounds_with_shadow(
+                &resolved,
+                wr,
+                doc.settings.shadow,
+            ));
         }
     }
     Rect::union_all(&rects).map(|r| {
@@ -242,6 +247,7 @@ impl Writer<'_> {
                     cap,
                     join,
                     dash,
+                    dash_offset,
                 } => {
                     let cap = match cap {
                         crate::model::Cap::Butt => "",
@@ -253,15 +259,20 @@ impl Writer<'_> {
                         crate::model::Join::Round => " stroke-linejoin=\"round\"",
                         crate::model::Join::Bevel => " stroke-linejoin=\"bevel\"",
                     };
-                    let dash = if dash.is_empty() {
-                        String::new()
+                    let (dash, dash_offset_attr) = if dash.is_empty() {
+                        (String::new(), String::new())
                     } else {
                         let v: Vec<String> = dash.iter().map(|d| n(*d)).collect();
-                        format!(" stroke-dasharray=\"{}\"", v.join(" "))
+                        let offset = if dash_offset.abs() > 1e-9 {
+                            format!(" stroke-dashoffset=\"{}\"", n(*dash_offset))
+                        } else {
+                            String::new()
+                        };
+                        (format!(" stroke-dasharray=\"{}\"", v.join(" ")), offset)
                     };
                     let _ = writeln!(
                         self.out,
-                        "{ind}<path d=\"{}\" fill=\"none\"{} stroke-width=\"{}\"{cap}{join}{dash}/>",
+                        "{ind}<path d=\"{}\" fill=\"none\"{} stroke-width=\"{}\"{cap}{join}{dash}{dash_offset_attr}/>",
                         path.to_svg(),
                         color_attr("stroke", *color),
                         n(*width)
@@ -289,12 +300,14 @@ impl Writer<'_> {
         }
     }
 
-    fn node(&mut self, id: NodeId, opacity: f64, depth: usize) {
+    fn node(&mut self, id: NodeId, opacity: f64, depth: usize, jw: &mut draw::JumpWalk) {
         let doc = self.doc;
         let Some(nd) = doc.get(id) else { return };
         if !nd.visible {
             return;
         }
+        let nd = crate::model::placeholders::resolve_node(nd, doc);
+        let nd = &*nd;
         let wr = doc.world_rect(id).unwrap();
         let ind = "  ".repeat(depth + 1);
         let op = opacity * nd.style.opacity;
@@ -313,8 +326,20 @@ impl Writer<'_> {
             "{ind}<g id=\"n{}\" data-name=\"{label}\"{aria}{blend}>",
             id.0
         );
-        let d = draw::node_draw(nd, wr, op);
+        let jump_pts = jw.points_for(nd, wr);
+        let d = draw::node_draw_with(
+            nd,
+            wr,
+            op,
+            doc.settings.shadow,
+            doc.settings.sketch,
+            doc.settings.auto_fill(),
+            &jump_pts,
+            false,
+            0.0,
+        );
         self.ops(&d.ops, &format!("{ind}  "));
+        jw.push(nd, wr);
         if !nd.children.is_empty() {
             let clip = matches!(nd.kind, NodeKind::Frame { clip: true });
             if clip {
@@ -328,7 +353,7 @@ impl Writer<'_> {
                 let _ = writeln!(self.out, "{ind}  <g clip-path=\"url(#{cid})\">");
             }
             for c in &nd.children {
-                self.node(*c, op, depth + 2);
+                self.node(*c, op, depth + 2, jw);
             }
             if clip {
                 let _ = writeln!(self.out, "{ind}  </g>");
@@ -346,7 +371,7 @@ pub fn export(
 ) -> Option<String> {
     let roots: Vec<NodeId> = roots
         .map(|r| r.to_vec())
-        .unwrap_or_else(|| doc.root.clone());
+        .unwrap_or_else(|| doc.layered_root());
     let b = export_bounds(doc, &roots)?;
     export_in(doc, &roots, b, background)
 }
@@ -375,9 +400,10 @@ pub fn export_in(
             color_attr("fill", bg.to_f32(1.0))
         );
     }
+    let mut jw = draw::JumpWalk::new(doc);
     for id in roots {
         let op = draw::inherited_opacity(doc, *id);
-        w.node(*id, op, 0);
+        w.node(*id, op, 0, &mut jw);
     }
     let mut s = String::new();
     let _ = writeln!(
@@ -404,7 +430,7 @@ mod tests {
     use super::*;
     use crate::demo;
     use crate::geom::Rect;
-    use crate::model::Paint;
+    use crate::model::{LineJump, Paint};
 
     #[test]
     fn svg_is_well_formed_and_contains_all_kinds() {
@@ -448,6 +474,85 @@ mod tests {
     }
 
     #[test]
+    fn export_bounds_include_connector_labels() {
+        use crate::geom::v2;
+        use crate::model::{Head, LineJump, Route};
+
+        let mut ed = crate::editor::Editor::default();
+        let id = ed.add_node(
+            crate::model::Node::new(
+                NodeId(0),
+                NodeKind::Connector {
+                    points: vec![v2(0.0, 0.0), v2(0.0, 100.0)],
+                    start: None,
+                    end: None,
+                    route: Route::Straight,
+                    start_head: Head::None,
+                    end_head: Head::Arrow,
+                    jump: LineJump::None,
+                    jump_size: 6.0,
+                },
+                Rect::new(0.0, 0.0, 0.0, 100.0),
+            ),
+            None,
+        );
+        ed.edit("label", |tx| {
+            let n = tx.node_mut(id).unwrap();
+            n.label = "A long edge label".into();
+            n.label_wrap = true;
+        });
+        let b = export_bounds(&ed.doc, &[id]).unwrap();
+        assert!(
+            b.w >= text::CONNECTOR_LABEL_WIDTH,
+            "a vertical line's label is wider than the line, bounds {b:?}"
+        );
+        let svg = export(&ed.doc, Some(&[id]), None).unwrap();
+        assert!(svg.contains("<svg"));
+        assert!(!svg.contains("NaN"));
+        let mut plain = ed.doc.clone();
+        plain.nodes.get_mut(&id).unwrap().label.clear();
+        let bare = export(&plain, Some(&[id]), None).unwrap();
+        assert!(
+            svg.matches("<path").count() > bare.matches("<path").count(),
+            "the label's glyph outlines are in the export"
+        );
+    }
+
+    #[test]
+    fn export_bounds_include_shape_shadow() {
+        let mut ed = crate::editor::Editor::default();
+        ed.doc.settings.shadow = true;
+        let mut n =
+            crate::model::Node::new(NodeId(0), NodeKind::Rect, Rect::new(10.0, 10.0, 20.0, 20.0));
+        n.style.fills = vec![Paint::solid(Color::rgb(20, 120, 180))];
+        let id = ed.add_node(n, None);
+
+        let b = export_bounds(&ed.doc, &[id]).unwrap();
+        assert!(
+            b.right() >= 33.0 && b.bottom() >= 34.0,
+            "page shadow must extend export bounds, got {b:?}"
+        );
+
+        let svg = export(&ed.doc, Some(&[id]), None).unwrap();
+        assert!(
+            svg.contains("viewBox=\"10 10 23 24\""),
+            "the SVG canvas must include the shadow"
+        );
+
+        ed.doc.nodes.get_mut(&id).unwrap().style.shadow = Some(false);
+        let b = export_bounds(&ed.doc, &[id]).unwrap();
+        assert!(
+            b.right() <= 30.0 && b.bottom() <= 30.0,
+            "an explicit no-shadow override must not extend export bounds, got {b:?}"
+        );
+        let svg = export(&ed.doc, Some(&[id]), None).unwrap();
+        assert!(
+            svg.contains("viewBox=\"10 10 20 20\""),
+            "an explicit override must keep the SVG canvas tight, got {svg}"
+        );
+    }
+
+    #[test]
     fn image_fills_embed_data_urls() {
         let img = image::RgbaImage::from_pixel(4, 4, image::Rgba([0, 128, 255, 255]));
         let id = assets::register_rgba(&img);
@@ -463,5 +568,66 @@ mod tests {
         let svg = export(&ed.doc, None, None).unwrap();
         assert!(svg.contains("data:image/png;base64,"));
         assert!(svg.contains("<image"));
+    }
+
+    #[test]
+    fn svg_export_paints_line_jumps_over_earlier_connectors() {
+        use crate::geom::v2;
+        use crate::model::{Head, Route};
+        let mk = |id: u64, rect: (f64, f64, f64, f64), pts: Vec<(f64, f64)>, jump: LineJump| {
+            crate::model::Node::new(
+                NodeId(id),
+                NodeKind::Connector {
+                    // Points are node-local; the rect places them in the world.
+                    points: pts.iter().map(|(x, y)| v2(*x, *y)).collect(),
+                    start: None,
+                    end: None,
+                    route: Route::Straight,
+                    start_head: Head::None,
+                    end_head: Head::None,
+                    jump,
+                    jump_size: 6.0,
+                },
+                Rect::new(rect.0, rect.1, rect.2, rect.3),
+            )
+        };
+        let mut ed = crate::editor::Editor::default();
+        // Painted first: the horizontal line across x 300..700 at y 300.
+        // Second: the jumper, which hops over it where they cross at
+        // (500, 300).
+        ed.add_node(
+            mk(
+                0,
+                (300.0, 300.0, 400.0, 0.0),
+                vec![(0.0, 0.0), (400.0, 0.0)],
+                LineJump::None,
+            ),
+            None,
+        );
+        ed.add_node(
+            mk(
+                1,
+                (500.0, 150.0, 0.0, 300.0),
+                vec![(0.0, 0.0), (0.0, 300.0)],
+                LineJump::Gap,
+            ),
+            None,
+        );
+        let svg = export(&ed.doc, None, Some(crate::model::Color::WHITE)).unwrap();
+        // The jumper's line is interrupted around the crossing instead of one
+        // straight run past the other line.
+        assert!(
+            !svg.contains("M500 150L500 450"),
+            "the jumper renders as one straight run: {svg}"
+        );
+        assert!(
+            svg.matches("M500 150").count() >= 1 && svg.contains("M500 304"),
+            "the jumper is split around the crossing: {svg}"
+        );
+        // The line below carries no hop of its own.
+        assert!(
+            svg.contains("M300 300L700 300"),
+            "the under line is whole: {svg}"
+        );
     }
 }

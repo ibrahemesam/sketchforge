@@ -113,7 +113,11 @@ fn hand_drawn_toggle_is_deterministic() {
     );
     e.run(Action::Tool(Tool::Ellipse));
     ev_drag(&mut e, v2(400.0, 300.0), v2(500.0, 380.0), 0.0, true);
-    assert!(e.doc.get(e.selection[0]).unwrap().style.rough.is_some());
+    assert!(e.doc.settings.sketch, "page-wide hand-drawn default");
+    assert!(
+        e.doc.get(e.selection[0]).unwrap().style.sketch.is_none(),
+        "a new shape inherits the diagram setting"
+    );
 }
 
 #[test]
@@ -332,7 +336,7 @@ fn library_items_insert_with_fresh_ids() {
 pub fn whiteboard() -> Editor {
     let mut e = editor(1440.0, 900.0);
     e.doc.name = "Retro board".into();
-    e.sketch = Some(Rough::default());
+    e.doc.settings.sketch = true;
     let mk = |e: &mut Editor, kind: NodeKind, r: Rect, fill: Color, fs: FillStyle, rough: f64| {
         let mut n = Node::new(NodeId(0), kind, r);
         n.style.set_fill(Some(fill));
@@ -422,7 +426,7 @@ pub fn whiteboard() -> Editor {
     arrow(&mut e, decide, no, Route::Curved, Head::Arrow);
     // Bend the curved arrow a little.
     // Sticky notes.
-    e.sketch = None;
+    e.doc.settings.sketch = false;
     for (i, (t, c)) in [
         ("Went well:\nautosave!", 0usize),
         ("Improve:\nfaster export", 1),

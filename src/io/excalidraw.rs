@@ -11,8 +11,8 @@ use crate::history::{Recording, Tx};
 use crate::library::LibItem;
 use crate::model::rough::{FillStyle, Rough};
 use crate::model::{
-    Binding, Color, Document, FillRule, Head, ImageMode, Node, NodeId, NodeKind, Paint, Route,
-    StrokePoint, TextAlign,
+    Binding, Color, Document, FillRule, Head, ImageMode, LineJump, Node, NodeId, NodeKind, Paint,
+    Route, StrokePoint, TextAlign,
 };
 use serde_json::Value;
 use std::collections::HashMap;
@@ -352,6 +352,8 @@ fn convert(elements: &[Value], files: Option<&Value>) -> Imported {
                             route,
                             start_head: sh,
                             end_head: eh,
+                            jump: LineJump::None,
+                            jump_size: 6.0,
                         },
                         b,
                     );
@@ -538,6 +540,7 @@ fn build(mut imp: Imported) -> (Document, Vec<NodeId>) {
             node: t,
             fixed,
             inside,
+            floating: false,
         };
         if let Some(n) = tx.node_mut(a)
             && let NodeKind::Connector { start, end: e, .. } = &mut n.kind

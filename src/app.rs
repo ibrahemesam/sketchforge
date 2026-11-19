@@ -105,6 +105,12 @@ impl App {
             wayland_dnd: None,
         };
         app.st.library.library = library;
+        app.st
+            .templates
+            .load(app.st.options.template_folder.clone());
+        app.st.library.scratch = crate::library::Scratchpad::load(
+            &crate::library::Scratchpad::path_in(&app.session.store.root),
+        );
         app.ed.clipboard_io = crate::io::clipboard::System::new()
             .map(|c| Box::new(c) as Box<dyn crate::io::clipboard::Provider>);
         match start {
@@ -116,8 +122,6 @@ impl App {
                 } else {
                     app.st.project_name = app.session.project_name();
                 }
-                // Options carry app-wide settings like the grid size.
-                app.ed.grid_step = app.st.options.grid_size;
             }
             Start::Scratch(ed) => app.ed = *ed,
         }
@@ -253,8 +257,6 @@ impl App {
                 self.st.project_name = self.session.project_name();
                 self.st.save_state.clear();
                 self.ed.status.clear();
-                // Options carry app-wide settings like the grid size.
-                self.ed.grid_step = self.st.options.grid_size;
             }
             Err(e) => self.error(format!("Could not open {}: {e}", dir.display())),
         }
@@ -291,7 +293,14 @@ impl App {
         let Some(p) = rfd::FileDialog::new()
             .add_filter(
                 "Supported files",
-                &[file::EXTENSION, file::OLD_EXTENSION, "excalidraw", "svg"],
+                &[
+                    file::EXTENSION,
+                    file::OLD_EXTENSION,
+                    "excalidraw",
+                    "svg",
+                    "drawio",
+                    "xml",
+                ],
             )
             .add_filter(
                 "Sketch 0.1 document",
@@ -299,6 +308,7 @@ impl App {
             )
             .add_filter("Excalidraw scene", &["excalidraw"])
             .add_filter("SVG", &["svg"])
+            .add_filter("draw.io diagram", &["drawio", "xml"])
             .pick_file()
         else {
             return;
@@ -314,8 +324,11 @@ impl App {
             .map(|e| e.to_string_lossy().to_lowercase())
             .unwrap_or_default();
         let is_image = matches!(ext.as_str(), "png" | "jpg" | "jpeg" | "gif" | "webp");
-        let is_importable =
-            is_image || matches!(ext.as_str(), "svg" | "excalidraw" | "excalidrawlib");
+        let is_importable = is_image
+            || matches!(
+                ext.as_str(),
+                "svg" | "excalidraw" | "excalidrawlib" | "drawio" | "xml"
+            );
         if is_importable && self.st.home.is_some() {
             // Dropped on the projects screen: start a project named after the file,
             // then bring the file into it.
@@ -356,15 +369,27 @@ impl App {
     }
 
     fn import_file(&mut self, p: &std::path::Path) {
-        match crate::io::import::import_as_pages(p) {
-            Ok((name, pages)) => match self.session.store.create_with_pages(&name, pages) {
-                Ok(proj) => {
-                    let dir = proj.dir.clone();
-                    self.open_project(&dir);
-                    self.ed.status = format!("Imported {}", p.display());
+        match crate::io::import::import_detailed(p) {
+            Ok(imported) => {
+                if let Some(report) = imported.report {
+                    self.st.import_report = Some(crate::ui::import_report::ImportReportUi {
+                        source: p.display().to_string(),
+                        report,
+                    });
                 }
-                Err(e) => self.error(format!("Could not create a project: {e}")),
-            },
+                match self
+                    .session
+                    .store
+                    .create_with_pages(&imported.name, imported.pages)
+                {
+                    Ok(proj) => {
+                        let dir = proj.dir.clone();
+                        self.open_project(&dir);
+                        self.ed.status = format!("Imported {}", p.display());
+                    }
+                    Err(e) => self.error(format!("Could not create a project: {e}")),
+                }
+            }
             Err(e) => self.error(format!("Could not import {}: {e}", p.display())),
         }
     }
@@ -431,6 +456,15 @@ impl App {
     /// Export through a save (or folder) dialog.
     fn export(&mut self, spec: crate::io::export::Spec) {
         use crate::io::export;
+        // A draw.io file always holds every page of the project.
+        let spec = if spec.format == export::Format::Drawio {
+            export::Spec {
+                scope: export::Scope::AllPages,
+                ..spec
+            }
+        } else {
+            spec
+        };
         let names: Vec<String> = self.ed.pages.iter().map(|p| p.name.clone()).collect();
         let pages: Vec<(&str, &crate::model::Document)> = names
             .iter()
@@ -466,7 +500,22 @@ impl App {
         };
         let Some(out) = out else { return };
         let gpu = self.offscreen();
-        match export::write(&spec, &items, &out, gpu.as_ref()) {
+        let embedded = spec.embed_data.then(|| {
+            let all: Vec<crate::project::PageData> = (0..self.ed.pages.len())
+                .map(|i| self.ed.page_data(i))
+                .collect();
+            let name = if self.st.project_name.trim().is_empty() {
+                all[0].name.clone()
+            } else {
+                self.st.project_name.clone()
+            };
+            crate::project::format::pages_to_json(&name, &all, Some(self.ed.active_page_id()))
+        });
+        let result = match embedded.as_deref() {
+            Some(json) => export::write_with_data(&spec, &items, &out, gpu.as_ref(), Some(json)),
+            None => export::write(&spec, &items, &out, gpu.as_ref()),
+        };
+        match result {
             Ok(files) => {
                 self.ed.status = if files.len() == 1 {
                     format!("Exported {}", files[0].display())
@@ -535,6 +584,17 @@ impl App {
                 };
                 self.ed.selection = ids;
                 Ok(format!("Imported {}", p.display()))
+            }),
+            "drawio" | "xml" => crate::io::import::import_detailed(p).map(|imported| {
+                let n = imported.pages.len();
+                if let Some(report) = imported.report {
+                    self.st.import_report = Some(crate::ui::import_report::ImportReportUi {
+                        source: p.display().to_string(),
+                        report,
+                    });
+                }
+                self.ed.append_pages(imported.pages);
+                format!("Imported {n} page(s)")
             }),
             _ => {
                 if self.session.project.is_none() {
@@ -630,6 +690,8 @@ impl App {
                                     "excalidraw",
                                     "excalidrawlib",
                                     "json",
+                                    "drawio",
+                                    "xml",
                                     "png",
                                     "jpg",
                                     "jpeg",
@@ -669,6 +731,24 @@ impl App {
                     self.export(spec);
                 }
                 AppRequest::Export(spec) => self.export(spec),
+                AppRequest::OpenLink(url) => {
+                    let go = rfd::MessageDialog::new()
+                        .set_level(rfd::MessageLevel::Info)
+                        .set_title("Open Link?")
+                        .set_description(format!(
+                            "Open this link with your system's default app?\n\n{url}"
+                        ))
+                        .set_buttons(rfd::MessageButtons::OkCancel)
+                        .show();
+                    if go == rfd::MessageDialogResult::Ok {
+                        match crate::link::open_external(&url) {
+                            Ok(()) => self.ed.status = format!("Opened {url}"),
+                            Err(e) => self.error(format!("Could not open the link: {e}")),
+                        }
+                    } else {
+                        self.ed.status = "Link not opened.".into();
+                    }
+                }
                 AppRequest::CopyAsPng => {
                     let roots = self.export_roots();
                     let Some(gpu) = self.offscreen() else {
@@ -702,6 +782,8 @@ impl App {
         let hover_cursor = (over_canvas || self.captured)
             .then(|| self.ed.hover_cursor())
             .flatten();
+        // Autosave needs a writable project folder; a scratch document has none.
+        self.st.autosave_available = self.session.project.is_some();
         let Some(g) = self.gfx.as_mut() else { return };
         let input = g.egui.take_egui_input(&g.window);
         let mut l = frame::layout(&self.ctx, input, &mut self.ed, &mut self.st);
@@ -712,6 +794,7 @@ impl App {
                 CursorShape::NeSw => egui::CursorIcon::ResizeNeSw,
                 CursorShape::Ew => egui::CursorIcon::ResizeHorizontal,
                 CursorShape::Ns => egui::CursorIcon::ResizeVertical,
+                CursorShape::Rotate => egui::CursorIcon::Grab,
             };
         }
         let repaint_delay = l
@@ -760,7 +843,7 @@ impl App {
             &self.ctx,
             l,
             &self.ed,
-            !self.st.show_grid_off,
+            self.ed.doc.settings.grid,
         );
         g.window.pre_present_notify();
         g.queue.present(frame);
@@ -792,6 +875,12 @@ impl App {
             self.st.library.dirty = false;
             if let Err(e) = self.st.library.library.save() {
                 self.error(format!("Could not save the library: {e}"));
+            }
+        }
+        if self.st.library.scratch_dirty {
+            self.st.library.scratch_dirty = false;
+            if let Err(e) = self.st.library.scratch.save() {
+                self.error(format!("Could not save the scratchpad: {e}"));
             }
         }
         if self.st.options_dirty {
@@ -832,7 +921,7 @@ impl App {
                 }
             };
             set(&m.snapping, self.ed.snapping);
-            set(&m.grid, !self.st.show_grid_off);
+            set(&m.grid, self.ed.doc.settings.grid);
             set(&m.help, self.st.show_help);
         }
     }
@@ -848,7 +937,7 @@ impl App {
                 }
             }
             MenuCmd::CheckForUpdates => crate::macos::updater::check_for_updates(),
-            MenuCmd::ToggleGrid => self.st.show_grid_off = !self.st.show_grid_off,
+            MenuCmd::ToggleGrid => self.ed.toggle_grid(),
             MenuCmd::ToggleHelp => self.st.show_help = !self.st.show_help,
             // Menu key equivalents never reach egui, so while a text field is focused, hand
             // the standard editing commands to it instead of the canvas.
@@ -922,9 +1011,22 @@ impl ApplicationHandler<UserEvent> for App {
         if self.gfx.is_some() {
             return;
         }
+        // Start at 1440×900, but never larger than the screen: on a smaller
+        // display an oversized window would lay panels out past the visible
+        // edge, and X11 does not clamp the size for us.
+        let monitor = event_loop
+            .primary_monitor()
+            .or_else(|| event_loop.available_monitors().next());
+        let (mw, mh) = monitor
+            .map(|m| m.size().to_logical::<f64>(m.scale_factor()))
+            .map(|s| (s.width, s.height))
+            .unwrap_or((1440.0, 900.0));
         let attrs = Window::default_attributes()
             .with_title("Sketch")
-            .with_inner_size(winit::dpi::LogicalSize::new(1440.0, 900.0))
+            .with_inner_size(winit::dpi::LogicalSize::new(
+                1440.0_f64.min(mw),
+                900.0_f64.min(mh),
+            ))
             .with_min_inner_size(winit::dpi::LogicalSize::new(720.0, 480.0));
         // The app id ties the window to the desktop entry in packaging/linux. On Wayland it is
         // the only way a desktop shell can match the window to that entry, and it is where KDE
@@ -1343,7 +1445,7 @@ impl ApplicationHandler<UserEvent> for App {
         {
             g.window.request_redraw();
         }
-        let wake = match (self.next_repaint, self.session.next_deadline()) {
+        let wake = match (self.next_repaint, self.session.next_deadline(&self.ed)) {
             (Some(a), Some(b)) => Some(a.min(b)),
             (a, b) => a.or(b),
         };

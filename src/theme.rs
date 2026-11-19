@@ -9,6 +9,10 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicU32, Ordering};
 
 pub static INTER_REGULAR: &[u8] = include_bytes!("../assets/fonts/Inter-Regular.ttf");
+/// Arabic fallback for panel text (CAD-style tool UI). Canvas text has its own
+/// copy in text.rs; this one feeds egui's shaper so panel and layer names in
+/// Arabic shape correctly instead of showing tofu squares.
+pub static NOTO_ARABIC: &[u8] = include_bytes!("../assets/fonts/NotoSansArabic-Regular.ttf");
 pub static INTER_MEDIUM: &[u8] = include_bytes!("../assets/fonts/Inter-Medium.ttf");
 pub static INTER_SEMIBOLD: &[u8] = include_bytes!("../assets/fonts/Inter-SemiBold.ttf");
 
@@ -130,6 +134,7 @@ pub fn install_fonts(ctx: &egui::Context) {
         ("Inter", INTER_REGULAR),
         ("Inter-Medium", INTER_MEDIUM),
         ("Inter-SemiBold", INTER_SEMIBOLD),
+        ("NotoSansArabic", NOTO_ARABIC),
     ] {
         fonts
             .font_data
@@ -141,7 +146,7 @@ pub fn install_fonts(ctx: &egui::Context) {
         .cloned()
         .unwrap_or_default();
     let with = |first: &str| {
-        let mut v = vec![first.to_string()];
+        let mut v = vec![first.to_string(), "NotoSansArabic".to_string()];
         v.extend(fallbacks.iter().cloned());
         v
     };
@@ -317,6 +322,10 @@ pub enum Icon {
     More,
     Page,
     Restore,
+    /// Two overlapping sheets (layer duplicate).
+    Duplicate,
+    /// Corner brackets (select everything).
+    SelectAll,
     Group,
     Pen,
     Polygon,
@@ -756,6 +765,28 @@ pub fn paint_icon(painter: &egui::Painter, rect: Rect, icon: Icon, color: Color3
             closed(&[pt(3.8, 4.0), pt(12.2, 4.0), pt(11.4, 14.0), pt(4.6, 14.0)]);
             line(&[pt(6.6, 6.5), pt(6.9, 11.8)]);
             line(&[pt(9.4, 6.5), pt(9.1, 11.8)]);
+        }
+        Icon::Duplicate => {
+            painter.rect_stroke(
+                Rect::from_min_max(pt(2.5, 5.5), pt(9.5, 12.5)),
+                1.0 * u,
+                st,
+                egui::StrokeKind::Middle,
+            );
+            line(&[
+                pt(5.5, 5.5),
+                pt(5.5, 2.5),
+                pt(13.0, 2.5),
+                pt(13.0, 10.0),
+                pt(9.0, 10.0),
+            ]);
+        }
+        Icon::SelectAll => {
+            for (cx, sx) in [(2.5, 1.0), (13.5, -1.0)] {
+                for (cy, sy) in [(2.5, 1.0), (13.5, -1.0)] {
+                    line(&[pt(cx + 3.2 * sx, cy), pt(cx, cy), pt(cx, cy + 3.2 * sy)]);
+                }
+            }
         }
         Icon::More => {
             for x in [3.5, 8.0, 12.5] {

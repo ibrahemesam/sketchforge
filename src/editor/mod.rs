@@ -3,12 +3,16 @@
 //! It consumes platform-agnostic [`InputEvent`]s, so every interaction can be scripted in tests.
 
 pub mod commands;
+pub mod generate_ops;
 pub mod hit;
 pub mod input;
+pub mod layers;
 pub mod pages;
+pub mod registry_ops;
 pub mod shortcuts;
 pub mod snap;
 pub mod structure;
+pub mod template_ops;
 pub mod text_edit;
 pub mod vector_ops;
 pub mod whiteboard;
@@ -16,7 +20,10 @@ pub mod whiteboard;
 use crate::geom::{Camera, Rect, V2, next_zoom_step, v2};
 use crate::history::{History, Recording, Tx};
 use crate::ink::{self, InkBuilder};
-use crate::model::{Color, Document, Node, NodeId, NodeKind, StrokePoint, TextAlign};
+use crate::model::{
+    Color, DiagramSettings, Document, GuideAxis, ManualGuide, Node, NodeId, NodeKind, StrokePoint,
+    TextAlign,
+};
 use crate::text;
 pub use input::{Button, CursorShape, InputEvent, Key, Modifiers};
 pub use pages::{PageSlot, PageStash};
@@ -123,11 +130,16 @@ pub enum AppRequest {
     PlaceImage,
     /// Pick an image for fill layer `.1` of these layers.
     ImageFill(Vec<NodeId>, usize),
+    /// Ask before opening an external link.
+    OpenLink(String),
 }
 
 #[derive(Debug, Clone)]
 pub struct TextEdit {
     pub id: NodeId,
+    /// Which label of the node this edits: 0 is the main label, higher
+    /// indices are a connector's extra labels.
+    pub label: usize,
     /// Caret as a char index.
     pub caret: usize,
     /// Other end of the selection (None = no selection).
@@ -165,6 +177,15 @@ enum Gesture {
         /// group scaling are recomputed from this each move, so nothing drifts).
         snapshot: Vec<Node>,
     },
+    /// Dragging the rotate handle above the selection.
+    Rotate {
+        id: NodeId,
+        center: V2,
+        /// Angle from the center to the press point, in radians.
+        start_angle: f64,
+        /// Rotation at drag start, in degrees.
+        rotation0: f64,
+    },
     Create {
         tool: Tool,
         start: V2,
@@ -191,7 +212,28 @@ enum Gesture {
     ConnectorMid {
         id: NodeId,
     },
+    /// Dragging a connector label along its route or off it.
+    LabelDrag {
+        id: NodeId,
+        /// Which label: 0 is the main label, higher indices are extras.
+        idx: usize,
+        /// Pointer offset from the label center at press time.
+        grab: V2,
+        start_screen: V2,
+        started: bool,
+    },
     Laser,
+    /// Dragging a manual guide out of a ruler, or moving/deleting an existing one.
+    GuideDrag {
+        axis: GuideAxis,
+        /// Press position in canvas screen space.
+        start_screen: V2,
+        /// Index into the page's manual guides once the guide exists.
+        index: Option<usize>,
+        /// A guide created by this drag (from a ruler) rather than grabbed.
+        created: bool,
+        started: bool,
+    },
     /// Dragging a point or handle of the path being edited.
     PathPart {
         si: usize,
@@ -203,6 +245,10 @@ enum Gesture {
 /// Drag distance (screen px) before a press turns into a move.
 const DRAG_THRESHOLD: f64 = 3.0;
 const PASTE_OFFSET: f64 = 16.0;
+/// Ruler strip thickness in canvas screen pixels.
+pub const RULER_PX: f64 = 18.0;
+/// How close the pointer must be to a guide line to grab it, in screen pixels.
+const GUIDE_HIT_PX: f64 = 4.0;
 
 pub struct Editor {
     pub doc: Document,
@@ -225,6 +271,8 @@ pub struct Editor {
     pub ink_color: Color,
     pub snapping: bool,
     pub file_path: Option<PathBuf>,
+    /// Project or file name used by the `%filename%` placeholder.
+    pub file_name: String,
     pub requests: Vec<AppRequest>,
     pub status: String,
     clipboard: Vec<Node>,
@@ -265,12 +313,7 @@ pub struct Editor {
     pub now_ms: f64,
     /// Route for new arrows.
     pub arrow_route: crate::model::Route,
-    /// Hand-drawn style for new shapes (None = clean lines).
-    pub sketch: Option<crate::model::rough::Rough>,
-    /// Remembered style for new shapes (draw.io's Set as Default Style). Session
-    /// scope, like the hand-drawn option above.
-    pub default_style: Option<crate::model::Style>,
-    /// Grid spacing in world units, from options.json's `grid_size`.
+    /// Grid spacing in world units, mirrored from the page settings.
     pub grid_step: f64,
     pub sticky_color: Color,
     /// Requests for the chrome (command palette, rename...).
@@ -289,12 +332,15 @@ impl Default for Editor {
 }
 
 impl Editor {
-    pub fn new(doc: Document) -> Editor {
+    pub fn new(mut doc: Document) -> Editor {
+        doc.settings.validate();
         let name = match doc.name.as_str() {
             "" | "Untitled" => "Page 1".to_string(),
             n => n.to_string(),
         };
-        Editor {
+        let grid_step = doc.settings.grid_size;
+        let snapping = doc.settings.guides;
+        let mut ed = Editor {
             doc,
             history: History::default(),
             camera: Camera::default(),
@@ -311,8 +357,9 @@ impl Editor {
             ink_width: 3.0,
             ink_smoothing: 0.5,
             ink_color: Color::INK,
-            snapping: true,
+            snapping,
             file_path: None,
+            file_name: "Untitled".into(),
             requests: Vec::new(),
             status: String::new(),
             clipboard: Vec::new(),
@@ -337,15 +384,15 @@ impl Editor {
             laser: Vec::new(),
             now_ms: 0.0,
             arrow_route: crate::model::Route::Straight,
-            sketch: None,
-            default_style: None,
-            grid_step: snap::GRID_STEP,
+            grid_step,
             sticky_color: Color::rgb(0xff, 0xdf, 0x6b),
             ui_events: Vec::new(),
             clipboard_style: None,
             clipboard_io: None,
             clipboard_written: None,
-        }
+        };
+        ed.refresh_page_contexts();
+        ed
     }
 
     // ------------------------------------------------------------------ transactions
@@ -400,6 +447,72 @@ impl Editor {
         r
     }
 
+    /// Change page/diagram settings as one undoable transaction.
+    pub fn edit_settings(&mut self, label: &str, f: impl FnOnce(&mut DiagramSettings)) {
+        self.begin(label);
+        f(self.tx().settings_mut());
+        self.commit();
+        self.sync_page_settings();
+    }
+
+    /// Like [`Self::edit_settings`], but consecutive drags of the same control
+    /// fold into one history entry.
+    pub fn edit_settings_coalescing(
+        &mut self,
+        label: &str,
+        key: &str,
+        f: impl FnOnce(&mut DiagramSettings),
+    ) {
+        self.begin_coalescing(label, Some(key));
+        f(self.tx().settings_mut());
+        self.commit();
+        self.sync_page_settings();
+    }
+
+    /// Mirror document settings that also drive editor behavior.
+    pub fn sync_page_settings(&mut self) {
+        self.doc.settings.validate();
+        self.grid_step = self.doc.settings.grid_size;
+        self.snapping = self.doc.settings.guides;
+    }
+
+    /// Refresh `PageContext` on every page so predefined placeholders see the
+    /// current page number, page count, page title and file name.
+    pub fn refresh_page_contexts(&mut self) {
+        let count = self.pages.len().max(1);
+        let file_name = self.file_name.clone();
+        if self.active_page < self.pages.len() {
+            let name = self.pages[self.active_page].name.clone();
+            self.doc.context =
+                crate::model::PageContext::new(self.active_page + 1, count, &name, &file_name);
+        }
+        for i in 0..self.pages.len() {
+            if i == self.active_page {
+                continue;
+            }
+            let name = self.pages[i].name.clone();
+            if let Some(stash) = self.pages[i].stash.as_mut() {
+                stash.doc.context = crate::model::PageContext::new(i + 1, count, &name, &file_name);
+            }
+        }
+    }
+
+    pub fn set_grid_step(&mut self, step: f64) {
+        let step = if step.is_finite() && step > 0.0 {
+            step.clamp(1.0, 1000.0)
+        } else {
+            snap::GRID_STEP
+        };
+        self.grid_step = step;
+        if self.doc.settings.grid_size != step {
+            self.edit_settings("Change grid spacing", |s| s.grid_size = step);
+        }
+    }
+
+    pub fn toggle_grid(&mut self) {
+        self.edit_settings("Toggle grid", |s| s.grid = !s.grid);
+    }
+
     pub fn undo(&mut self) {
         self.cancel_gesture();
         self.end_text_edit();
@@ -424,6 +537,7 @@ impl Editor {
         self.revision += 1;
         self.doc_stamp = next_stamp();
         self.selection.retain(|id| self.doc.nodes.contains_key(id));
+        self.sync_page_settings();
     }
 
     /// A pointer gesture (drag, draw, resize...) is in progress.
@@ -459,7 +573,6 @@ impl Editor {
             clipboard_roots: std::mem::take(&mut self.clipboard_roots),
             clipboard_page: self.clipboard_page.take(),
             clipboard_world: std::mem::take(&mut self.clipboard_world),
-            sketch: self.sketch,
             arrow_route: self.arrow_route,
             sticky_color: self.sticky_color,
             clipboard_io: self.clipboard_io.take(),
@@ -467,6 +580,12 @@ impl Editor {
             ..Editor::new(doc)
         };
         self.file_path = path;
+        self.file_name = self
+            .file_path
+            .as_ref()
+            .and_then(|p| p.file_stem())
+            .map(|s| s.to_string_lossy().into_owned())
+            .unwrap_or_else(|| "Untitled".into());
         match camera {
             Some(c) => self.camera = c,
             None => {
@@ -474,6 +593,8 @@ impl Editor {
                 self.pending_fit = true;
             }
         }
+        self.sync_page_settings();
+        self.refresh_page_contexts();
         self.revision += 1;
     }
 
@@ -508,6 +629,23 @@ impl Editor {
         Rect::union_all(&rects)
     }
 
+    /// The single node whose rotate handle the selection shows. Groups and
+    /// connectors have no rotation handle: their children would not turn with
+    /// them, and a connector's route is recomputed from its endpoints.
+    pub fn rotation_target(&self) -> Option<NodeId> {
+        let [id] = self.selection.as_slice() else {
+            return None;
+        };
+        let n = self.doc.get(*id)?;
+        if n.is_group() || matches!(n.kind, NodeKind::Connector { .. }) {
+            return None;
+        }
+        if n.is_frame() && !n.children.is_empty() {
+            return None;
+        }
+        (!self.doc.is_effectively_locked(*id)).then_some(*id)
+    }
+
     pub fn select(&mut self, ids: Vec<NodeId>) {
         if self
             .text_edit
@@ -519,12 +657,144 @@ impl Editor {
         self.selection = ids;
     }
 
+    /// Follow a custom link: switch to an internal page, queue an external URL
+    /// for the confirmation step, or explain why the link was blocked.
+    pub fn activate_link(&mut self, link: &str) {
+        match crate::link::classify(link) {
+            crate::link::LinkTarget::Page(target) => {
+                if let Some(i) = self.page_index_for(&target) {
+                    self.switch_page(i);
+                    self.status = format!("Opened {}", self.pages[i].name);
+                } else {
+                    self.status = format!("No page matches “{target}”.");
+                }
+            }
+            crate::link::LinkTarget::External(url) => {
+                self.requests.push(AppRequest::OpenLink(url));
+            }
+            crate::link::LinkTarget::Unsafe(reason) => {
+                self.status = format!("Link blocked: {reason}.");
+            }
+        }
+    }
+
+    fn page_index_for(&self, target: &str) -> Option<usize> {
+        self.pages
+            .iter()
+            .position(|p| p.id == target)
+            .or_else(|| self.pages.iter().position(|p| p.name == target))
+            .or_else(|| {
+                self.pages
+                    .iter()
+                    .position(|p| p.name.eq_ignore_ascii_case(target))
+            })
+    }
+
     fn snap_threshold(&self) -> f64 {
         snap::SNAP_PX / self.camera.zoom
     }
 
     fn snapping_active(&self) -> bool {
         self.snapping && !self.mods.command()
+    }
+
+    /// Vertical and horizontal manual guide positions, in world coordinates.
+    pub fn manual_guide_lines(&self) -> (Vec<f64>, Vec<f64>) {
+        let mut vertical = Vec::new();
+        let mut horizontal = Vec::new();
+        for g in &self.doc.settings.manual_guides {
+            match g.axis {
+                GuideAxis::Vertical => vertical.push(g.pos),
+                GuideAxis::Horizontal => horizontal.push(g.pos),
+            }
+        }
+        (vertical, horizontal)
+    }
+
+    /// The manual guide under a canvas screen position, nearest first.
+    pub fn guide_at(&self, pos: V2) -> Option<(usize, GuideAxis)> {
+        if !(self.doc.settings.guides || self.doc.settings.rulers) {
+            return None;
+        }
+        let z = self.camera.zoom;
+        let mut best: Option<(usize, GuideAxis, f64)> = None;
+        for (i, g) in self.doc.settings.manual_guides.iter().enumerate() {
+            let (screen, p) = match g.axis {
+                GuideAxis::Vertical => ((g.pos - self.camera.pan.x) * z, pos.x),
+                GuideAxis::Horizontal => ((g.pos - self.camera.pan.y) * z, pos.y),
+            };
+            let d = (p - screen).abs();
+            if d <= GUIDE_HIT_PX && best.is_none_or(|b| d < b.2) {
+                best = Some((i, g.axis, d));
+            }
+        }
+        best.map(|(i, axis, _)| (i, axis))
+    }
+
+    /// Which ruler strip, if any, contains a canvas screen position. The corner
+    /// square belongs to neither strip.
+    pub fn ruler_axis_at(&self, pos: V2) -> Option<GuideAxis> {
+        if !self.doc.settings.rulers || (pos.x <= RULER_PX && pos.y <= RULER_PX) {
+            return None;
+        }
+        if pos.y <= RULER_PX {
+            Some(GuideAxis::Horizontal)
+        } else if pos.x <= RULER_PX {
+            Some(GuideAxis::Vertical)
+        } else {
+            None
+        }
+    }
+
+    /// Whether a guide dropped here should be removed: back onto its own ruler.
+    fn guide_on_ruler(&self, axis: GuideAxis, pos: V2) -> bool {
+        self.doc.settings.rulers
+            && match axis {
+                GuideAxis::Vertical => pos.x <= RULER_PX,
+                GuideAxis::Horizontal => pos.y <= RULER_PX,
+            }
+    }
+
+    /// World coordinate a guide of `axis` would take at a screen position.
+    fn guide_world_pos(&self, axis: GuideAxis, pos: V2) -> f64 {
+        let world = self.screen_to_world(pos);
+        match axis {
+            GuideAxis::Vertical => world.x,
+            GuideAxis::Horizontal => world.y,
+        }
+    }
+
+    /// Start a gesture from a ruler strip: the guide appears once the drag
+    /// crosses the threshold, so a click in the ruler does not add one.
+    fn ruler_down(&mut self, pos: V2) -> bool {
+        let Some(axis) = self.ruler_axis_at(pos) else {
+            return false;
+        };
+        self.end_text_edit();
+        self.gesture = Gesture::GuideDrag {
+            axis,
+            start_screen: pos,
+            index: None,
+            created: true,
+            started: false,
+        };
+        true
+    }
+
+    /// Start dragging an existing manual guide.
+    fn guide_grab(&mut self, pos: V2) -> bool {
+        let Some((index, axis)) = self.guide_at(pos) else {
+            return false;
+        };
+        self.end_text_edit();
+        self.gesture = Gesture::GuideDrag {
+            axis,
+            start_screen: pos,
+            index: Some(index),
+            created: false,
+            started: false,
+        };
+        true
     }
 
     /// Rects of nodes that moving `ids` may snap against: siblings, the parent frame, top-level frames.
@@ -589,7 +859,7 @@ impl Editor {
             .iter()
             .filter_map(|id| {
                 let n = self.doc.get(*id)?;
-                if !n.is_frame() || !n.visible {
+                if !n.is_frame() || !self.doc.is_effectively_visible(*id) {
                     return None;
                 }
                 let sr = self.camera.world_rect_to_screen(&self.doc.world_rect(*id)?);
@@ -615,13 +885,18 @@ impl Editor {
 
     /// Char index in a node's editable text nearest to world point `p`.
     fn text_caret_at(&self, id: NodeId, p: V2) -> usize {
+        self.text_caret_at_label(id, 0, p)
+    }
+
+    /// Caret index for a click at `p` inside label `idx` of the node.
+    fn text_caret_at_label(&self, id: NodeId, idx: usize, p: V2) -> usize {
         let Some(n) = self.doc.get(id) else {
             return 0;
         };
-        let Some(l) = text::layout_node(n) else {
+        let Some(l) = text::layout_node_label(n, idx) else {
             return 0;
         };
-        if n.is_frame() {
+        if idx == 0 && n.is_frame() {
             let Some((title, origin)) = self.frame_title(id) else {
                 return 0;
             };
@@ -630,7 +905,7 @@ impl Editor {
         let Some(wr) = self.doc.world_rect(id) else {
             return 0;
         };
-        l.hit(p - wr.min() - text::text_origin(n, &l))
+        l.hit(p - wr.min() - text::text_origin_label(n, &l, idx))
     }
 
     fn label_at(&self, p: V2) -> Option<NodeId> {
@@ -639,6 +914,27 @@ impl Editor {
             .rev()
             .find(|(id, r)| r.contains(p) && !self.doc.is_effectively_locked(*id))
             .map(|(id, _)| id)
+    }
+
+    /// A connector label under the pointer: its index (0 = main label), the
+    /// node, and the label's center in world space. Hit testing decides
+    /// whether the label is topmost, so a shape above it wins. Later labels
+    /// paint on top, so they win too.
+    fn connector_label_at(&self, world: V2) -> Option<(NodeId, usize, V2)> {
+        let id = hit::hit_test(&self.doc, world, self.camera.zoom)?;
+        let n = self.doc.get(id)?;
+        if !n.is_connector() {
+            return None;
+        }
+        let wr = self.doc.world_rect(id)?;
+        for idx in (0..n.label_count()).rev() {
+            if let Some(b) = crate::text::label_box_label(n, idx)
+                && b.contains(world - wr.min())
+            {
+                return Some((id, idx, wr.min() + b.center()));
+            }
+        }
+        None
     }
 
     // ------------------------------------------------------------------ input
@@ -712,6 +1008,9 @@ impl Editor {
             return;
         }
         if button != Button::Primary {
+            return;
+        }
+        if self.ruler_down(pos) {
             return;
         }
         let double = self
@@ -791,6 +1090,7 @@ impl Editor {
                 self.selection = vec![id];
                 self.text_edit = Some(TextEdit {
                     id,
+                    label: 0,
                     caret: 0,
                     anchor: None,
                 });
@@ -843,8 +1143,7 @@ impl Editor {
                     },
                 };
                 let frame_count = self.doc.nodes.values().filter(|n| n.is_frame()).count();
-                let sketch = self.sketch;
-                let default_style = self.default_style.clone();
+                let default_style = self.doc.settings.shape_default.clone();
                 let id = {
                     let mut tx = self.tx();
                     let id = tx.alloc_id();
@@ -858,15 +1157,11 @@ impl Editor {
                     if !n.is_frame()
                         && let Some(ds) = default_style
                     {
-                        n.style = ds;
+                        n.style = ds.style;
+                        n.text_style = ds.text_style;
                     }
                     if n.is_frame() {
                         n.name = format!("Frame {}", frame_count + 1);
-                    } else if let Some(r) = sketch {
-                        n.style.rough = Some(crate::model::rough::Rough {
-                            seed: (id.0 as u32).wrapping_mul(2654435761) | 1,
-                            ..r
-                        });
                     }
                     if matches!(n.kind, NodeKind::Polygon { sides: 4 }) {
                         n.name = "Diamond".into();
@@ -884,6 +1179,44 @@ impl Editor {
     }
 
     fn select_down(&mut self, pos: V2, world: V2, double: bool) {
+        // Cmd/Ctrl-click follows a link instead of selecting, as in draw.io.
+        if self.mods.command()
+            && !double
+            && let Some(hit) = hit::hit_test(&self.doc, world, self.camera.zoom)
+            && let Some(link) = self.doc.get(hit).map(|n| n.link.clone())
+            && !link.trim().is_empty()
+        {
+            self.activate_link(&link);
+            return;
+        }
+        // A connector's bend handle sits at the line midpoint, where its label
+        // also sits. Double-clicking the edge edits the label under the
+        // pointer (the main label or an extra one) before any handle can turn
+        // the click into a bend.
+        if double
+            && self.path_edit.is_none()
+            && self.text_edit.is_none()
+            && let Some(hit) = hit::hit_test(&self.doc, world, self.camera.zoom)
+            && self.doc.get(hit).is_some_and(|n| n.is_connector())
+        {
+            // Double-clicking a specific label edits that label; without one
+            // under the pointer the main label edits, as before.
+            let idx = self
+                .connector_label_at(world)
+                .filter(|(id, _, _)| *id == hit)
+                .map_or(0, |(_, idx, _)| idx);
+            self.start_text_edit_label(hit, idx, Some(world));
+            if let Some(te) = self.text_edit.as_mut().filter(|te| te.id == hit) {
+                let len = self
+                    .doc
+                    .get(hit)
+                    .and_then(|n| n.edited_label(te.label))
+                    .map_or(0, |t| t.chars().count());
+                te.anchor = Some(0);
+                te.caret = len;
+            }
+            return;
+        }
         if self.path_edit.is_none() && self.text_edit.is_none() {
             if let Some(&(dir, _)) = self.quick_knobs().iter().find(|(_, p)| p.dist(pos) <= 9.0) {
                 self.quick_connect(dir);
@@ -892,11 +1225,28 @@ impl Editor {
             if self.connector_handle_down(pos, world) {
                 return;
             }
+            if let Some((id, idx, center)) = self.connector_label_at(world) {
+                if !self.selection.contains(&id) {
+                    self.select(if self.mods.shift {
+                        [self.selection.clone(), vec![id]].concat()
+                    } else {
+                        vec![id]
+                    });
+                }
+                self.gesture = Gesture::LabelDrag {
+                    id,
+                    idx,
+                    grab: world - center,
+                    start_screen: pos,
+                    started: false,
+                };
+                return;
+            }
             // Press a quick-connect knob on the hovered (unselected) shape and
             // drag to draw an arrow straight to another shape, as in draw.io.
-            if let Some((id, knobs)) = self.hover_knobs()
-                && let Some(&(dir, _)) = knobs.iter().find(|(_, p)| p.dist(pos) <= 9.0)
-            {
+            // The knobs sit outside the shape, so a press on the knob itself has
+            // no `hover` yet — match it by position instead.
+            if let Some((id, dir)) = self.knob_hit(pos) {
                 self.hover_connect_down(id, dir, world);
                 return;
             }
@@ -932,6 +1282,21 @@ impl Editor {
             && let Some(b) = self.selection_bounds()
         {
             let bs = self.camera.world_rect_to_screen(&b);
+            if let Some(id) = self.rotation_target()
+                && hit::rotate_handle_at(&bs, pos)
+            {
+                let center = b.center();
+                let d = world - center;
+                let rotation0 = self.doc.get(id).unwrap().style.rotation;
+                self.begin("Rotate");
+                self.gesture = Gesture::Rotate {
+                    id,
+                    center,
+                    start_angle: d.y.atan2(d.x),
+                    rotation0,
+                };
+                return;
+            }
             if let Some(handle) = hit::handle_at(&bs, pos) {
                 let origins = self.top_selection_world();
                 if !origins.is_empty() {
@@ -981,6 +1346,9 @@ impl Editor {
                 return;
             }
         }
+        if self.guide_grab(pos) {
+            return;
+        }
         if let Some(id) = self.label_at(pos) {
             // Clicking a title that is being edited moves the caret.
             if self.text_edit.as_ref().is_some_and(|te| te.id == id) {
@@ -1028,7 +1396,14 @@ impl Editor {
         }
         self.end_text_edit();
         let Some(mut target) = hit else {
-            self.start_marquee(world, None);
+            if double {
+                // draw.io's quick-add: double-clicking empty space opens the
+                // quick shape picker right there.
+                self.ui_events.push(commands::UiEvent::QuickAdd { world });
+                self.gesture = Gesture::None;
+            } else {
+                self.start_marquee(world, None);
+            }
             return;
         };
         // Top-level frames: clicking empty space selects the frame itself.
@@ -1157,10 +1532,11 @@ impl Editor {
         };
     }
 
-    /// The nodes a marquee rectangle hits, scanning `scope`'s children (None =
-    /// the top level). Frames the marquee fully encloses are selected as a
-    /// whole; frames it merely grazes are stepped into, so intersecting
-    /// children inside them get selected rather than nothing.
+    /// The nodes a marquee rectangle selects, scanning `scope`'s children
+    /// (None = the top level). A node is selected only when the marquee fully
+    /// contains it, as in draw.io. Frames the marquee fully encloses are
+    /// selected as a whole; frames it merely grazes are stepped into, so
+    /// contained children inside them get selected rather than nothing.
     fn marquee_collect(&self, scope: Option<NodeId>, r: Rect, sel: &mut Vec<NodeId>) {
         for id in self.doc.children(scope) {
             let Some(n) = self.doc.get(*id) else {
@@ -1177,7 +1553,7 @@ impl Editor {
             }
             if n.is_frame() && !r.contains_rect(&wr) {
                 self.marquee_collect(Some(*id), r, sel);
-            } else {
+            } else if r.contains_rect(&wr) {
                 sel.push(*id);
             }
         }
@@ -1199,21 +1575,33 @@ impl Editor {
         if self.tool != Tool::Select {
             return None;
         }
-        if let Gesture::Resize { handle, .. } = &self.gesture {
-            return Some(CursorShape::resize(*handle));
+        match &self.gesture {
+            Gesture::Resize { handle, .. } => return Some(CursorShape::resize(*handle)),
+            Gesture::Rotate { .. } => return Some(CursorShape::Rotate),
+            Gesture::GuideDrag { axis, .. } => {
+                return Some(match axis {
+                    GuideAxis::Vertical => CursorShape::Ew,
+                    GuideAxis::Horizontal => CursorShape::Ns,
+                });
+            }
+            _ => {}
         }
         if self.text_edit.is_some() {
             return None;
         }
         if let Some(b) = self.selection_bounds() {
             let bs = self.camera.world_rect_to_screen(&b);
+            if self.rotation_target().is_some() && hit::rotate_handle_at(&bs, self.pointer) {
+                return Some(CursorShape::Rotate);
+            }
             if let Some(handle) = hit::handle_at(&bs, self.pointer) {
                 return Some(CursorShape::resize(handle));
             }
         }
         // Handles on the hovered unselected shape match the press routing in
         // `select_down`.
-        self.hover
+        let handle = self
+            .hover
             .filter(|h| !self.selection.contains(h))
             .filter(|&h| !self.doc.is_effectively_locked(h))
             .filter(|&h| {
@@ -1222,15 +1610,21 @@ impl Editor {
                     .is_some_and(|n| !matches!(n.kind, NodeKind::Connector { .. }))
             })
             .and_then(|h| self.doc.world_rect(h))
-            .and_then(|wr| hit::handle_at(&self.camera.world_rect_to_screen(&wr), self.pointer))
-            .map(CursorShape::resize)
+            .and_then(|wr| hit::handle_at(&self.camera.world_rect_to_screen(&wr), self.pointer));
+        if let Some(handle) = handle {
+            return Some(CursorShape::resize(handle));
+        }
+        self.guide_at(self.pointer).map(|(_, axis)| match axis {
+            GuideAxis::Vertical => CursorShape::Ew,
+            GuideAxis::Horizontal => CursorShape::Ns,
+        })
     }
 
     fn pointer_move(&mut self, pos: V2, pressure: Option<f64>, time_ms: f64) {
         let world = self.screen_to_world(pos);
         match std::mem::replace(&mut self.gesture, Gesture::None) {
             Gesture::None => {
-                self.hover = if self.tool == Tool::Select {
+                self.hover = if self.tool == Tool::Select && self.ruler_axis_at(pos).is_none() {
                     self.label_at(pos)
                         .or_else(|| hit::hit_test(&self.doc, world, self.camera.zoom))
                 } else {
@@ -1292,6 +1686,35 @@ impl Editor {
                 };
                 self.pointer_move(pos, pressure, time_ms);
             }
+            Gesture::LabelDrag {
+                id,
+                idx,
+                grab,
+                start_screen,
+                started,
+            } => {
+                if !started {
+                    if pos.dist(start_screen) < DRAG_THRESHOLD {
+                        self.gesture = Gesture::LabelDrag {
+                            id,
+                            idx,
+                            grab,
+                            start_screen,
+                            started,
+                        };
+                        return;
+                    }
+                    self.begin("Move label");
+                }
+                self.set_connector_label_center(id, idx, world - grab);
+                self.gesture = Gesture::LabelDrag {
+                    id,
+                    idx,
+                    grab,
+                    start_screen,
+                    started: true,
+                };
+            }
             Gesture::Move {
                 start,
                 origins,
@@ -1311,33 +1734,52 @@ impl Editor {
                 if self.snapping_active() {
                     let ids: Vec<NodeId> = origins.iter().map(|(id, _)| *id).collect();
                     let cands = self.snap_candidates(&ids);
-                    let (sx, sy, guides) = snap::snap_rect(
-                        &moved,
-                        [true; 3],
-                        [true; 3],
-                        &cands,
-                        self.snap_threshold(),
+                    let threshold = self.snap_threshold();
+                    // Manual guides win. Row and column alignment only: the
+                    // center snaps to a candidate's center, never to an edge or
+                    // side. Grid and equal spacing stay as the fallbacks.
+                    let (vlines, hlines) = self.manual_guide_lines();
+                    let (mut sx, mut sy, mx, my, manual) = snap::snap_manual(
+                        &moved, [true; 3], [true; 3], &vlines, &hlines, threshold,
                     );
                     moved = moved.translate(v2(sx, sy));
-                    self.guides = guides;
-                    // Equal spacing between neighbors on axes that didn't edge-snap.
-                    let (gx, gy, gaps) = snap::snap_spacing(&moved, &cands, self.snap_threshold());
-                    let gx = if sx == 0.0 { gx } else { 0.0 };
-                    let gy = if sy == 0.0 { gy } else { 0.0 };
+                    self.guides = manual;
+                    let (cx, cy, guides) = snap::snap_centers(&moved, &cands, threshold);
+                    if !mx {
+                        sx = cx;
+                        moved = moved.translate(v2(cx, 0.0));
+                    }
+                    if !my {
+                        sy = cy;
+                        moved = moved.translate(v2(0.0, cy));
+                    }
+                    self.guides.extend(guides.into_iter().filter(|g| match g {
+                        Guide::V { .. } => !mx,
+                        Guide::H { .. } => !my,
+                        _ => true,
+                    }));
+                    // Equal spacing between neighbors on axes that didn't align.
+                    let (gx, gy, gaps) = snap::snap_spacing(&moved, &cands, threshold);
+                    let lock_x = mx || sx != 0.0;
+                    let lock_y = my || sy != 0.0;
+                    let gx = if lock_x { 0.0 } else { gx };
+                    let gy = if lock_y { 0.0 } else { gy };
+                    let no_grid_x = lock_x || gx != 0.0;
+                    let no_grid_y = lock_y || gy != 0.0;
                     if gx != 0.0 || gy != 0.0 || !gaps.is_empty() {
                         moved = moved.translate(v2(gx, gy));
                         self.guides.extend(gaps.into_iter().filter(|g| match g {
                             Guide::Gap { a, b } => {
-                                ((a.y - b.y).abs() < 1e-9 && sx == 0.0)
-                                    || ((a.x - b.x).abs() < 1e-9 && sy == 0.0)
+                                ((a.y - b.y).abs() < 1e-9 && !lock_x)
+                                    || ((a.x - b.x).abs() < 1e-9 && !lock_y)
                             }
                             _ => true,
                         }));
                     }
-                    if sx == 0.0 && gx == 0.0 {
+                    if !no_grid_x {
                         moved.x = snap::grid(moved.x, self.grid_step);
                     }
-                    if sy == 0.0 && gy == 0.0 {
+                    if !no_grid_y {
                         moved.y = snap::grid(moved.y, self.grid_step);
                     }
                 }
@@ -1367,8 +1809,7 @@ impl Editor {
                 snapshot,
             } => {
                 let nb = {
-                    let ids: Vec<NodeId> = origins.iter().map(|(id, _)| *id).collect();
-                    let (nb, guides) = self.resize_bounds(handle, start, world, bounds0, &ids);
+                    let (nb, guides) = self.resize_bounds(handle, start, world, bounds0);
                     self.guides = guides;
                     nb
                 };
@@ -1431,6 +1872,29 @@ impl Editor {
                     snapshot,
                 };
             }
+            Gesture::Rotate {
+                id,
+                center,
+                start_angle,
+                rotation0,
+            } => {
+                let d = world - center;
+                let mut deg = rotation0 + (d.y.atan2(d.x) - start_angle).to_degrees();
+                // Common angles by default; Shift gives one-degree control.
+                let step = if self.mods.shift { 1.0 } else { 15.0 };
+                deg = (deg / step).round() * step;
+                let value = commands::normalize_angle(deg);
+                if let Some(n) = self.tx().node_mut(id) {
+                    n.style.rotation = value;
+                }
+                self.fixup();
+                self.gesture = Gesture::Rotate {
+                    id,
+                    center,
+                    start_angle,
+                    rotation0,
+                };
+            }
             Gesture::Marquee { start, scope, base } => {
                 let r = Rect::from_points(start, world);
                 self.marquee = Some(r);
@@ -1442,33 +1906,13 @@ impl Editor {
             Gesture::Create { tool, start, id } => {
                 let mut end = world;
                 if self.snapping_active() && !self.mods.shift {
-                    // Magnet the dragged end onto nearby elements (draw.io
-                    // style): the start corner stays put, only the end moves.
-                    // Candidates come from the new node's parent, so shapes
-                    // inside the same frame magnet against each other.
-                    let ids = [id];
-                    let cands = self.snap_candidates(&ids);
-                    let r = Rect::from_points(start, end);
-                    let ux = if end.x >= start.x {
-                        [false, true, true]
-                    } else {
-                        [true, true, false]
-                    };
-                    let uy = if end.y >= start.y {
-                        [false, true, true]
-                    } else {
-                        [true, true, false]
-                    };
-                    let (sx, sy, gs) = snap::snap_rect(&r, ux, uy, &cands, self.snap_threshold());
-                    end = end + v2(sx, sy);
-                    // Grid fallback on the axes that did not magnet.
-                    if sx == 0.0 {
-                        end.x = snap::grid(end.x, self.grid_step);
-                    }
-                    if sy == 0.0 {
-                        end.y = snap::grid(end.y, self.grid_step);
-                    }
-                    self.guides = gs;
+                    // Grid only: creating magnetizes to the grid, not to
+                    // nearby elements' edges or centers.
+                    end = v2(
+                        snap::grid(end.x, self.grid_step),
+                        snap::grid(end.y, self.grid_step),
+                    );
+                    self.guides.clear();
                 } else {
                     self.guides.clear();
                     if self.snapping {
@@ -1534,6 +1978,51 @@ impl Editor {
                 self.laser_point(world, time_ms);
                 self.gesture = Gesture::Laser;
             }
+            Gesture::GuideDrag {
+                axis,
+                start_screen,
+                index,
+                created,
+                started,
+            } => {
+                if !started {
+                    if pos.dist(start_screen) < DRAG_THRESHOLD {
+                        self.gesture = Gesture::GuideDrag {
+                            axis,
+                            start_screen,
+                            index,
+                            created,
+                            started,
+                        };
+                        return;
+                    }
+                    self.begin(if created { "Add guide" } else { "Move guide" });
+                }
+                let index = match index {
+                    Some(i) => Some(i),
+                    None => {
+                        let value = self.guide_world_pos(axis, pos);
+                        self.tx()
+                            .settings_mut()
+                            .manual_guides
+                            .push(ManualGuide { axis, pos: value });
+                        Some(self.doc.settings.manual_guides.len() - 1)
+                    }
+                };
+                if let Some(i) = index {
+                    let value = self.guide_world_pos(axis, pos);
+                    if let Some(g) = self.tx().settings_mut().manual_guides.get_mut(i) {
+                        g.pos = value;
+                    }
+                }
+                self.gesture = Gesture::GuideDrag {
+                    axis,
+                    start_screen,
+                    index,
+                    created,
+                    started: true,
+                };
+            }
             Gesture::TextSelect { id } => {
                 let caret = self.text_caret_at(id, world);
                 if let Some(te) = &mut self.text_edit {
@@ -1559,7 +2048,6 @@ impl Editor {
         start: V2,
         world: V2,
         b0: Rect,
-        ids: &[NodeId],
     ) -> (Rect, Vec<Guide>) {
         let d = world - start;
         let (mut x0, mut y0, mut x1, mut y1) = (b0.x, b0.y, b0.right(), b0.bottom());
@@ -1619,46 +2107,77 @@ impl Editor {
         let mut r = Rect::from_points(v2(x0, y0), v2(x1, y1));
         let mut guides = Vec::new();
         if self.snapping_active() && !self.mods.shift {
-            // Magnet the dragged edges onto sibling anchors. `ids` are the
-            // resized nodes, so their parent's children (inside a frame) are
-            // candidates even when the fetch comes from a hover resize.
-            let cands = self.snap_candidates(ids);
-            let ux = [hx == 0.0, false, hx == 1.0];
-            let uy = [hy == 0.0, false, hy == 1.0];
-            let (sx, sy, gs) = snap::snap_rect(&r, ux, uy, &cands, self.snap_threshold());
-            if hx == 0.0 {
-                r.x += sx;
-                r.w -= sx
-            } else if hx == 1.0 {
-                r.w += sx
+            // Manual guides win over the grid. Only the dragged edge snaps, so
+            // a fixed edge stays put and sym keeps the center (skipped).
+            let threshold = self.snap_threshold();
+            let (vlines, hlines) = self.manual_guide_lines();
+            let mut hit_x = false;
+            let mut hit_y = false;
+            if hx == 0.0
+                && let Some(x) = snap::nearest_guide(r.x, &vlines, threshold)
+            {
+                r.w = r.right() - x;
+                r.x = x;
+                hit_x = true;
+                guides.push(Guide::V {
+                    x,
+                    y0: r.y,
+                    y1: r.bottom(),
+                });
+            } else if hx == 1.0
+                && let Some(x) = snap::nearest_guide(r.right(), &vlines, threshold)
+            {
+                r.w = x - r.x;
+                hit_x = true;
+                guides.push(Guide::V {
+                    x,
+                    y0: r.y,
+                    y1: r.bottom(),
+                });
             }
-            if hy == 0.0 {
-                r.y += sy;
-                r.h -= sy
-            } else if hy == 1.0 {
-                r.h += sy
+            if hy == 0.0
+                && let Some(y) = snap::nearest_guide(r.y, &hlines, threshold)
+            {
+                r.h = r.bottom() - y;
+                r.y = y;
+                hit_y = true;
+                guides.push(Guide::H {
+                    y,
+                    x0: r.x,
+                    x1: r.right(),
+                });
+            } else if hy == 1.0
+                && let Some(y) = snap::nearest_guide(r.bottom(), &hlines, threshold)
+            {
+                r.h = y - r.y;
+                hit_y = true;
+                guides.push(Guide::H {
+                    y,
+                    x0: r.x,
+                    x1: r.right(),
+                });
             }
-            // Un-snapped axes fall back to the grid: snap the dragged edge only,
-            // so a fixed edge stays put and sym keeps the center (skipped).
-            if sx == 0.0 && hx == 0.0 {
-                let l = snap::grid(r.x, self.grid_step);
-                r.w = r.right() - l;
-                r.x = l;
-            } else if sx == 0.0 && hx == 1.0 {
-                let rr = snap::grid(r.right(), self.grid_step);
-                r.w = rr - r.x;
+            // Grid fallback on edges no manual guide caught.
+            if !hit_x {
+                if hx == 0.0 {
+                    let l = snap::grid(r.x, self.grid_step);
+                    r.w = r.right() - l;
+                    r.x = l;
+                } else if hx == 1.0 {
+                    let rr = snap::grid(r.right(), self.grid_step);
+                    r.w = rr - r.x;
+                }
             }
-            if sy == 0.0 && hy == 0.0 {
-                let t = snap::grid(r.y, self.grid_step);
-                r.h = r.bottom() - t;
-                r.y = t;
-            } else if sy == 0.0 && hy == 1.0 {
-                let bb = snap::grid(r.bottom(), self.grid_step);
-                r.h = bb - r.y;
+            if !hit_y {
+                if hy == 0.0 {
+                    let t = snap::grid(r.y, self.grid_step);
+                    r.h = r.bottom() - t;
+                    r.y = t;
+                } else if hy == 1.0 {
+                    let bb = snap::grid(r.bottom(), self.grid_step);
+                    r.h = bb - r.y;
+                }
             }
-            // Keep snap_rect's guides: they appear while the dragged edge sits
-            // on a candidate anchor, even when the correction is already 0.
-            guides = gs;
         }
         r.w = r.w.max(1.0 / self.camera.zoom);
         r.h = r.h.max(1.0 / self.camera.zoom);
@@ -1679,6 +2198,11 @@ impl Editor {
                     }
                 }
             }
+            Gesture::LabelDrag { started, .. } => {
+                if started {
+                    self.commit();
+                }
+            }
             Gesture::Move { origins, .. } => {
                 let ids: Vec<NodeId> = origins.iter().map(|(id, _)| *id).collect();
                 self.unbind_moved_connectors(&ids);
@@ -1689,6 +2213,10 @@ impl Editor {
                 self.commit();
             }
             Gesture::Resize { .. } => {
+                self.guides.clear();
+                self.commit();
+            }
+            Gesture::Rotate { .. } => {
                 self.guides.clear();
                 self.commit();
             }
@@ -1731,6 +2259,30 @@ impl Editor {
             Gesture::ConnectorEnd { id, start, .. } => self.connector_end_up(id, start, world),
             Gesture::ConnectorMid { .. } => self.commit(),
             Gesture::Laser => {}
+            Gesture::GuideDrag {
+                axis,
+                index,
+                started,
+                ..
+            } => {
+                if started {
+                    let mut deleted = false;
+                    if self.guide_on_ruler(axis, pos)
+                        && let Some(i) = index
+                    {
+                        let mut tx = self.tx();
+                        let guides = &mut tx.settings_mut().manual_guides;
+                        if i < guides.len() {
+                            guides.remove(i);
+                            deleted = true;
+                        }
+                    }
+                    if deleted && let Some((rec, _)) = self.rec.as_mut() {
+                        rec.relabel("Delete guide");
+                    }
+                    self.commit();
+                }
+            }
             Gesture::TextSelect { .. } => {
                 if let Some(te) = &mut self.text_edit
                     && te.anchor == Some(te.caret)
@@ -1952,16 +2504,27 @@ impl Editor {
     }
 
     pub fn start_text_edit(&mut self, id: NodeId, at_world: Option<V2>) {
+        self.start_text_edit_label(id, 0, at_world)
+    }
+
+    /// Start editing label `idx` of the node (0 = main label).
+    pub fn start_text_edit_label(&mut self, id: NodeId, idx: usize, at_world: Option<V2>) {
         let Some(len) = self
             .doc
             .get(id)
-            .and_then(|n| n.edited_text())
+            .and_then(|n| n.edited_label(idx))
             .map(|t| t.chars().count())
         else {
             return;
         };
-        let caret = at_world.map(|p| self.text_caret_at(id, p)).unwrap_or(len);
-        if let Some(te) = self.text_edit.as_mut().filter(|te| te.id == id) {
+        let caret = at_world
+            .map(|p| self.text_caret_at_label(id, idx, p))
+            .unwrap_or(len);
+        if let Some(te) = self
+            .text_edit
+            .as_mut()
+            .filter(|te| te.id == id && te.label == idx)
+        {
             // Clicking inside the text being edited: place the caret (Shift extends) and
             // start a drag selection.
             if self.mods.shift {
@@ -1973,11 +2536,16 @@ impl Editor {
             self.gesture = Gesture::TextSelect { id };
             return;
         }
-        self.end_text_edit();
+        if self.text_edit.is_some() {
+            // A different label of the same node or another node: commit the
+            // old edit first, like switching nodes does.
+            self.end_text_edit();
+        }
         self.begin("Edit text");
         self.selection = vec![id];
         self.text_edit = Some(TextEdit {
             id,
+            label: idx,
             caret,
             anchor: if at_world.is_none() { Some(0) } else { None },
         });
@@ -1988,7 +2556,7 @@ impl Editor {
         let Some(te) = self.text_edit.clone() else {
             return;
         };
-        let Some(text) = self.doc.get(te.id).and_then(|n| n.edited_text()) else {
+        let Some(text) = self.doc.get(te.id).and_then(|n| n.edited_label(te.label)) else {
             return;
         };
         let chars: Vec<char> = text.chars().collect();
@@ -2007,7 +2575,8 @@ impl Editor {
         }
     }
 
-    /// Finish text editing; empty text nodes are removed.
+    /// Finish text editing; empty text nodes are removed and emptied extra
+    /// labels are pruned.
     pub fn end_text_edit(&mut self) {
         let Some(te) = self.text_edit.take() else {
             return;
@@ -2019,6 +2588,13 @@ impl Editor {
         if empty {
             self.tx().remove(te.id);
             self.selection.retain(|s| *s != te.id);
+        }
+        if te.label > 0 {
+            // An extra label emptied out is gone; extras never sit empty.
+            let mut tx = self.tx();
+            if let Some(n) = tx.node_mut(te.id) {
+                n.labels.retain(|l| !l.text.trim().is_empty());
+            }
         }
         self.commit();
     }
@@ -2218,6 +2794,7 @@ impl Editor {
             A::DetachInstance => self.detach_instance(),
             A::AddAutoLayout => self.add_auto_layout(),
             A::RemoveAutoLayout => self.remove_auto_layout(),
+            A::Autosize => self.autosize_selection(),
             A::Align(axis, to) => self.align(axis as usize, to),
             A::Distribute(axis) => self.distribute(axis as usize),
             A::Boolean(op) => self.boolean(op),
@@ -2227,8 +2804,11 @@ impl Editor {
             A::Underline => self.toggle_underline(),
             A::Strikethrough => self.toggle_strike(),
             A::PlaceImage => self.requests.push(AppRequest::PlaceImage),
+            A::Generate(source) => self.ui_events.push(commands::UiEvent::Generate(source)),
             A::ToggleSketch => self.toggle_sketch(),
             A::CommandPalette => self.ui_events.push(commands::UiEvent::TogglePalette),
+            A::Find => self.ui_events.push(commands::UiEvent::OpenFind),
+            A::FindStep(next) => self.ui_events.push(commands::UiEvent::FindStep(next)),
             A::Rename => {
                 if let Some(id) = self.selection.first() {
                     self.ui_events.push(commands::UiEvent::Rename(*id));
@@ -2237,6 +2817,7 @@ impl Editor {
             A::ToggleUi => self.ui_events.push(commands::UiEvent::ToggleUi),
             A::ToggleHelp => self.ui_events.push(commands::UiEvent::ToggleHelp),
             A::ToggleGrid => self.ui_events.push(commands::UiEvent::ToggleGrid),
+            A::ToggleInspector => self.ui_events.push(commands::UiEvent::ToggleInspector),
             A::SelectNext => self.select_sibling(true),
             A::SelectPrev => self.select_sibling(false),
             A::SelectParent => self.select_parent(),
@@ -2260,11 +2841,13 @@ impl Editor {
         match std::mem::replace(&mut self.gesture, Gesture::None) {
             Gesture::Move { .. }
             | Gesture::Resize { .. }
+            | Gesture::Rotate { .. }
             | Gesture::Create { .. }
             | Gesture::Draw { .. }
             | Gesture::PathPart { .. }
             | Gesture::ConnectorEnd { .. }
             | Gesture::ConnectorMid { .. }
+            | Gesture::GuideDrag { .. }
             | Gesture::Erase => {
                 // Roll back the open transaction.
                 if let Some((rec, key)) = self.rec.take() {

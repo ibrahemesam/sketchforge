@@ -43,6 +43,8 @@ pub enum Action {
     DetachInstance,
     AddAutoLayout,
     RemoveAutoLayout,
+    /// draw.io Autosize: containers shrink to their contents.
+    Autosize,
     /// Axis (0 = x, 1 = y) and target (0 start, 0.5 center, 1 end).
     Align(u8, f64),
     Distribute(u8),
@@ -53,12 +55,19 @@ pub enum Action {
     Underline,
     Strikethrough,
     PlaceImage,
+    /// Open the insert-diagram dialog for this text format (M8).
+    Generate(crate::generate::Source),
     ToggleSketch,
     CommandPalette,
     Rename,
+    /// Open the diagram find bar.
+    Find,
+    /// Step to the next or previous match while the find bar is open.
+    FindStep(bool),
     ToggleUi,
     ToggleHelp,
     ToggleGrid,
+    ToggleInspector,
     SelectNext,
     SelectPrev,
     SelectParent,
@@ -155,12 +164,21 @@ fn bindings() -> Vec<(Key, Chord, Action, &'static str)> {
             "Hand-drawn style on/off",
         ),
         (Char('k'), CMD, A::CommandPalette, "Command palette"),
+        (Char('f'), CMD, A::Find, "Find in diagram"),
+        (Right, CMD_ALT, A::FindStep(true), "Find next match"),
+        (Left, CMD_ALT, A::FindStep(false), "Find previous match"),
         (Char('p'), CMD_ALT, A::ExportPdf, "Export PDF"),
         (Char('c'), CMD_SHIFT, A::CopyAsPng, "Copy as PNG"),
         (Char('c'), CMD_ALT_SHIFT, A::CopyAsSvg, "Copy as SVG"),
         (Char('/'), CMD_SHIFT, A::CommandPalette, "Command palette"),
         (Char('r'), CMD, A::Rename, "Rename layer"),
         (Char('\\'), CMD, A::ToggleUi, "Show / hide UI"),
+        (
+            Char('f'),
+            CMD_SHIFT,
+            A::ToggleInspector,
+            "Show / hide format panel",
+        ),
         (Char('/'), CMD, A::ToggleHelp, "Keyboard shortcuts"),
         (Char('?'), SHIFT, A::ToggleHelp, "Keyboard shortcuts"),
         (Char('\''), CMD_SHIFT, A::ToggleGrid, "Show / hide dot grid"),
@@ -248,6 +266,12 @@ fn bindings() -> Vec<(Key, Chord, Action, &'static str)> {
             ALT_SHIFT,
             A::RemoveAutoLayout,
             "Remove auto layout",
+        ),
+        (
+            Char('f'),
+            ALT,
+            A::Autosize,
+            "Autosize: containers hug contents",
         ),
         (Char('a'), ALT, A::Align(0, 0.0), "Align left"),
         (Char('h'), ALT, A::Align(0, 0.5), "Align horizontal centers"),
@@ -394,6 +418,7 @@ pub fn category(a: Action) -> &'static str {
         | A::ExportPng
         | A::ExportSvg
         | A::PlaceImage
+        | A::Generate(_)
         | A::Home => "File",
         A::Undo
         | A::Redo
@@ -421,6 +446,7 @@ pub fn category(a: Action) -> &'static str {
         | A::ToggleGrid
         | A::ToggleUi
         | A::ToggleHelp
+        | A::ToggleInspector
         | A::NextPage
         | A::PrevPage => "View",
         A::Bold | A::Italic | A::Underline | A::Strikethrough => "Text",
@@ -499,6 +525,18 @@ pub fn menus() -> Vec<(&'static str, Vec<MenuEntry>)> {
             ],
         ),
         (
+            "Insert",
+            vec![
+                I(
+                    "Mermaid Diagram…",
+                    A::Generate(crate::generate::Source::Mermaid),
+                ),
+                I("CSV Rows…", A::Generate(crate::generate::Source::Csv)),
+                I("SQL Schema…", A::Generate(crate::generate::Source::Sql)),
+                I("JSON Graph…", A::Generate(crate::generate::Source::Json)),
+            ],
+        ),
+        (
             "Edit",
             vec![
                 I("Undo", A::Undo),
@@ -518,6 +556,10 @@ pub fn menus() -> Vec<(&'static str, Vec<MenuEntry>)> {
                 S,
                 I("Rename", A::Rename),
                 I("Command Palette…", A::CommandPalette),
+                S,
+                I("Find…", A::Find),
+                I("Find Next", A::FindStep(true)),
+                I("Find Previous", A::FindStep(false)),
             ],
         ),
         (
@@ -532,6 +574,8 @@ pub fn menus() -> Vec<(&'static str, Vec<MenuEntry>)> {
                 S,
                 I("Add Auto Layout", A::AddAutoLayout),
                 I("Remove Auto Layout", A::RemoveAutoLayout),
+                S,
+                I("Autosize", A::Autosize),
                 S,
                 Sub(
                     "Align",
@@ -601,6 +645,7 @@ pub fn menus() -> Vec<(&'static str, Vec<MenuEntry>)> {
                 S,
                 I("Snapping", A::ToggleSnapping),
                 I("Dot Grid", A::ToggleGrid),
+                I("Format Panel", A::ToggleInspector),
                 I("Show/Hide UI", A::ToggleUi),
                 I("Keyboard Shortcuts", A::ToggleHelp),
             ],
@@ -654,7 +699,10 @@ mod tests {
                             // Delete is bound to the Delete key; everything should be reachable.
                             assert!(
                                 super::chord_of(*a).is_some()
-                                    || matches!(a, super::Action::ExportSvg),
+                                    || matches!(
+                                        a,
+                                        super::Action::ExportSvg | super::Action::Generate(_)
+                                    ),
                                 "{label} has no shortcut"
                             );
                         }

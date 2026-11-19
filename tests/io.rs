@@ -143,6 +143,8 @@ fn m6_png_and_svg_export_of_frames_and_all_pages() {
         scope: Scope::Frames,
         scale: 1.0,
         transparent: true,
+        appearance: Default::default(),
+        embed_data: false,
     };
     let files = export::write(
         &spec,
@@ -375,5 +377,132 @@ fn cli_reads_paper_rs_home_from_before_the_rename() {
     );
     let proj = PathBuf::from(String::from_utf8_lossy(&out.stdout).trim().to_string());
     assert!(proj.starts_with(dir.join("home")), "{}", proj.display());
+    std::fs::remove_dir_all(dir).ok();
+}
+
+#[test]
+fn cli_embeds_svg_data_for_reopen() {
+    let dir = tmp("embed-svg");
+    let exe = env!("CARGO_BIN_EXE_sketch-rs");
+    let svg = dir.join("demo.svg");
+    let out = std::process::Command::new(exe)
+        .arg("--export-svg")
+        .arg(&svg)
+        .args(["--demo", "--embed-data"])
+        .output()
+        .unwrap();
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let text = std::fs::read_to_string(&svg).unwrap();
+    assert!(text.contains("sketch-rs-data"), "no embedded pages in SVG");
+
+    let out = std::process::Command::new(exe)
+        .env("SKETCH_RS_HOME", dir.join("home"))
+        .arg("--import")
+        .arg(&svg)
+        .output()
+        .unwrap();
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let proj = PathBuf::from(String::from_utf8_lossy(&out.stdout).trim().to_string());
+    let pages = sketch_rs::project::Project::open(&proj)
+        .unwrap()
+        .load_pages()
+        .unwrap();
+    assert_eq!(pages.len(), 1);
+    assert_eq!(pages[0].name, "Launch plan");
+    assert_eq!(
+        pages[0].doc.nodes.len(),
+        sketch_rs::demo::showcase().doc.nodes.len()
+    );
+    std::fs::remove_dir_all(dir).ok();
+}
+
+#[test]
+fn cli_embeds_png_data_for_reopen() {
+    if gpu().is_none() {
+        return;
+    }
+    let dir = tmp("embed-png");
+    let exe = env!("CARGO_BIN_EXE_sketch-rs");
+    let png = dir.join("demo.png");
+    let out = std::process::Command::new(exe)
+        .arg("--export-png")
+        .arg(&png)
+        .args(["--demo", "--embed-data"])
+        .output()
+        .unwrap();
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let out = std::process::Command::new(exe)
+        .env("SKETCH_RS_HOME", dir.join("home"))
+        .arg("--import")
+        .arg(&png)
+        .output()
+        .unwrap();
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let proj = PathBuf::from(String::from_utf8_lossy(&out.stdout).trim().to_string());
+    let pages = sketch_rs::project::Project::open(&proj)
+        .unwrap()
+        .load_pages()
+        .unwrap();
+    assert_eq!(pages.len(), 1);
+    assert_eq!(pages[0].name, "Launch plan");
+    assert_eq!(
+        pages[0].doc.nodes.len(),
+        sketch_rs::demo::showcase().doc.nodes.len()
+    );
+    std::fs::remove_dir_all(dir).ok();
+}
+
+#[test]
+fn embedded_svg_and_png_reopen_all_pages() {
+    let Some(g) = gpu() else { return };
+    let mut e = board();
+    e.add_page();
+    e.add_node(
+        Node::new(NodeId(0), NodeKind::Rect, Rect::new(0.0, 0.0, 60.0, 40.0)),
+        None,
+    );
+    e.switch_page(0);
+    let all: Vec<sketch_rs::project::PageData> =
+        (0..e.pages.len()).map(|i| e.page_data(i)).collect();
+    let bundle =
+        sketch_rs::project::format::pages_to_json("Embedded board", &all, Some(e.active_page_id()));
+    let dir = tmp("embedded-pages");
+
+    for format in [Format::Svg, Format::Png] {
+        let spec = Spec {
+            format,
+            scope: Scope::Page,
+            scale: 1.0,
+            transparent: true,
+            appearance: Default::default(),
+            embed_data: true,
+        };
+        let path = dir.join(format!("board.{}", format.ext()));
+        let items = export::items(&spec, &[("Page 1", &e.doc)], 0, &[]);
+        export::write_with_data(&spec, &items, &path, Some(g), Some(&bundle)).unwrap();
+        let imported = sketch_rs::io::import::import_detailed(&path).unwrap();
+        assert_eq!(imported.name, "Embedded board", "{format:?}");
+        assert_eq!(imported.pages.len(), 2, "{format:?}");
+        assert_eq!(imported.pages[0].name, all[0].name, "{format:?}");
+        assert_eq!(imported.pages[0].doc.nodes, all[0].doc.nodes, "{format:?}");
+        assert_eq!(imported.pages[1].name, all[1].name, "{format:?}");
+        assert_eq!(imported.pages[1].doc.nodes.len(), 1, "{format:?}");
+    }
     std::fs::remove_dir_all(dir).ok();
 }

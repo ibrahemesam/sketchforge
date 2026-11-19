@@ -312,3 +312,142 @@ mod tests {
         assert_eq!(it.doc().root.len(), 2);
     }
 }
+
+// ---------------------------------------------------------------------------------- scratchpad
+
+pub const SCRATCH_FORMAT: &str = "sketch-rs-scratchpad";
+pub const SCRATCH_VERSION: u32 = 1;
+pub const SCRATCH_FILE: &str = "scratchpad.json";
+/// Pinned items always stay; recents fall off the back past this.
+pub const SCRATCH_LIMIT: usize = 12;
+
+/// One scratchpad entry: a pinned or recently used shape for quick reuse
+/// (draw.io's scratchpad).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ScratchItem {
+    pub item: LibItem,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub pinned: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Scratchpad {
+    pub format: String,
+    pub version: u32,
+    pub items: Vec<ScratchItem>,
+    #[serde(skip)]
+    pub path: Option<PathBuf>,
+}
+
+impl Default for Scratchpad {
+    fn default() -> Self {
+        Scratchpad {
+            format: SCRATCH_FORMAT.into(),
+            version: SCRATCH_VERSION,
+            items: Vec::new(),
+            path: None,
+        }
+    }
+}
+
+impl Scratchpad {
+    pub fn path_in(root: &Path) -> PathBuf {
+        root.join(SCRATCH_FILE)
+    }
+
+    pub fn load(path: &Path) -> Scratchpad {
+        let mut out = std::fs::read_to_string(path)
+            .ok()
+            .and_then(|s| serde_json::from_str::<Scratchpad>(&s).ok())
+            .filter(|s| s.format == SCRATCH_FORMAT && s.version <= SCRATCH_VERSION)
+            .unwrap_or_default();
+        out.path = Some(path.to_path_buf());
+        out
+    }
+
+    pub fn save(&self) -> std::io::Result<()> {
+        let Some(p) = &self.path else { return Ok(()) };
+        if let Some(dir) = p.parent() {
+            std::fs::create_dir_all(dir)?;
+        }
+        crate::io::atomic::write(
+            p,
+            serde_json::to_string_pretty(self)
+                .expect("scratchpad serializes")
+                .as_bytes(),
+        )
+    }
+
+    /// Add (or move to front) a shape. Pinned items live at the front in pin
+    /// order; recents follow, most recent first. Returns the item id used.
+    pub fn add(&mut self, item: LibItem, pinned: bool) -> String {
+        let id = item.id.clone();
+        self.remove(&id);
+        self.items.insert(0, ScratchItem { item, pinned });
+        self.tidy();
+        id
+    }
+
+    pub fn remove(&mut self, id: &str) {
+        self.items.retain(|it| it.item.id != id);
+    }
+
+    /// Pin or unpin; pinned items sort to the front.
+    pub fn set_pinned(&mut self, id: &str, pinned: bool) {
+        if let Some(it) = self.items.iter_mut().find(|it| it.item.id == id) {
+            it.pinned = pinned;
+        }
+        self.tidy();
+    }
+
+    fn tidy(&mut self) {
+        // Pinned first (list order), recents after.
+        self.items.sort_by_key(|it| !it.pinned);
+        // Cap the recents; pinned items always stay.
+        let pinned = self.items.iter().filter(|it| it.pinned).count();
+        self.items.truncate(pinned + SCRATCH_LIMIT);
+    }
+}
+
+#[cfg(test)]
+mod scratch_tests {
+    use super::*;
+
+    fn demo_item(id: &str, w: f64) -> LibItem {
+        let mut n = Node::new(NodeId(1), NodeKind::Rect, Rect::new(0.0, 0.0, w, 40.0));
+        n.id = NodeId(1);
+        LibItem {
+            id: id.into(),
+            name: id.into(),
+            nodes: vec![n],
+            roots: vec![NodeId(1)],
+        }
+    }
+
+    #[test]
+    fn recent_items_cap_and_dedupe() {
+        let mut s = Scratchpad::default();
+        for i in 0..(SCRATCH_LIMIT + 3) {
+            s.add(demo_item(&format!("r{}", i), 10.0), false);
+        }
+        assert_eq!(s.items.len(), SCRATCH_LIMIT);
+        assert_eq!(s.items[0].item.id, format!("r{}", SCRATCH_LIMIT + 2));
+        // Re-adding a known item moves it to the front without duplicating.
+        s.add(demo_item("r4", 10.0), false);
+        assert_eq!(s.items[0].item.id, "r4");
+        assert_eq!(s.items.iter().filter(|i| i.item.id == "r4").count(), 1);
+    }
+
+    #[test]
+    fn pinned_items_sort_first_and_survive_the_cap() {
+        let mut s = Scratchpad::default();
+        for i in 0..(SCRATCH_LIMIT + 3) {
+            s.add(demo_item(&format!("r{}", i), 10.0), false);
+        }
+        s.add(demo_item("pin1", 10.0), true);
+        s.add(demo_item("pin2", 10.0), true);
+        assert!(s.items[0].item.id == "pin2" || s.items[1].item.id == "pin2");
+        assert!(s.items.iter().filter(|i| i.pinned).count() == 2);
+        assert_eq!(s.items.len(), SCRATCH_LIMIT + 2);
+    }
+}

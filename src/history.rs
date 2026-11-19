@@ -5,7 +5,7 @@
 //! and pushes a [`Change`] that can be applied in either direction.
 
 use crate::geom::V2;
-use crate::model::{Document, Node, NodeId};
+use crate::model::{DiagramSettings, Document, Layer, Node, NodeId};
 use std::collections::HashMap;
 
 const MAX_DEPTH: usize = 500;
@@ -23,6 +23,9 @@ pub struct Change {
     entries: Vec<Entry>,
     root: Option<(Vec<NodeId>, Vec<NodeId>)>,
     next_id: (u64, u64),
+    settings: Option<(DiagramSettings, DiagramSettings)>,
+    layers: Option<(Vec<Layer>, Vec<Layer>)>,
+    next_layer: (u64, u64),
     coalesce_key: Option<String>,
 }
 
@@ -51,6 +54,25 @@ impl Change {
         } else {
             self.next_id.0
         };
+        if let Some((before, after)) = &self.settings {
+            doc.settings = if forward {
+                after.clone()
+            } else {
+                before.clone()
+            };
+        }
+        if let Some((before, after)) = &self.layers {
+            doc.layers = if forward {
+                after.clone()
+            } else {
+                before.clone()
+            };
+        }
+        doc.next_layer = if forward {
+            self.next_layer.1
+        } else {
+            self.next_layer.0
+        };
     }
 }
 
@@ -62,6 +84,9 @@ pub struct Recording {
     order: Vec<NodeId>,
     root_before: Option<Vec<NodeId>>,
     next_id_before: u64,
+    settings_before: Option<DiagramSettings>,
+    layers_before: Option<Vec<Layer>>,
+    next_layer_before: u64,
 }
 
 impl Recording {
@@ -73,10 +98,17 @@ impl Recording {
     pub fn before(&self, id: NodeId) -> Option<&Option<Node>> {
         self.before.get(&id)
     }
+    /// Rename the transaction, for a gesture whose meaning changes on release
+    /// (a guide drag that ends on its ruler deletes instead of moves).
+    pub fn relabel(&mut self, label: impl Into<String>) {
+        self.label = label.into();
+    }
+
     pub fn new(label: impl Into<String>, doc: &Document) -> Recording {
         Recording {
             label: label.into(),
             next_id_before: doc.next_id,
+            next_layer_before: doc.next_layer,
             ..Default::default()
         }
     }
@@ -125,6 +157,24 @@ impl<'a> Tx<'a> {
 
     pub fn alloc_id(&mut self) -> NodeId {
         self.doc.alloc_id()
+    }
+
+    /// Mutable page settings. The first call snapshots them for undo.
+    pub fn settings_mut(&mut self) -> &mut DiagramSettings {
+        if self.rec.settings_before.is_none() {
+            self.rec.settings_before = Some(self.doc.settings.clone());
+        }
+        &mut self.doc.settings
+    }
+
+    /// Mutable layer list. The first call snapshots it (with `next_layer`)
+    /// for undo. Node membership lives on the nodes themselves; this only
+    /// edits the records.
+    pub fn layers_mut(&mut self) -> &mut Vec<Layer> {
+        if self.rec.layers_before.is_none() {
+            self.rec.layers_before = Some(self.doc.layers.clone());
+        }
+        &mut self.doc.layers
     }
 
     /// Insert a node under `parent` at `index` (None = top of the stack).
@@ -229,7 +279,15 @@ impl History {
             .root_before
             .filter(|b| *b != doc.root)
             .map(|b| (b, doc.root.clone()));
-        if entries.is_empty() && root.is_none() {
+        let settings = rec
+            .settings_before
+            .filter(|b| *b != doc.settings)
+            .map(|b| (b, doc.settings.clone()));
+        let layers = rec
+            .layers_before
+            .filter(|b| *b != doc.layers)
+            .map(|b| (b, doc.layers.clone()));
+        if entries.is_empty() && root.is_none() && settings.is_none() && layers.is_none() {
             return false;
         }
         let change = Change {
@@ -237,6 +295,9 @@ impl History {
             entries,
             root,
             next_id: (rec.next_id_before, doc.next_id),
+            settings,
+            layers,
+            next_layer: (rec.next_layer_before, doc.next_layer),
             coalesce_key,
         };
         self.generation += 1;
@@ -312,6 +373,17 @@ fn merge(older: &mut Change, newer: Change) {
         _ => {}
     }
     older.next_id.1 = newer.next_id.1;
+    older.next_layer.1 = newer.next_layer.1;
+    match (&mut older.settings, newer.settings) {
+        (Some((_, after)), Some((_, new_after))) => *after = new_after,
+        (s @ None, Some(ns)) => *s = Some(ns),
+        _ => {}
+    }
+    match (&mut older.layers, newer.layers) {
+        (Some((_, after)), Some((_, new_after))) => *after = new_after,
+        (l @ None, Some(nl)) => *l = Some(nl),
+        _ => {}
+    }
 }
 
 #[cfg(test)]

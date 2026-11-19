@@ -24,20 +24,47 @@ pub fn node_contains(doc: &Document, id: NodeId, p: V2, zoom: f64) -> bool {
         return false;
     };
     let slop = HIT_SLOP_PX / zoom;
+    // Rotation happens around the node's center, so undo it before testing the
+    // unrotated geometry. `p` stays in world space for the broad-phase bounds.
+    let local = if n.style.rotation != 0.0 {
+        p.rotate_about(r.center(), -n.style.rotation.to_radians())
+    } else {
+        p
+    };
     match &n.kind {
-        NodeKind::Frame { .. } | NodeKind::Rect | NodeKind::Text { .. } => r.contains(p),
+        NodeKind::Frame { .. } | NodeKind::Rect | NodeKind::Text { .. } => r.contains(local),
         NodeKind::Group => false,
         NodeKind::Stroke {
             points,
             width,
             thinning,
         } => {
-            if !r.inflate(slop).contains(p) {
+            if !r.inflate(slop).contains(local) {
                 return false;
             }
-            let local = p - r.min();
+            let local = local - r.min();
             let max_r = ink::radius(*width, *thinning, 1.0);
             ink::distance_to_polyline(points, local) <= max_r + slop
+        }
+        NodeKind::Connector { .. } => {
+            // The line is thin, so the routed path decides the hit before the
+            // label box does. A label can extend past the line's bounding box
+            // on a short connector, so test it on its own.
+            let tol = 0.25 / zoom;
+            if let Some(path) = draw::shape_path(n, r)
+                && path.distance(local, tol) <= n.style.stroke_width * 0.5 + slop
+            {
+                return true;
+            }
+            for idx in 0..n.label_count() {
+                if let Some(b) = crate::text::label_box_label(n, idx) {
+                    let boxr = Rect::new(r.x + b.x, r.y + b.y, b.w, b.h);
+                    if boxr.inflate(slop).contains(local) {
+                        return true;
+                    }
+                }
+            }
+            false
         }
         _ => {
             if !draw::draw_bounds(n, r).inflate(slop).contains(p) {
@@ -55,13 +82,13 @@ pub fn node_contains(doc: &Document, id: NodeId, p: V2, zoom: f64) -> bool {
                 }
             );
             // Tiny shapes are easier to grab by their box.
-            if r.w.min(r.h) * zoom < 8.0 && draw::is_area(n) && r.inflate(slop).contains(p) {
+            if r.w.min(r.h) * zoom < 8.0 && draw::is_area(n) && r.inflate(slop).contains(local) {
                 return true;
             }
             let filled =
                 draw::is_area(n) && (!n.style.fills.is_empty() || n.style.stroke.is_none());
-            (filled && path.contains(p, even_odd, tol))
-                || path.distance(p, tol) <= n.style.stroke_width * 0.5 + slop
+            (filled && path.contains(local, even_odd, tol))
+                || path.distance(local, tol) <= n.style.stroke_width * 0.5 + slop
         }
     }
 }
@@ -118,3 +145,20 @@ pub const HANDLES: [(f64, f64); 8] = [
     (0.0, 1.0),
     (0.0, 0.5),
 ];
+
+/// Screen distance from the selection's top edge to the center of the rotate handle.
+pub const ROTATE_OFFSET: f64 = 20.0;
+/// How close the pointer must be to the rotate handle, in screen pixels.
+const ROTATE_R: f64 = 9.0;
+
+/// Center of the rotate handle above the selection's top-right corner, in
+/// screen space. draw.io puts it at the top right, clear of the connection
+/// knobs at the middle of each edge.
+pub fn rotate_handle_pos(bounds_screen: &Rect) -> V2 {
+    v2(bounds_screen.right(), bounds_screen.y - ROTATE_OFFSET)
+}
+
+/// Whether `p` (screen) is on the rotate handle above the selection bounds.
+pub fn rotate_handle_at(bounds_screen: &Rect, p: V2) -> bool {
+    rotate_handle_pos(bounds_screen).dist(p) <= ROTATE_R
+}

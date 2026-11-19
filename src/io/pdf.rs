@@ -379,6 +379,7 @@ impl PageWriter<'_> {
                     cap,
                     join,
                     dash,
+                    ..
                 } => {
                     let p = self.emit_path(path);
                     let gs = self.gstate(1.0, color[3], blend);
@@ -419,15 +420,27 @@ impl PageWriter<'_> {
         }
     }
 
-    fn node(&mut self, doc: &Document, id: NodeId, opacity: f64) {
+    fn node(&mut self, doc: &Document, id: NodeId, opacity: f64, jw: &mut draw::JumpWalk) {
         let Some(n) = doc.get(id) else { return };
         if !n.visible {
             return;
         }
         let wr = doc.world_rect(id).unwrap();
         let op = opacity * n.style.opacity;
-        let d = draw::node_draw(n, wr, op);
+        let jump_pts = jw.points_for(n, wr);
+        let d = draw::node_draw_with(
+            n,
+            wr,
+            op,
+            doc.settings.shadow,
+            doc.settings.sketch,
+            doc.settings.auto_fill(),
+            &jump_pts,
+            false,
+            0.0,
+        );
         self.ops(&d.ops, d.blend);
+        jw.push(n, wr);
         if n.children.is_empty() {
             return;
         }
@@ -437,7 +450,7 @@ impl PageWriter<'_> {
             let _ = writeln!(self.out, "q {p}W n");
         }
         for c in &n.children {
-            self.node(doc, *c, op);
+            self.node(doc, *c, op, jw);
         }
         if clip {
             self.out.push_str("Q\n");
@@ -472,9 +485,10 @@ pub fn export(pages: &[PdfPage]) -> Vec<u8> {
                 num(b.h)
             );
         }
+        let mut jw = draw::JumpWalk::new(pg.doc);
         for r in &pg.roots {
             let op = draw::inherited_opacity(pg.doc, *r);
-            w.node(pg.doc, *r, op);
+            w.node(pg.doc, *r, op, &mut jw);
         }
         let content = std::mem::take(&mut w.out);
         let res = std::mem::take(&mut w.res);
@@ -547,7 +561,7 @@ pub fn pages_for<'a>(
 ) -> Vec<PdfPage<'a>> {
     let roots: Vec<NodeId> = roots
         .map(|r| r.to_vec())
-        .unwrap_or_else(|| doc.root.clone());
+        .unwrap_or_else(|| doc.layered_root());
     if frames {
         let fr: Vec<NodeId> = roots
             .iter()

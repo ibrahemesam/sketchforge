@@ -139,6 +139,69 @@ pub fn snap_rect(
     (dx, dy, guides)
 }
 
+/// Snap a moving rectangle to manual guides. Returns the correction, whether a
+/// guide is engaged on each axis (even when the correction is zero), and the
+/// guide spans to draw.
+pub fn snap_manual(
+    moving: &Rect,
+    use_x: [bool; 3],
+    use_y: [bool; 3],
+    vertical: &[f64],
+    horizontal: &[f64],
+    threshold: f64,
+) -> (f64, f64, bool, bool, Vec<Guide>) {
+    let mx: Vec<f64> = anchors_x(moving)
+        .into_iter()
+        .zip(use_x)
+        .filter(|(_, u)| *u)
+        .map(|(v, _)| v)
+        .collect();
+    let my: Vec<f64> = anchors_y(moving)
+        .into_iter()
+        .zip(use_y)
+        .filter(|(_, u)| *u)
+        .map(|(v, _)| v)
+        .collect();
+    let dx = best_offset(&mx, vertical.iter().copied(), threshold).unwrap_or(0.0);
+    let dy = best_offset(&my, horizontal.iter().copied(), threshold).unwrap_or(0.0);
+    let snapped = moving.translate(v2(dx, dy));
+    let eps = 1e-6;
+    let mut guides = Vec::new();
+    let mut hit_x = false;
+    for (v, used) in anchors_x(&snapped).into_iter().zip(use_x) {
+        if used && vertical.iter().any(|t| (t - v).abs() < eps) {
+            hit_x = true;
+            guides.push(Guide::V {
+                x: v,
+                y0: snapped.y,
+                y1: snapped.bottom(),
+            });
+        }
+    }
+    let mut hit_y = false;
+    for (v, used) in anchors_y(&snapped).into_iter().zip(use_y) {
+        if used && horizontal.iter().any(|t| (t - v).abs() < eps) {
+            hit_y = true;
+            guides.push(Guide::H {
+                y: v,
+                x0: snapped.x,
+                x1: snapped.right(),
+            });
+        }
+    }
+    (dx, dy, hit_x, hit_y, guides)
+}
+
+/// The nearest guide to `value` within `threshold`, if any. Used for the single
+/// edge a resize drag moves.
+pub fn nearest_guide(value: f64, guides: &[f64], threshold: f64) -> Option<f64> {
+    guides
+        .iter()
+        .copied()
+        .filter(|g| (g - value).abs() <= threshold)
+        .min_by(|a, b| (a - value).abs().total_cmp(&(b - value).abs()))
+}
+
 /// Equal-spacing snap: when the moving rect sits between two neighbors on an axis, make the
 /// two gaps equal. Returns the correction and gap guides (drawn with their distances).
 pub fn snap_spacing(moving: &Rect, candidates: &[Rect], threshold: f64) -> (f64, f64, Vec<Guide>) {
@@ -216,6 +279,61 @@ fn lo_hi(r: &Rect, axis: usize) -> (f64, f64) {
     } else {
         (r.y, r.bottom())
     }
+}
+
+/// Row and column alignment: the moving rect's center snaps to the center of a
+/// candidate on each axis, so elements line up in the same column or row. This
+/// is the only element magnetism for moves; edges and sides do not attract
+/// (draw.io's center guides). Guides run through both centers across their
+/// union, so the alignment reads as one shared line.
+pub fn snap_centers(moving: &Rect, candidates: &[Rect], threshold: f64) -> (f64, f64, Vec<Guide>) {
+    let mc = moving.center();
+    let dx = candidates
+        .iter()
+        .map(|c| c.center().x - mc.x)
+        .filter(|d| d.abs() <= threshold)
+        .min_by(|a, b| a.abs().total_cmp(&b.abs()))
+        .unwrap_or(0.0);
+    let dy = candidates
+        .iter()
+        .map(|c| c.center().y - mc.y)
+        .filter(|d| d.abs() <= threshold)
+        .min_by(|a, b| a.abs().total_cmp(&b.abs()))
+        .unwrap_or(0.0);
+    let snapped = moving.translate(v2(dx, dy));
+    let mut guides = Vec::new();
+    let eps = 1e-6;
+    if dx != 0.0
+        || candidates
+            .iter()
+            .any(|c| (c.center().x - snapped.center().x).abs() < eps)
+    {
+        let x = snapped.center().x;
+        for c in candidates.iter().filter(|c| (c.center().x - x).abs() < eps) {
+            let u = snapped.union(c);
+            guides.push(Guide::V {
+                x,
+                y0: u.y,
+                y1: u.bottom(),
+            });
+        }
+    }
+    if dy != 0.0
+        || candidates
+            .iter()
+            .any(|c| (c.center().y - snapped.center().y).abs() < eps)
+    {
+        let y = snapped.center().y;
+        for c in candidates.iter().filter(|c| (c.center().y - y).abs() < eps) {
+            let u = snapped.union(c);
+            guides.push(Guide::H {
+                y,
+                x0: u.x,
+                x1: u.right(),
+            });
+        }
+    }
+    (dx, dy, guides)
 }
 
 /// Red measurement lines from `sel` to `other` (Alt-hover), as Gap guides.
@@ -330,5 +448,97 @@ mod spacing_tests {
         let m = Rect::new(96.0, 0.0, 52.0, 10.0); // left 96 (near 100), right 148 (near 150)
         let (dx, _, _) = snap_rect(&m, [false, false, true], [false; 3], &others, 6.0);
         assert_eq!(dx, 2.0);
+    }
+}
+
+#[cfg(test)]
+mod center_tests {
+    use super::*;
+
+    #[test]
+    fn centers_align_into_rows_and_columns() {
+        let c = [Rect::new(100.0, 100.0, 100.0, 50.0)]; // center (150, 125)
+        // Moving rect's center (146, 122) is 4 px off on both axes.
+        let m = Rect::new(96.0, 97.0, 100.0, 50.0);
+        let (dx, dy, g) = snap_centers(&m, &c, 6.0);
+        assert_eq!((dx, dy), (4.0, 3.0));
+        // One vertical guide through both centers spanning their union; the
+        // snap puts the moving rect exactly on the candidate, so the union is
+        // the candidate itself.
+        assert!(
+            matches!(g[0], Guide::V { x, y0, y1 } if x == 150.0 && y0 == 100.0 && y1 == 150.0),
+            "{g:?}"
+        );
+        assert!(
+            matches!(g[1], Guide::H { y, x0, x1 } if y == 125.0 && x0 == 100.0 && x1 == 200.0),
+            "{g:?}"
+        );
+
+        // Beyond the threshold on both axes nothing attracts.
+        let m = Rect::new(140.0, 160.0, 100.0, 50.0); // center (190, 185)
+        let (dx, dy, g) = snap_centers(&m, &c, 6.0);
+        assert_eq!((dx, dy), (0.0, 0.0));
+        assert!(g.is_empty());
+    }
+
+    #[test]
+    fn aligned_center_keeps_its_guide() {
+        // Already exactly aligned: correction 0 but the shared-axis guide
+        // still shows (the absorption state).
+        let c = [Rect::new(100.0, 100.0, 100.0, 50.0)];
+        let m = Rect::new(100.0, 300.0, 100.0, 50.0); // center x 150
+        let (dx, dy, g) = snap_centers(&m, &c, 6.0);
+        assert_eq!((dx, dy), (0.0, 0.0));
+        assert_eq!(g.len(), 1);
+        assert!(matches!(g[0], Guide::V { x, .. } if x == 150.0));
+    }
+}
+
+#[cfg(test)]
+mod manual_tests {
+    use super::*;
+
+    #[test]
+    fn manual_guides_snap_any_anchor_and_report_the_hit() {
+        let m = Rect::new(97.0, 200.0, 80.0, 60.0);
+        let (dx, dy, x, y, g) = snap_manual(&m, [true; 3], [true; 3], &[100.0], &[257.0], 6.0);
+        assert_eq!((dx, dy), (3.0, -3.0));
+        assert!(x && y);
+        assert!(matches!(g[0], Guide::V { x: 100.0, .. }));
+        assert!(matches!(g[1], Guide::H { y: 257.0, .. }));
+
+        // Exactly aligned still counts as engaged so the grid does not pull it off.
+        let m = Rect::new(100.0, 200.0, 80.0, 60.0);
+        let (dx, dy, x, _, _) = snap_manual(&m, [true; 3], [true; 3], &[100.0], &[], 6.0);
+        assert_eq!((dx, dy), (0.0, 0.0));
+        assert!(x);
+
+        // Beyond the threshold nothing attracts.
+        let m = Rect::new(120.0, 200.0, 80.0, 60.0);
+        let (dx, _, x, _, g) = snap_manual(&m, [true; 3], [true; 3], &[100.0], &[], 6.0);
+        assert_eq!(dx, 0.0);
+        assert!(!x);
+        assert!(g.is_empty());
+    }
+
+    #[test]
+    fn manual_guides_respect_the_axis_mask() {
+        let m = Rect::new(96.0, 0.0, 52.0, 10.0); // left 96, right 148
+        let (dx, _, x, _, _) = snap_manual(
+            &m,
+            [false, false, true],
+            [false; 3],
+            &[100.0, 150.0],
+            &[],
+            6.0,
+        );
+        assert_eq!(dx, 2.0);
+        assert!(x);
+    }
+
+    #[test]
+    fn nearest_guide_picks_the_closest_line() {
+        assert_eq!(nearest_guide(101.0, &[90.0, 100.0], 6.0), Some(100.0));
+        assert_eq!(nearest_guide(120.0, &[100.0], 6.0), None);
     }
 }

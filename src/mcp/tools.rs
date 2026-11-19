@@ -125,6 +125,37 @@ pub fn definitions() -> Vec<Value> {
             &["updates"],
             false,
         ),
+        tool(
+            "list_layers",
+            "The page's layers (draw.io layers): id, name, visibility, lock, and how many \
+             top-level shapes are on each, bottom first. Layers are separate from groups and \
+             the z-order tree.",
+            json!({"pageId": page_id()}),
+            &[],
+            true,
+        ),
+        tool(
+            "layer_ops",
+            "Create, edit or reorganize the page's layers (draw.io layers). `ops` is a list of \
+             single-op objects, applied in order: {op: add, name?}, {op: rename, layer, name}, \
+             {op: delete, layer}, {op: duplicate, layer}, {op: move, layer, index}, \
+             {op: show|hide|lock|unlock, layer}, {op: moveNodes, layer, nodeIds}, \
+             {op: selectNodes, layer}. Buttons stay one undo step per applied op. `layer` is a \
+             layer id (number, from list_layers) or the layer's name.",
+            json!({
+                "ops": {"type": "array", "description": "Layer operations, applied in order.",
+                    "items": {"type": "object", "properties": {
+                        "op": {"type": "string", "enum": ["add", "rename", "delete", "duplicate", "move", "show", "hide", "lock", "unlock", "moveNodes", "selectNodes"]},
+                        "layer": {"type": "string", "description": "Layer id or name (not for add)."},
+                        "name": {"type": "string", "description": "New or initial name."},
+                        "index": {"type": "number", "description": "New 0-based position, bottom first (move only)."},
+                        "nodeIds": {"type": "array", "items": {"type": "string"}, "description": "Nodes to move (moveNodes)."},
+                    }}},
+                "pageId": page_id(),
+            }),
+            &["ops"],
+            false,
+        ),
         // ------------------------------------------------------------ reading
         tool(
             "get_basic_info",
@@ -353,6 +384,81 @@ pub fn definitions() -> Vec<Value> {
                 "pageId": page_id(),
             }),
             &["type"],
+            false,
+        ),
+        tool(
+            "search_shapes",
+            "Search the native shape registry (flowchart, UML, ER, network, floor plan, org \
+             chart). Matching is fuzzy over the shape name, id and keywords, best first. Returns \
+             each shape's id, name, category, preferred size and keywords. Use the id (or exact \
+             name) with insert_shape.",
+            json!({
+                "query": {"type": "string", "description": "Search text, e.g. \"cylinder\" or \"queue\". Empty lists every shape."},
+                "category": {"type": "string", "description": "Optional category filter: Flowchart, UML, ER, Network, Floor plan, Org chart."},
+            }),
+            &[],
+            true,
+        ),
+        tool(
+            "insert_shape",
+            "Insert a native registry shape (see search_shapes) as an editable node. Coordinates \
+             are world units for the shape's top-left corner; width/height default to the \
+             shape's preferred size. The node joins the frame under the point unless parentId \
+             names a container, and takes the diagram's default style where the shape allows it.",
+            json!({
+                "shape": {"type": "string", "description": "Registry shape id or exact name, e.g. \"database\" or \"Queue\"."},
+                "x": {"type": "number"}, "y": {"type": "number"},
+                "width": {"type": "number"}, "height": {"type": "number"},
+                "parentId": {"type": "string", "description": "Frame or group to place the shape in."},
+                "layer": {"type": "string", "description": "Layer id or name on the page; the shape joins it."},
+                "pageId": page_id(),
+            }),
+            &["shape"],
+            false,
+        ),
+        tool(
+            "list_templates",
+            "List the bundled diagram packs and any custom template libraries in the folder \
+             chosen in the app's template browser. Each template reports its id, name, \
+             category, library, description, keywords and page names. Use the id (or exact \
+             name) with insert_template.",
+            json!({
+                "query": {"type": "string", "description": "Search text over names, categories, descriptions and keywords. Empty lists everything."},
+                "category": {"type": "string", "description": "Optional category filter, e.g. BPMN 2.0, C4, SysML, Kanban."},
+            }),
+            &[],
+            true,
+        ),
+        tool(
+            "insert_template",
+            "Insert a template from list_templates as editable native content. By default one \
+             template page joins the open diagram as a single undo step, centered on x/y (or \
+             the viewport center). With asPages true, every template page becomes its own \
+             project page. Registry shapes missing from this build are reported and skipped.",
+            json!({
+                "template": {"type": "string", "description": "Template id or exact name, e.g. \"bpmn-process\" or \"BPMN order process\"."},
+                "page": {"type": "number", "description": "1-based template page for in-page insertion. Defaults to 1."},
+                "asPages": {"type": "boolean", "description": "Add every template page as project pages instead of inserting in place."},
+                "x": {"type": "number", "description": "World x of the insertion center for in-page insertion."},
+                "y": {"type": "number", "description": "World y of the insertion center for in-page insertion."},
+            }),
+            &["template"],
+            false,
+        ),
+        tool(
+            "generate_diagram",
+            "Turn Mermaid, CSV, SQL, or JSON graph text into editable native shapes and              connectors. The diagram joins the open page as one undo step, centered on x/y (or              the viewport center), or becomes its own page with asPage. Layout is deterministic              for the same input. Approximations are returned in warnings, and parse errors name              the line or token that failed.",
+            json!({
+                "source": {"type": "string", "enum": ["mermaid", "csv", "sql", "json"], "description": "Text format to parse."},
+                "text": {"type": "string", "description": "The diagram source text."},
+                "layout": {"type": "string", "enum": ["auto", "grid", "vertical", "horizontal", "vertical-tree", "horizontal-tree"], "description": "Placement for CSV and JSON. Mermaid and SQL choose their own layout."},
+                "header": {"type": "boolean", "description": "CSV: treat the first row as column names and skip it as data."},
+                "labelColumn": {"type": "number", "description": "CSV: 1-based column used as each shape's label."},
+                "asPage": {"type": "boolean", "description": "Create a new page instead of inserting into the open one."},
+                "x": {"type": "number", "description": "World x of the insertion center for in-page insertion."},
+                "y": {"type": "number", "description": "World y of the insertion center for in-page insertion."},
+            }),
+            &["source", "text"],
             false,
         ),
         tool(

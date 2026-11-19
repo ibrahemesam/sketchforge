@@ -1,8 +1,10 @@
-//! ⌘K command palette: fuzzy search over every action, tool, page, layer and library item.
+//! ⌘K search omnibox: fuzzy search over every action, tool, page, layer, library item,
+//! registry shape, and the text inside the diagram.
 
 use super::UiState;
 use crate::editor::shortcuts::{self, Action};
 use crate::editor::{Editor, Tool};
+use crate::generate::Source;
 use crate::model::NodeId;
 use crate::theme;
 use egui::{Color32, RichText};
@@ -31,7 +33,14 @@ pub enum Command {
     Page(usize),
     Layer(NodeId),
     Library(String),
+    Shape(&'static str),
+    /// Jump to a piece of text on a page and select the node that carries it.
+    Text {
+        page: usize,
+        node: NodeId,
+    },
     ToggleLibrary,
+    Templates,
 }
 
 pub struct Entry {
@@ -130,6 +139,25 @@ pub fn entries(ed: &Editor, st: &UiState) -> Vec<Entry> {
         detail: String::new(),
         cmd: Command::ToggleLibrary,
     });
+    out.push(Entry {
+        label: "Browse templates…".into(),
+        detail: "Library".into(),
+        cmd: Command::Templates,
+    });
+    for source in Source::ALL {
+        out.push(Entry {
+            label: format!("Insert {} diagram…", source.label()),
+            detail: "Insert".into(),
+            cmd: Command::Run(Action::Generate(source)),
+        });
+    }
+    for def in crate::registry::all() {
+        out.push(Entry {
+            label: format!("Insert: {}", def.name),
+            detail: format!("Shape · {}", def.category.name()),
+            cmd: Command::Shape(def.id),
+        });
+    }
     for (i, p) in ed.pages.iter().enumerate() {
         out.push(Entry {
             label: format!("Go to page: {}", p.name),
@@ -156,6 +184,37 @@ pub fn entries(ed: &Editor, st: &UiState) -> Vec<Entry> {
     out
 }
 
+/// Diagram text hits for the omnibox: one entry per node field, so a label with
+/// several occurrences of the query still appears once.
+fn text_matches(ed: &Editor, q: &str) -> Vec<Entry> {
+    let Ok(query) = crate::find::Query::new(q, false, false) else {
+        return Vec::new();
+    };
+    let matches = crate::find::search(ed, &query);
+    let mut seen = std::collections::HashSet::new();
+    let mut out = Vec::new();
+    for m in matches {
+        let Some(node) = m.node else { continue };
+        if !seen.insert((m.page, node, m.field.label())) {
+            continue;
+        }
+        let page = ed
+            .pages
+            .get(m.page)
+            .map(|p| p.name.as_str())
+            .unwrap_or("Page");
+        out.push(Entry {
+            label: m.preview,
+            detail: format!("{} · {}", m.field.label(), page),
+            cmd: Command::Text { page: m.page, node },
+        });
+        if out.len() >= 40 {
+            break;
+        }
+    }
+    out
+}
+
 /// Ranked matches for a query.
 pub fn search(ed: &Editor, st: &UiState, q: &str) -> Vec<Entry> {
     let mut scored: Vec<(i64, usize, Entry)> = entries(ed, st)
@@ -163,6 +222,14 @@ pub fn search(ed: &Editor, st: &UiState, q: &str) -> Vec<Entry> {
         .enumerate()
         .filter_map(|(i, e)| fuzzy(q, &e.label).map(|s| (s, i, e)))
         .collect();
+    if !q.trim().is_empty() {
+        let start = scored.len();
+        // Text hits rank below a command or shape whose word starts with the
+        // query, but they still surface when nothing else matches.
+        for (n, e) in text_matches(ed, q).into_iter().enumerate() {
+            scored.push((0, start + n, e));
+        }
+    }
     scored.sort_by(|a, b| b.0.cmp(&a.0).then(a.1.cmp(&b.1)));
     scored.into_iter().map(|(_, _, e)| e).collect()
 }
@@ -189,7 +256,26 @@ pub fn run(ed: &mut Editor, st: &mut UiState, cmd: Command) {
                 ed.insert_library_item(&item, at);
             }
         }
+        Command::Shape(id) => {
+            ed.insert_registry_shape(id, None, None, None, None);
+        }
+        Command::Text { page, node } => {
+            ed.end_text_edit();
+            if page != ed.active_page {
+                ed.switch_page(page);
+            }
+            if ed.doc.get(node).is_some() {
+                ed.select(vec![node]);
+                ed.run(Action::ZoomSelection);
+            }
+        }
         Command::ToggleLibrary => st.show_library = !st.show_library,
+        Command::Templates => {
+            st.templates.open = true;
+            if st.templates.libraries.is_empty() {
+                st.templates.load(st.options.template_folder.clone());
+            }
+        }
     }
 }
 
@@ -238,7 +324,7 @@ pub fn draw(ctx: &egui::Context, ed: &mut Editor, st: &mut UiState, canvas: egui
                     ui.set_width(width);
                     let r = ui.add(
                         egui::TextEdit::singleline(&mut st.palette.query)
-                            .hint_text("Search actions, tools, pages, layers…")
+                            .hint_text("Search commands, shapes, text, pages, layers…")
                             .font(egui::FontId::proportional(15.0))
                             .frame(egui::Frame::NONE)
                             .desired_width(f32::INFINITY),
@@ -328,5 +414,89 @@ mod tests {
         assert!(r.iter().any(|e| matches!(e.cmd, Command::Layer(_))));
         let r = search(&ed, &st, "page 1");
         assert!(r.iter().any(|e| matches!(e.cmd, Command::Page(0))));
+    }
+
+    #[test]
+    fn the_palette_opens_each_generator() {
+        let mut ed = crate::demo::showcase();
+        let mut st = UiState::default();
+        for source in Source::ALL {
+            let r = search(&ed, &st, &format!("insert {} diagram", source.label()));
+            assert!(
+                matches!(r[0].cmd, Command::Run(Action::Generate(s)) if s == source),
+                "{}",
+                r[0].label
+            );
+            run(&mut ed, &mut st, r[0].cmd.clone());
+            for ev in std::mem::take(&mut ed.ui_events) {
+                if let crate::editor::commands::UiEvent::Generate(s) = ev {
+                    st.generate.open_with(s);
+                }
+            }
+            assert!(st.generate.open);
+            assert_eq!(st.generate.source, source);
+        }
+    }
+
+    #[test]
+    fn the_palette_opens_the_template_browser() {
+        let mut ed = crate::demo::showcase();
+        let mut st = UiState::default();
+        let r = search(&ed, &st, "browse templates");
+        assert!(matches!(r[0].cmd, Command::Templates), "{}", r[0].label);
+        run(&mut ed, &mut st, r[0].cmd.clone());
+        assert!(st.templates.open);
+        assert!(!st.templates.libraries.is_empty(), "packs load on open");
+    }
+
+    #[test]
+    fn searches_registry_shapes_and_inserts_one() {
+        let mut ed = crate::demo::showcase();
+        let mut st = UiState::default();
+        let before = ed.doc.nodes.len();
+        let r = search(&ed, &st, "database");
+        let hit = r
+            .iter()
+            .find(|e| matches!(e.cmd, Command::Shape(_)))
+            .expect("a registry shape should match");
+        assert!(hit.label.contains("Database"), "{}", hit.label);
+        assert!(hit.detail.starts_with("Shape · "), "{}", hit.detail);
+        run(&mut ed, &mut st, hit.cmd.clone());
+        assert_eq!(ed.doc.nodes.len(), before + 1);
+        assert_eq!(ed.selection.len(), 1);
+        assert_eq!(ed.doc.get(ed.selection[0]).unwrap().name, "Database");
+    }
+
+    #[test]
+    fn searches_diagram_text_across_pages_and_jumps_to_it() {
+        let mut ed = crate::demo::showcase();
+        let mut st = UiState::default();
+        assert!(
+            !search(&ed, &st, "")
+                .iter()
+                .any(|e| matches!(e.cmd, Command::Text { .. })),
+            "an empty query should not dump diagram text"
+        );
+        let page = ed.add_page();
+        ed.rename_page(page, "Appendix");
+        let mut n = crate::model::Node::new(
+            crate::model::NodeId(0),
+            crate::model::NodeKind::Rect,
+            crate::geom::Rect::new(80.0, 80.0, 160.0, 80.0),
+        );
+        n.label = "Zebra crossing plan".into();
+        let id = ed.add_node(n, None);
+        ed.switch_page(0);
+
+        let r = search(&ed, &st, "zebra");
+        let hit = r
+            .iter()
+            .find(|e| matches!(e.cmd, Command::Text { .. }))
+            .expect("the label on the other page should match");
+        assert!(hit.label.contains("Zebra crossing"), "{}", hit.label);
+        assert_eq!(hit.detail, "label · Appendix");
+        run(&mut ed, &mut st, hit.cmd.clone());
+        assert_eq!(ed.active_page, page);
+        assert_eq!(ed.selection, vec![id]);
     }
 }

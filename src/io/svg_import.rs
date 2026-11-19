@@ -30,6 +30,7 @@ fn stops(s: &[usvg::Stop]) -> Vec<Stop> {
         .map(|st| Stop {
             pos: st.offset().get() as f64,
             color: color(st.color(), st.opacity().get()),
+            dark: None,
         })
         .collect()
 }
@@ -213,7 +214,7 @@ fn options() -> usvg::Options<'static> {
     let mut o = usvg::Options::default();
     let db = o.fontdb_mut();
     for i in 0..crate::text::FACE_COUNT {
-        db.load_font_data(crate::text::face_bytes(i).to_vec());
+        db.load_font_data(crate::text::face_bytes(i as crate::text::FaceId).to_vec());
     }
     db.load_font_data(crate::theme::INTER_MEDIUM.to_vec());
     db.load_font_data(crate::theme::INTER_SEMIBOLD.to_vec());

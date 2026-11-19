@@ -1,18 +1,23 @@
 //! egui chrome: menu bar, layers panel, design (properties) panel, floating toolbar, and the
 //! projects home screen.
 
+pub mod findbar;
+pub mod generate;
 pub mod home;
+pub mod import_report;
 pub mod inspector;
 pub mod library;
 pub mod pages;
 pub mod palette;
+pub mod quick_add;
+pub mod templates;
 
 use crate::editor::shortcuts::{self, Action};
 use crate::editor::{Editor, Tool};
-use crate::model::{Color, NodeId, NodeKind};
+use crate::model::{Color, NodeId, NodeKind, SchemeScope};
 use crate::theme::{self, Icon};
 use egui::{Align2, Color32, RichText, Ui};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 #[derive(Default)]
 pub struct UiState {
@@ -22,7 +27,6 @@ pub struct UiState {
     /// would pin the focus, so committing on Enter or a click away could never fire.
     pub renaming_focus: bool,
     pub show_help: bool,
-    pub show_grid_off: bool,
     /// Export settings (inspector Export section).
     pub export: crate::io::export::Spec,
     /// The window has native chrome: a system menu bar (so no egui menu) and traffic lights
@@ -49,23 +53,104 @@ pub struct UiState {
     pub layer_rows: Vec<(NodeId, egui::Rect, usize)>,
     pub options: crate::options::Options,
     pub options_dirty: bool,
-    /// Which inspector tab (Style | Text | Arrange) is showing for the selection.
+    /// Which inspector tab is showing. Diagram and the global Style tab when
+    /// nothing is selected, Style | Text | Arrange otherwise.
     pub inspector_tab: InspectorTab,
+    /// Format-panel property filter. It is session-only; collapsed section
+    /// state lives in Options and survives restart.
+    pub inspector_filter: String,
+    /// Element Style tab: local filter for the key/value property list.
+    pub style_property_filter: String,
+    /// Uncommitted values in the key/value property list, keyed by selection
+    /// and property name so a different selection gets fresh values.
+    pub style_property_drafts: HashMap<String, String>,
+    /// Validation message for the last key/value property edit.
+    pub style_property_error: Option<String>,
+    /// The format panel is closed (× or ⌘⇧F) and can be reopened from the
+    /// toolbar. Stored inverted so the default is visible.
+    pub hide_inspector: bool,
     /// Arrange tab: keep width/height proportional while editing either field.
     pub lock_aspect: bool,
     /// Ratio captured when the aspect lock was switched on (w / h).
     pub aspect_ratio: f64,
     /// Arrange tab: a copied size (draw.io's Copy Size), applied via Apply Size.
     pub copied_size: Option<(f64, f64)>,
+    /// Element Style tab: advanced JSON edit in progress.
+    pub style_json: Option<inspector::StyleJsonDialog>,
+    /// Diagram tab: Edit Data… dialog rows.
+    pub metadata_edit: Option<inspector::MetadataEdit>,
+    /// Diagram tab: Background › Change… dialog.
+    pub background_open: bool,
+    /// Page background color while the dialog is open, before Apply.
+    pub background_draft: Option<Color>,
+    /// Dark page background color while the dialog is open, before Apply.
+    pub background_dark_draft: Option<Color>,
+    /// Page layers dialog (draw.io layers), separate from the z-order panel.
+    pub layers_dialog: Option<inspector::LayersDialog>,
+    /// Quick-add picker opened by double-clicking empty canvas (draw.io).
+    pub quick_add: Option<quick_add::QuickAdd>,
+    /// Find bar state (cross-page search and replace).
+    pub find: findbar::FindUi,
+    /// Template browser: bundled packs and custom libraries (M7).
+    pub templates: templates::TemplateUi,
+    /// Insert-diagram dialog for Mermaid, CSV, SQL and JSON (M8).
+    pub generate: generate::GenerateUi,
+    /// Hovered node and the time its tooltip delay started.
+    pub tooltip_hover: Option<(NodeId, f64)>,
+    /// Fidelity report shown after a draw.io import.
+    pub import_report: Option<import_report::ImportReportUi>,
+    /// The quick-add search field is focused once when it opens.
+    pub quick_add_focus: bool,
+    /// Style tab palette page (draw.io-style swatch pager).
+    pub palette_page: usize,
+    /// Global Style tab scheme page.
+    pub scheme_page: usize,
+    /// Global Style tab scheme scope: the whole page or selected subtrees.
+    pub scheme_scope: SchemeScope,
+    /// The active storage target supports autosave (a project folder).
+    pub autosave_available: bool,
+    /// The canvas area on screen (set every frame by the layout pass); library
+    /// drag-outs use it to know when the pointer is over the diagram.
+    pub canvas_rect: Option<egui::Rect>,
 }
 
-/// The right panel's draw.io-style tabs for the selection.
+/// The right panel's draw.io-style tabs.
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
 pub enum InspectorTab {
     #[default]
+    Diagram,
     Style,
     Text,
     Arrange,
+    Data,
+}
+
+impl InspectorTab {
+    /// Tabs shown with nothing selected.
+    pub const GLOBAL: [InspectorTab; 2] = [InspectorTab::Diagram, InspectorTab::Style];
+    /// Tabs shown for a selection.
+    pub const ELEMENT: [InspectorTab; 4] = [
+        InspectorTab::Style,
+        InspectorTab::Text,
+        InspectorTab::Arrange,
+        InspectorTab::Data,
+    ];
+
+    pub fn valid_for(self, has_selection: bool) -> bool {
+        if has_selection {
+            Self::ELEMENT.contains(&self)
+        } else {
+            Self::GLOBAL.contains(&self)
+        }
+    }
+
+    pub fn first_for(has_selection: bool) -> InspectorTab {
+        if has_selection {
+            InspectorTab::Style
+        } else {
+            InspectorTab::Diagram
+        }
+    }
 }
 
 /// Where a dragged layer lands relative to a row.
@@ -142,6 +227,7 @@ pub fn draw(ui: &mut Ui, ed: &mut Editor, st: &mut UiState) -> egui::Rect {
         use crate::editor::commands::UiEvent;
         match ev {
             UiEvent::TogglePalette => st.palette.toggle(),
+            UiEvent::Generate(source) => st.generate.open_with(source),
             UiEvent::Rename(id) => {
                 if let Some(n) = ed.doc.get(id) {
                     st.renaming = Some((id, n.name.clone()));
@@ -151,8 +237,21 @@ pub fn draw(ui: &mut Ui, ed: &mut Editor, st: &mut UiState) -> egui::Rect {
                 }
             }
             UiEvent::ToggleUi => st.hide_ui = !st.hide_ui,
+            UiEvent::OpenFind => st.find.open(),
+            UiEvent::FindStep(next) => {
+                st.find.open = true;
+                st.find.step_current(ed, next);
+            }
             UiEvent::ToggleHelp => st.show_help = !st.show_help,
-            UiEvent::ToggleGrid => st.show_grid_off = !st.show_grid_off,
+            UiEvent::ToggleGrid => ed.toggle_grid(),
+            UiEvent::ToggleInspector => st.hide_inspector = !st.hide_inspector,
+            UiEvent::QuickAdd { world } => {
+                st.quick_add = Some(crate::ui::quick_add::QuickAdd {
+                    world,
+                    ..Default::default()
+                });
+                st.quick_add_focus = true;
+            }
         }
     }
     if st.hide_ui {
@@ -194,19 +293,47 @@ pub fn draw(ui: &mut Ui, ed: &mut Editor, st: &mut UiState) -> egui::Rect {
                 .inner_margin(egui::Margin::symmetric(12, 0)),
         )
         .show(ui, |ui| top_bar(ui, ed, st));
-    egui::Panel::right("design")
-        .resizable(true)
-        .default_size(260.0)
-        .size_range(220.0..=420.0)
-        .frame(
-            egui::Frame::NONE
-                .fill(p.inspector)
-                .inner_margin(egui::Margin::symmetric(14, 10)),
-        )
-        .show(ui, |ui| inspector::panel(ui, ed, st));
+    if !st.hide_inspector {
+        // The panel's laid-out outer rect: the available area's right edge is
+        // the panel's fixed edge, and its size comes from the stored state (or
+        // the 260 default on first run).
+        let avail = ui.available_rect_before_wrap();
+        let laid_out_right = avail.right();
+        let panel_resp = egui::Panel::right("design")
+            .resizable(true)
+            .default_size(260.0)
+            .size_range(220.0..=420.0)
+            .frame(
+                egui::Frame::NONE
+                    .fill(p.inspector)
+                    .inner_margin(egui::Margin::symmetric(14, 10)),
+            )
+            .show(ui, |ui| inspector::panel(ui, ed, st));
+        // egui stores the panel's size from the frame's response rect, which
+        // grows with the content. A row wider than the panel would then widen
+        // the panel itself, frame after frame. If the content overflowed the
+        // laid-out rect, put the stored size back to what was laid out.
+        if panel_resp.response.rect.right() > laid_out_right + 0.5 {
+            let mut outer_rect = panel_resp.response.rect;
+            outer_rect.max.x = laid_out_right;
+            ui.ctx().data_mut(|d| {
+                d.insert_persisted(
+                    egui::Id::new("design"),
+                    egui::containers::panel::PanelState { outer_rect },
+                );
+            });
+        }
+    }
+    inspector::dialogs(ui.ctx(), ed, st);
+    templates::dialog(ui.ctx(), ed, st);
+    generate::dialog(ui.ctx(), ed, st);
+    quick_add::dialog(ui.ctx(), ed, st);
     let canvas = ui.available_rect_before_wrap();
+    import_report::dialog(ui.ctx(), st, canvas);
     toolbar(ui.ctx(), ed, canvas);
     status(ui.ctx(), ed, canvas);
+    findbar::draw(ui.ctx(), ed, st, canvas);
+    tooltip(ui.ctx(), ed, st, canvas);
     palette::draw(ui.ctx(), ed, st, canvas);
     if st.show_help {
         help(ui.ctx(), st, canvas);
@@ -280,6 +407,13 @@ fn top_bar(ui: &mut Ui, ed: &mut Editor, st: &mut UiState) {
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
             ui.spacing_mut().item_spacing.x = 2.0;
             theme_button(ui, &mut st.options, &mut st.options_dirty);
+            ui.add_space(4.0);
+            if theme::icon_button(ui, theme::Icon::Sidebar, 26.0, !st.hide_inspector)
+                .on_hover_text("Format panel (⌘⇧F)")
+                .clicked()
+            {
+                st.hide_inspector = !st.hide_inspector;
+            }
             ui.add_space(4.0);
             if theme::icon_button(ui, theme::Icon::Question, 26.0, st.show_help)
                 .on_hover_text("Keyboard shortcuts")
@@ -357,6 +491,17 @@ fn layers(ui: &mut Ui, ed: &mut Editor, st: &mut UiState) {
             if r.clicked() {
                 st.show_library = lib;
             }
+        }
+        if !st.show_library
+            && ui
+                .small_button("Page layers…")
+                .on_hover_text(
+                    "Organize the page into layers with their own visibility, \
+                                lock and order. The Layers tab is the stacking order.",
+                )
+                .clicked()
+        {
+            st.layers_dialog = Some(Default::default());
         }
         if st.show_library {
             return;
@@ -820,6 +965,52 @@ fn status(ctx: &egui::Context, ed: &Editor, canvas: egui::Rect) {
         });
 }
 
+/// Show a shape's tooltip after the pointer rests on it, resolved through page
+/// placeholders. The delay keeps tooltips from flickering while passing over.
+fn tooltip(ctx: &egui::Context, ed: &Editor, st: &mut UiState, canvas: egui::Rect) {
+    let now = ctx.input(|i| i.time);
+    match (ed.hover, st.tooltip_hover) {
+        (None, _) => st.tooltip_hover = None,
+        (Some(id), Some((hovered, _))) if hovered == id => {}
+        (Some(id), _) => st.tooltip_hover = Some((id, now)),
+    }
+    let Some((id, since)) = st.tooltip_hover else {
+        return;
+    };
+    let Some(n) = ed.doc.get(id) else {
+        return;
+    };
+    if n.tooltip.trim().is_empty() {
+        return;
+    }
+    let delay = 0.6;
+    if now - since < delay {
+        ctx.request_repaint_after(std::time::Duration::from_millis(60));
+        return;
+    }
+    let Some(pos) = ctx.pointer_latest_pos() else {
+        return;
+    };
+    if !canvas.contains(pos) {
+        return;
+    }
+    let text = crate::model::placeholders::resolve_text(&n.tooltip, Some(n), &ed.doc);
+    egui::Area::new(egui::Id::new(("shape-tooltip", id.0)))
+        .order(egui::Order::Tooltip)
+        .fixed_pos(pos + egui::vec2(14.0, 18.0))
+        .interactable(false)
+        .show(ctx, |ui| {
+            let p = theme::pal(ui);
+            egui::Frame::popup(ui.style())
+                .fill(p.popover)
+                .corner_radius(6.0)
+                .inner_margin(egui::Margin::symmetric(8, 5))
+                .show(ui, |ui| {
+                    ui.label(RichText::new(text).size(12.0));
+                });
+        });
+}
+
 fn help(ctx: &egui::Context, st: &mut UiState, canvas: egui::Rect) {
     let width = 820.0f32.min(canvas.width() - 40.0);
     egui::Area::new("help".into())
@@ -914,6 +1105,23 @@ mod tests {
             ui.horizontal(|ui| theme_button(ui, options, dirty));
         });
         out.textures_delta.clear();
+    }
+
+    #[test]
+    fn inspector_tabs_follow_selection_presence() {
+        assert!(InspectorTab::Diagram.valid_for(false));
+        assert!(!InspectorTab::Diagram.valid_for(true));
+        assert!(InspectorTab::Style.valid_for(false));
+        assert!(InspectorTab::Style.valid_for(true));
+        assert!(!InspectorTab::Text.valid_for(false));
+        assert!(InspectorTab::Text.valid_for(true));
+        assert!(!InspectorTab::Arrange.valid_for(false));
+        assert!(InspectorTab::Arrange.valid_for(true));
+        assert_eq!(InspectorTab::first_for(false), InspectorTab::Diagram);
+        assert_eq!(InspectorTab::first_for(true), InspectorTab::Style);
+        // The Style tab is the only one shared by both states, so a selection
+        // change never strands the panel on Diagram, Text or Arrange.
+        assert!(InspectorTab::Style.valid_for(false) && InspectorTab::Style.valid_for(true));
     }
 
     #[test]

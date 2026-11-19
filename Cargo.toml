@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 rust-version = "1.95"
 description = "A native infinite-canvas app for planning, working and sketching"
-license = "MIT OR Apache-2.0"
+license = "MIT"
 
 [lib]
 name = "sketch_rs"
@@ -30,6 +30,7 @@ unicode-bidi = "0.3"
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["float_roundtrip"] }
 image = { version = "0.25", default-features = false, features = ["png", "jpeg", "gif", "webp"] }
+png = "0.18.1"
 pollster = "0.4"
 bytemuck = { version = "1", features = ["derive"] }
 log = "0.4"
@@ -37,8 +38,10 @@ env_logger = "0.11"
 rfd = "0.17"
 fastrand = "2"
 dirs = "6"
+regex = "1"
 i_overlay = "9.0.1"
 miniz_oxide = "0.9.1"
+roxmltree = "0.21"
 usvg = "0.48"
 arboard = { version = "3.6.1", features = ["image-data"] }
 rmcp = { version = "3.5.1", default-features = false, features = ["server", "base64", "transport-streamable-http-server", "transport-io", "client", "transport-streamable-http-client-reqwest"] }

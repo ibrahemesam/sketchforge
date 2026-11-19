@@ -91,6 +91,8 @@ pub enum CursorShape {
     Ew,
     /// ↕: a left/right side handle that resizes the height.
     Ns,
+    /// Circular grab: the rotate handle above the selection.
+    Rotate,
 }
 
 impl CursorShape {

@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="drawio" modified="2026-11-09T00:00:00.000Z" agent="fixture" version="24.0.0" type="device">
+  <diagram id="data" name="Data">
+    <mxGraphModel dx="800" dy="600" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <UserObject id="portal" label="Portal" link="https://example.com/docs" tooltip="Open the portal docs" tags="web, external" owner="Ada" sketch-data="{&quot;space key&quot;:&quot;value with space&quot;,&quot;2fa&quot;:&quot;enabled&quot;}">
+          <mxCell style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+            <mxGeometry x="40" y="40" width="160" height="60" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <mxCell id="plain" value="Details" link="data:page/id,detail" tooltip="Go to Detail" tags="nav" vertex="1" parent="1">
+          <mxGeometry x="240" y="40" width="140" height="60" as="geometry" />
+        </mxCell>
+        <UserObject id="edge" label="Tap" link="page:Data" tooltip="Internal jump" tags="flow" kind="primary">
+          <mxCell style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=classic;startArrow=none;" edge="1" parent="1" source="portal" target="plain">
+            <mxGeometry relative="1" as="geometry" />
+          </mxCell>
+        </UserObject>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="detail" name="Detail">
+    <mxGraphModel dx="800" dy="600" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="back" value="Back" link="page:Data" tooltip="Return to Data" tags="nav" vertex="1" parent="1">
+          <mxGeometry x="40" y="40" width="120" height="50" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

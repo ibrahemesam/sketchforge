@@ -438,7 +438,11 @@ pub fn gradient(s: &str) -> Option<Paint> {
         } else {
             i as f64 / (n - 1) as f64
         });
-        stops.push(Stop { pos, color: c });
+        stops.push(Stop {
+            pos,
+            color: c,
+            dark: None,
+        });
     }
     if stops.len() == 1 {
         stops.push(stops[0]);
@@ -1327,7 +1331,7 @@ pub fn computed(n: &Node, parent_layout: Option<&AutoLayout>, is_root: bool) -> 
                 .iter()
                 .rev()
                 .filter_map(|p| match p {
-                    Paint::Solid { color } => Some(color_css(*color)),
+                    Paint::Solid { color, .. } => Some(color_css(*color)),
                     Paint::Image { asset, .. } => Some(format!("url(paper-asset://{asset})")),
                     g => gradient_css(g),
                 })
