@@ -263,17 +263,17 @@ gaps landed on 2026-10-26: a label without a solid background cuts the line behi
 text, and the gap follows label moves, reroutes, and export. Page view is a view
 preference and is not part of the page file.
 
-**Size:** 231 capabilities in 13 domains. 123 are verified against committed tests or directly exercised code, 22 are implemented without a focused check, 78 are absent, and 8 are analysed or partial.
+**Size:** 231 capabilities in 13 domains. 124 are verified against committed tests or directly exercised code, 22 are implemented without a focused check, 77 are absent, and 8 are analysed or partial.
 
 ## Counts
 
 | Status | Count | Meaning |
 |---|---:|---|
-| VERIFIED | 123 | Committed test or directly exercised code path proves the behavior. |
+| VERIFIED | 124 | Committed test or directly exercised code path proves the behavior. |
 | IMPLEMENTED | 22 | Code exists and the path is readable, but no focused test or this-session runtime check covers it. |
 | IN_PROGRESS | 3 | Partial code at HEAD; the acceptance criteria are not met. |
 | ANALYZED | 5 | draw.io behavior is documented and a native design is recorded, but no code exists. |
-| DISCOVERED | 44 | draw.io behavior is documented here; no code or design exists. |
+| DISCOVERED | 43 | draw.io behavior is documented here; no code or design exists. |
 | BLOCKED | 34 | Work cannot proceed without a missing subsystem, external service, licensing decision, or explicit scope decision. |
 | **Total** | **231** | |
 
@@ -289,7 +289,7 @@ preference and is not part of the page file.
 | GEN Generation, templates, and diagram types | 15 | 0 | 0 | 0 | 0 | 13 | 2 |
 | IO Import, export, clipboard, and files | 21 | 12 | 3 | 0 | 2 | 0 | 4 |
 | CUS Libraries, scratchpad, and custom shapes | 16 | 5 | 0 | 0 | 0 | 6 | 5 |
-| DIA Diagram data: metadata, links, tags, and placeholders | 12 | 1 | 0 | 0 | 1 | 6 | 4 |
+| DIA Diagram data: metadata, links, tags, and placeholders | 12 | 2 | 0 | 0 | 1 | 5 | 4 |
 | STO Storage, sharing, collaboration, and integrations | 11 | 1 | 0 | 0 | 0 | 0 | 10 |
 | UIX Editor UI, panels, search, and accessibility | 14 | 7 | 1 | 2 | 0 | 3 | 1 |
 
@@ -592,7 +592,7 @@ Non-visual data attached to shapes and pages.
 | DIA-02 | Edit Data dialog | An Edit Data dialog adds, edits, and removes shape properties and diagram properties. | [Edit shape metadata](https://www.drawio.com/docs/manual/shapes/shape-metadata/) | None | **DISCOVERED** | Open Edit Data on a shape, add a key, and see the same value after reload. | Depends on DIA-01. No dialog exists. Working tree (2026-11-10): the Edit Data dialog adds, edits, and removes shape or page property rows, and the values survive save and reload. |
 | DIA-03 | Custom links on shapes | A shape can link to a URL or page and open it on click in the viewer. | [Add actions to custom links](https://www.drawio.com/docs/manual/links-tooltips-tags/custom-links/) | None | **DISCOVERED** | Add a link to a shape, click it in the editor, and confirm the target opens with confirmation. | The editor has no link field, link hit target, or safe external-open policy. Working tree (2026-11-10): nodes store a link, Cmd/Ctrl click and the Data tab Open Link follow it, page targets switch pages, and external targets are limited to http, https, and mailto with a confirmation. |
 | DIA-04 | Tooltips | Hovering a shape with a tooltip shows its text after a short delay. | [Add and delete tooltips on shapes](https://www.drawio.com/docs/manual/links-tooltips-tags/tooltips/) | None | **DISCOVERED** | Add a tooltip, hover the shape, and confirm the text appears and truncates cleanly. | Tooltips exist for toolbar controls through egui, not as diagram data. Working tree (2026-11-10): a node tooltip shows after about 600 ms of hover, resolves placeholders, and saves with the node. |
-| DIA-05 | Tags | Shapes can be tagged and tags can be searched, filtered, and shown in the viewer. | [Use tags in diagrams to select, hide and display related shapes and connectors](https://www.drawio.com/docs/manual/links-tooltips-tags/tags-in-diagrams/) | None | **DISCOVERED** | Tag three shapes, search the tag, and select all matches. | No tag field or tag search. Working tree (2026-11-10): nodes store a tag list, the Data tab edits it, find searches tags, and tags survive the page file and draw.io tags attribute. |
+| DIA-05 | Tags | Shapes can be tagged and tags can be searched, filtered, and shown in the viewer. | [Use tags in diagrams to select, hide and display related shapes and connectors](https://www.drawio.com/docs/manual/links-tooltips-tags/tags-in-diagrams/) | src/model/node.rs, src/ui/inspector.rs, src/find.rs, src/io/drawio.rs, src/mcp/exec.rs, src/mcp/tools.rs | **VERIFIED** | Tag three shapes, search the tag, and select all matches. | Nodes store an ordered tag list; the Data tab edits comma-separated tags and the find bar searches each one. Tags survive the native page file and draw.io's tags attribute. The stale row missed MCP, so `find_nodes` now accepts `tag` with the same case-insensitive `*` glob as the editor find bar, combines it with text and style filters using AND, and honours page and subtree scope. Its matched array reports the stored tag. Four integration tests cover globbing, text combination, subtree scope and chaining into `select_nodes`: `mcp_find_nodes_matches_tags_case_insensitively_with_wildcards`, `mcp_find_nodes_tag_and_text_are_combined`, `mcp_find_nodes_tag_search_respects_subtree_scope`, `mcp_tag_search_results_select_all_matches`. Live Xvfb evidence used MCP over HTTP, not the editor find bar. |
 | DIA-06 | Find in diagram | Find compares text in labels, tags, tooltips, and properties without case sensitivity. | [Search for shapes, in-diagram text, help and more](https://www.drawio.com/docs/manual/editor/panels/search-omnibox/) | None | **DISCOVERED** | Search a word, step through matches across pages, and center each one. | The command palette searches commands, page names, layer names, and library items, not diagram content. Working tree (2026-11-10): the find bar searches labels, connector labels, text and sticky content, frame names, tags, tooltips, and metadata keys across pages, with case sensitivity and optional regular expressions. |
 | DIA-07 | Find and replace | Replace changes matching label text one at a time or across all pages. | [Search for shapes, in-diagram text, help and more](https://www.drawio.com/docs/manual/editor/panels/search-omnibox/) | None | **DISCOVERED** | Replace a misspelling in two labels and confirm undo restores both. | No diagram text search or replace transaction. Working tree (2026-11-10): replace runs one undo step per page, steps through matches, skips locked and hidden nodes, and reports the counts. |
 | DIA-08 | Placeholders | Percent-delimited placeholders resolve from shape properties, page properties, and predefined values. | [Work with placeholders in labels and tooltips](https://www.drawio.com/docs/manual/advanced/placeholders/) | None | **BLOCKED** | Type %name% in a label, define name on the shape, and see the resolved value in view and export. | Blocked by DIA-01 and DIA-02. Placeholder expansion also needs a cycle and missing-value policy. Working tree (2026-11-10): percent placeholders resolve in labels, connector labels, text and sticky content, frame names, and tooltips from shape, ancestor, and page metadata, with a visible missing-value fallback and a double percent escape. |

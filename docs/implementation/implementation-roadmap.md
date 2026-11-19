@@ -337,6 +337,24 @@ text changes would not mask the undo result. The code was committed after the
 recording, so the report names `unknown`. The implementation was committed as
 221cf0f; this documentation closeout completes the round.
 
+**Committed (2026-11-19, round 47).** DIA-05 closed on
+`agent/drawio-features`. The row was stale: `Node.tags`, the Data tab editor,
+the find bar's tag search and draw.io's tags attribute were already at HEAD.
+The MCP `find_nodes` tool had no tag query, so a tag-only search was rejected
+and a combined query ignored the tag. It now accepts `tag` with the same
+case-insensitive `*` glob used for text, reports the stored tag in `matched`,
+combines with text and style filters using AND, and honours page and subtree
+scope. Four integration tests, the serial skip suite (534 tests), final checks
+and a verified 30.27 s live recording in
+`.artifacts/round47/evidence/evidence-20261119-154205-45489a/report.md` are in
+`.artifacts/round47/`. The first focused run expected a lowercase match for a
+node tagged `Web`; the tool correctly reports the stored value. The live flow
+called MCP over HTTP rather than clicking the editor find bar, seeded tags in
+the page JSON, and confirmed `get_node_info` reports them. The code was
+committed after the recording, so the report names `unknown`. The
+implementation was committed as 2ec2fbd; this documentation closeout completes
+the round.
+
 **Scope.**
 
 - A selection context resolver that classifies the current selection as document, single
