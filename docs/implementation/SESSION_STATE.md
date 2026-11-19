@@ -1,6 +1,6 @@
 # Sketch agent session state
 
-Last updated: 2026-11-19 (round 51 stale-row closures and DIA-07, local pending commit/push).
+Last updated: 2026-11-19 (round 52 stale-row closures, local pending commit/push).
 
 ## Objective
 
@@ -622,16 +622,17 @@ upright-labeled shape produced `.artifacts/round50/io/upright.drawio` with
 `.artifacts/round50/io/imported-node.json` with rotation 30 and `label_upright`
 true. The implementation and docs commits (`30636ea`, `b7ce024`) were pushed.
 
-Round 51 (local, pending commit/push) closed stale rows DIA-02, DIA-06, CUS-16,
-DIA-01, SHP-17, UIX-04 and UIX-11 as evidence-only doc updates against HEAD
-behavior and existing tests. DIA-07 was implemented and verified locally:
-`replace_one` and `Query::replace_one_at` in `src/find.rs` plus Replace-current-
-match wiring in `src/ui/findbar.rs`, with
-`replace_one_changes_only_the_current_match_and_is_one_undo_step` and
-`cargo test --lib find` passing alongside `cargo fmt --check`,
-`cargo clippy --all-targets -- -D warnings`, `git diff --check`, and
-`python3 .artifacts/check_parity_docs.py`. Full `cargo test` and release build
-were not rerun in this round. Parity docs record VERIFIED 135 and IN_PROGRESS 3.
+Round 51 was committed as `4e5b64d` and pushed: stale rows DIA-02, DIA-06,
+CUS-16, DIA-01, SHP-17, UIX-04 and UIX-11 closed as evidence-only doc updates,
+and DIA-07 replace-current-match was implemented and verified with focused
+checks.
+
+Round 52 (local, pending commit/push) closed stale DISCOVERED rows CON-09,
+CON-11, CON-15, TXT-20, GEN-06, CUS-07, CUS-08, CUS-09 and CUS-12 as
+evidence-only doc updates against HEAD behavior and existing tests. No
+application code changed. Parity docs record VERIFIED 144, DISCOVERED 24 and
+IN_PROGRESS 3. `git diff --check` and parity doc checks should pass before
+commit. Full `cargo test` and release build were not rerun.
 
 ## Blockers
 
@@ -647,17 +648,15 @@ were not rerun in this round. Parity docs record VERIFIED 135 and IN_PROGRESS 3.
 
 ## Exact next task
 
-Commit and `git push --quiet` the round 51 work in logical commits on
-`agent/drawio-features` (evidence-only stale-row parity/doc closures, then
-DIA-07 replace-one implementation/tests/docs as appropriate), keeping docs and
-parity checks passing in each committed state. After pushing, continue verifying
-the next stale `DISCOVERED` rows at HEAD (start with clearly stale rows such as
-DOC-08, DOC-10, DOC-11 or CAN-12 only after careful source/test confirmation;
-many diagram-data/placeholder/template rows are genuinely blocked or analyzed).
-Capture a failing test before fixes when a real code gap exists; otherwise close
-as evidence-only with cited HEAD identifiers and update verification/session
-docs. Do not restart completed rounds. Keep blocked/deferred items blocked. No
-release, tag, or PR.
+Commit and `git push --quiet` the round 52 evidence-only parity/doc closures on
+`agent/drawio-features`, keeping parity checks passing. After pushing, continue
+verifying the next stale `DISCOVERED` rows at HEAD (high-value candidates:
+CON-10, DOC-08, DOC-10, DOC-11, DOC-14, CAN-15, CAN-16, TXT-19, CON-12, CON-16,
+CON-19 and template/diagram-pack rows that may already be implemented, but
+confirm each carefully against source and tests). Capture a failing test before
+fixes when a real code gap exists; otherwise close as evidence-only with cited
+HEAD identifiers and update verification/session docs. Do not restart completed
+rounds. Keep blocked/deferred items blocked. No release, tag, or PR.
 
 ## Commands
 
