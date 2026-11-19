@@ -24,10 +24,9 @@ grid color, e9bf2ed with its docs closeout and c43a525 marking it pushed. Round
 43 was pushed as 9cae03e and cb8a4fd with the page fade transition and b2f487f
 with its docs closeout. Round 44 was pushed as 60186ab with draw.io shape
 library XML import and export, 3fe9208 with its docs closeout and 4510e02
-marking it pushed. Round 45 implementation is committed locally as c7941e0 with
-installed font families exposed to MCP and draw.io, and this update is its docs
-closeout. Do not create releases or deploy Vercel; plain `git push` sends
-commits to the fork.
+marking it pushed. Round 45 was pushed as c7941e0 with installed font families
+exposed to MCP and draw.io, and e7cce0a with its docs closeout. Do not create
+releases or deploy Vercel; plain `git push` sends commits to the fork.
 
 The full sidebar spec was implemented and verified in round 6 (see
 `.opencode/MEMORY.md`). Round 7 closed the transparent connector label gap.
@@ -500,8 +499,8 @@ families against the earlier single Inter entry from round 34, and a
 font-family HTML round trip reports the chosen family while adding 1604 dark
 pixels. The calls went over HTTP rather than the inspector, the flow polled
 until the background font scan landed, and the code was committed after the
-recording so the report names the earlier commit. The parity docs recorded
-VERIFIED 122, ANALYZED 5 and DISCOVERED 45 at closeout.
+recording so the report names the earlier commit. Both commits were pushed; the
+parity docs recorded VERIFIED 122, ANALYZED 5 and DISCOVERED 45 at closeout.
 
 ## Blockers
 
