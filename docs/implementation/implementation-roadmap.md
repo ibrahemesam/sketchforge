@@ -317,6 +317,26 @@ was committed after the recording, so the report names the previous commit. The
 implementation was committed as c7941e0; this documentation closeout completes
 the round.
 
+**Committed (2026-11-19, round 46).** CON-18 closed on
+`agent/drawio-features`. The row was stale: `Editor::reverse_connectors`, the
+Arrange tab Reverse button and two editor tests were already at HEAD. The real
+gap was MCP, so `reverse_connectors` now takes `nodeIds`, resolves each on its
+own page, reverses connector points and swaps the start and end bindings in one
+undo step per page, and reports `reversed`, `count`, `notConnectors` and
+`notFound`. Heads stay on the line's own ends and move to the opposite shape,
+matching draw.io's `turnShapes` edge branch. The first failure was
+`unknown tool 'reverse_connectors'`. A first focused run asserted hard-coded
+points and failed because insertion reroutes the arrow; the tests now compare
+with the points captured before the call. Two integration tests, the serial
+skip suite (530 tests), final checks and a verified 33.73 s live recording in
+`.artifacts/round46/evidence/evidence-20261119-152715-46ade4/report.md` are in
+`.artifacts/round46/`. The live flow called MCP over HTTP rather than clicking
+the inspector button, read bindings from the saved page JSON because
+`get_node_info` omits connector ends, and measured canvas pixels only so status
+text changes would not mask the undo result. The code was committed after the
+recording, so the report names `unknown`. The implementation was committed as
+221cf0f; this documentation closeout completes the round.
+
 **Scope.**
 
 - A selection context resolver that classifies the current selection as document, single

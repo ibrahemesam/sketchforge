@@ -263,17 +263,17 @@ gaps landed on 2026-10-26: a label without a solid background cuts the line behi
 text, and the gap follows label moves, reroutes, and export. Page view is a view
 preference and is not part of the page file.
 
-**Size:** 231 capabilities in 13 domains. 122 are verified against committed tests or directly exercised code, 22 are implemented without a focused check, 79 are absent, and 8 are analysed or partial.
+**Size:** 231 capabilities in 13 domains. 123 are verified against committed tests or directly exercised code, 22 are implemented without a focused check, 78 are absent, and 8 are analysed or partial.
 
 ## Counts
 
 | Status | Count | Meaning |
 |---|---:|---|
-| VERIFIED | 122 | Committed test or directly exercised code path proves the behavior. |
+| VERIFIED | 123 | Committed test or directly exercised code path proves the behavior. |
 | IMPLEMENTED | 22 | Code exists and the path is readable, but no focused test or this-session runtime check covers it. |
 | IN_PROGRESS | 3 | Partial code at HEAD; the acceptance criteria are not met. |
 | ANALYZED | 5 | draw.io behavior is documented and a native design is recorded, but no code exists. |
-| DISCOVERED | 45 | draw.io behavior is documented here; no code or design exists. |
+| DISCOVERED | 44 | draw.io behavior is documented here; no code or design exists. |
 | BLOCKED | 34 | Work cannot proceed without a missing subsystem, external service, licensing decision, or explicit scope decision. |
 | **Total** | **231** | |
 
@@ -282,7 +282,7 @@ preference and is not part of the page file.
 | DOC Document, projects, pages, and diagram settings | 15 | 9 | 0 | 1 | 0 | 4 | 1 |
 | CAN Canvas, navigation, grid, and guides | 16 | 13 | 1 | 0 | 0 | 2 | 0 |
 | SHP Shapes, frames, transforms, and paths | 26 | 18 | 5 | 0 | 0 | 2 | 1 |
-| CON Connectors and arrows | 21 | 11 | 2 | 0 | 1 | 7 | 0 |
+| CON Connectors and arrows | 21 | 12 | 2 | 0 | 1 | 6 | 0 |
 | TXT Text, labels, and typography | 25 | 16 | 4 | 0 | 0 | 2 | 3 |
 | STY Styles, effects, and themes | 23 | 18 | 5 | 0 | 0 | 0 | 0 |
 | ORG Structure: groups, frames, components, layout, and layers | 16 | 11 | 1 | 0 | 1 | 0 | 3 |
@@ -420,7 +420,7 @@ Drawing, binding, routing, labelling, and styling edges.
 | CON-15 | Line jumps | Crossing connectors can show a jump arc, gap, or sharp bend at the intersection. | [Style connectors](https://www.drawio.com/docs/manual/styles/connector-styles/) | None | **DISCOVERED** | Cross two connectors and choose each jump style; the crossing changes without moving endpoints. | No intersection detection or jump rendering at HEAD. The working tree implements it (see the working tree progress section and ADR-015). |
 | CON-16 | Flow animation | A connector can animate dashes to show direction and timing. | [Style connectors](https://www.drawio.com/docs/manual/styles/connector-styles/) | src/model/node.rs, src/render/draw.rs, src/render/tess.rs, src/ui/inspector.rs | **DISCOVERED** | Enable flow animation, change its timing, and confirm it plays and stops with the page. | No animation clock or connector property at HEAD. Working tree (2026-11-18): a node stores enabled, duration, timing, and direction; the renderer advances a dash offset from the editor clock; the Arrow section edits every value with undo; the draw.io adapter maps style keys in both directions. Exports keep authored dash values. |
 | CON-17 | Fixed versus floating endpoints | Each endpoint can be floating on the outline or fixed at a normalized point. | [See the difference between fixed and floating connectors](https://www.drawio.com/docs/manual/connectors/connector-fixed-vs-floating/) | src/model/node.rs, src/connector.rs, src/editor/whiteboard.rs, src/ui/inspector.rs | **VERIFIED** | Attach an endpoint to a corner and resize the shape; the endpoint keeps its relative point, and switching to floating makes it follow the outline. | HEAD keeps a normalized point and has no mode switch; test: `arrow_endpoint_drag_rebinds_and_bend_curves`. Working tree (2026-11-18): a defaulted binding flag preserves old documents, a floating end focuses the target rect center, the draw.io adapter imports and exports exit and entry coordinates, new drops float unless snapped to an anchor, and the Arrow section edits Start and End modes in one undo step. Four tests and live Xvfb evidence cover geometry, UI, serialization, and undo/redo. |
-| CON-18 | Reverse a connector | Reverse swaps source and target while keeping the route sensible. | [Style connectors](https://www.drawio.com/docs/manual/styles/connector-styles/) | None | **DISCOVERED** | Reverse an arrow and confirm the heads and binding sides swap, with one undo step. | No reverse command in the editor. |
+| CON-18 | Reverse a connector | Reverse swaps source and target while keeping the route sensible. | [Style connectors](https://www.drawio.com/docs/manual/styles/connector-styles/) | src/editor/whiteboard.rs, src/ui/inspector.rs, src/mcp/exec.rs, src/mcp/tools.rs | **VERIFIED** | Reverse an arrow and confirm the heads and binding sides swap, with one undo step. | Draw.io's Reverse is the `turnShapes` edge branch. The Arrange tab Reverse button swaps bindings and waypoints in one undo step; arrowheads stay on the line's own ends and move to the opposite shape. MCP `reverse_connectors` exposes the same operation over `nodeIds` and reports the reversed ids, count, non-connectors and missing ids. Editor tests are `reverse_connector_swaps_bindings_heads_points_and_label` and `reverse_connectors_is_one_undo_step_for_a_selection`; MCP tests are `mcp_reverse_connector_swaps_bindings_and_points` and `mcp_reverse_connectors_skips_shapes_and_is_one_undo_step`. Live Xvfb evidence read bindings from the saved page JSON because the node-info tool does not expose connector ends. |
 | CON-19 | Per-shape default connection style | A shape can define the default style for new connectors drawn from it. | [Style connectors](https://www.drawio.com/docs/manual/styles/connector-styles/) | None | **DISCOVERED** | Set a shape's source default, draw two new connectors, and confirm both inherit it. | Only the session-wide shape default exists, and it does not cover connectors. Working tree (2026-11-17): a shape can store a source connector default, copied from a selected connector or the page default, and new arrows started from it inherit that style before the page default. |
 | CON-20 | Quick connect | Direction arrows on a hovered shape create a connected shape or a connector in one drag. | [Connect shapes quickly](https://www.drawio.com/docs/manual/connectors/connect-shapes/) | src/editor/mod.rs, src/editor/whiteboard.rs | **VERIFIED** | Use a hover knob to create a new shape and confirm the connector is bound on both ends. | The created shape uses the current default style. Test: `quick_connect_and_sticky_notes`. |
 | CON-21 | Auto-route around obstacles | An orthogonal connector routes around unrelated shapes, not only its endpoints. | [Style connectors](https://www.drawio.com/docs/manual/styles/connector-styles/) | src/connector.rs | **IMPLEMENTED** | Place a third shape between two connected shapes and confirm the route avoids it. | The A* router treats the padded boxes of the two bound shapes as obstacles, not every shape on the page. |

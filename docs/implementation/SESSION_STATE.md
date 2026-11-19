@@ -1,6 +1,6 @@
 # Sketch agent session state
 
-Last updated: 2026-11-19 (round 45).
+Last updated: 2026-11-19 (round 46).
 
 ## Objective
 
@@ -25,8 +25,10 @@ grid color, e9bf2ed with its docs closeout and c43a525 marking it pushed. Round
 with its docs closeout. Round 44 was pushed as 60186ab with draw.io shape
 library XML import and export, 3fe9208 with its docs closeout and 4510e02
 marking it pushed. Round 45 was pushed as c7941e0 with installed font families
-exposed to MCP and draw.io, and e7cce0a with its docs closeout. Do not create
-releases or deploy Vercel; plain `git push` sends commits to the fork.
+exposed to MCP and draw.io, and e7cce0a with its docs closeout. Round 46
+implementation is committed locally as 221cf0f with the MCP reverse_connectors
+tool, and this update is its docs closeout. Do not create releases or deploy
+Vercel; plain `git push` sends commits to the fork.
 
 The full sidebar spec was implemented and verified in round 6 (see
 `.opencode/MEMORY.md`). Round 7 closed the transparent connector label gap.
@@ -502,6 +504,30 @@ until the background font scan landed, and the code was committed after the
 recording so the report names the earlier commit. Both commits were pushed; the
 parity docs recorded VERIFIED 122, ANALYZED 5 and DISCOVERED 45 at closeout.
 
+Round 46 closed CON-18, reverse connector. The row was stale: the Arrange tab
+Reverse button, `Editor::reverse_connectors` and two editor tests were already
+at HEAD. The missing piece was MCP, so `reverse_connectors` now takes `nodeIds`,
+resolves each on its page, reverses points and swaps bindings in one undo step
+per page, and reports `reversed`, `count`, `notConnectors` and `notFound`. Heads
+stay on the line's own ends and move to the opposite shape, matching draw.io's
+`turnShapes` edge branch. The first failure was `unknown tool
+'reverse_connectors'`. A first focused run asserted hard-coded points and failed
+because insertion reroutes the arrow; the tests now compare with points captured
+before the call. Two integration tests pass; the serial skip suite passes 530
+tests with the known `m2_pages_panel_screenshot` failure skipped, and screenshots
+were restored. fmt, clippy, diff-check and release build pass. A verified 33.73 s
+Xvfb `:105` recording with three passing assertions is in
+`.artifacts/round46/evidence/evidence-20261119-152715-46ade4/report.md`: the
+saved page JSON swaps start 1 / end 2 to start 2 / end 1 with reversed points
+and an unchanged triangle head, the reverse changes 240 canvas pixels, and one
+undo restores the original JSON with 0 canvas pixels changed. The calls went
+over HTTP rather than clicking the inspector button, bindings came from the
+saved page JSON because `get_node_info` omits connector ends, and the pixel diff
+excluded status-bar text so the undo result was not masked. The code was
+committed after the recording, so the report names `unknown`. Implementation
+committed as 221cf0f; parity docs recorded VERIFIED 123, ANALYZED 5 and
+DISCOVERED 44 at closeout.
+
 ## Blockers
 
 GEN-04 AI generation stays blocked: it needs a hosted model, credentials,
@@ -517,26 +543,27 @@ in `.opencode/MEMORY.md`).
 
 ## Exact next task
 
-Round 46 should close a stale DISCOVERED row that is already implemented at
-HEAD, starting with CON-18, reverse connector. The Arrange tab has a Reverse
-button backed by `Editor::reverse_connectors`, and editor tests cover the swap
-and undo; the inventory row still says no reverse command exists. Verify the row
-against HEAD, find a focused gap worth closing, and capture a failing test
-before changing code. Other stale candidates are DIA-05 tags, DIA-04 tooltips,
-DIA-03 links, CAN-15 connection points and CUS-16 library previews; each must be
-checked at HEAD first. Do not assume any ANALYZED or DISCOVERED row is open.
-UIX-12 and UIX-13 are genuine but broad. CUS-11 is documented out of scope.
-Keep DIA-11 animation actions blocked on a sandboxed action interpreter. Use a
-fresh scratch folder and reuse Xvfb `:105`, and start the recorder with
+Round 47 should close a stale DISCOVERED row that is already implemented at
+HEAD, starting with DIA-05, tags. `Node.tags` is a field in `src/model/node.rs`,
+the Data tab edits tags in `src/ui/inspector.rs`, and `get_node_info` reports
+them in `src/mcp/exec.rs`, but the inventory row still says there is no tag
+field or tag search. Verify the row against HEAD, find a focused gap worth
+closing, and capture a failing test before changing code. Tag search and the
+viewer-side display may be the real gap. Other stale candidates are DIA-04
+tooltips, DIA-03 links, CAN-15 connection points and CUS-16 library previews;
+each must be checked at HEAD first. Do not assume any ANALYZED or DISCOVERED row
+is open. UIX-12 and UIX-13 are genuine but broad. CUS-11 is documented out of
+scope. Keep DIA-11 animation actions blocked on a sandboxed action interpreter.
+Use a fresh scratch folder and reuse Xvfb `:105`, and start the recorder with
 `DISPLAY=:105` or it captures the blank `:0` screen; drive the app with
 `env -u WAYLAND_DISPLAY` or it picks the Wayland backend and maps no X11 window.
 No release or tag. Do not restart UIX-14, TXT-21, STY-23, IO-19, CAN-06, CON-09,
 CON-13, CON-17, UIX-04, STY-13, STY-14, STY-21, STY-22, DOC-09, TXT-24, DIA-10,
-CUS-05 or TXT-06: their commands, editor tests and runtime evidence are already
-committed. M9 collaboration stays blocked without a server, conflict model, and
-permissions. GEN-04 AI generation and GEN-10 vendor stencils also stay blocked.
-IO-17, IO-18 and IO-20 remain blocked or deferred, as do the HTML and PDF parts
-of DOC-15.
+CUS-05, TXT-06 or CON-18: their commands, editor tests and runtime evidence are
+already committed. M9 collaboration stays blocked without a server, conflict
+model, and permissions. GEN-04 AI generation and GEN-10 vendor stencils also
+stay blocked. IO-17, IO-18 and IO-20 remain blocked or deferred, as do the HTML
+and PDF parts of DOC-15.
 
 ## Commands
 
