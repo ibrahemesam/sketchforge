@@ -153,6 +153,46 @@ fn export_and_reimport_keep_the_source_connector_default() {
 }
 
 #[test]
+fn export_and_reimport_keep_an_upright_label_flag() {
+    let mut doc = Document {
+        name: "Upright labels".into(),
+        ..Document::default()
+    };
+    let mut node = Node::new(NodeId(1), NodeKind::Rect, Rect::new(0.0, 0.0, 100.0, 60.0));
+    node.label = "Turned".into();
+    node.style.rotation = 30.0;
+    node.style.label_upright = true;
+    doc.nodes.insert(node.id, node);
+    doc.root.push(NodeId(1));
+
+    let items = vec![export::Item {
+        name: doc.name.clone(),
+        doc: &doc,
+        roots: doc.layered_root(),
+    }];
+    let spec = Spec {
+        format: Format::Drawio,
+        scope: Scope::AllPages,
+        ..Spec::default()
+    };
+    let dir = tmp("upright-label-export");
+    let out = dir.join("upright.drawio");
+    export::write(&spec, &items, &out, None).unwrap();
+    let text = std::fs::read_to_string(&out).unwrap();
+    assert!(text.contains("rotation=30;"), "{text}");
+    assert!(text.contains("__sketchLabelUpright"), "{text}");
+
+    let again = import::import_detailed(&out).unwrap();
+    let back = again.pages[0].doc.get(NodeId(1)).expect("shape survives");
+    assert!((back.style.rotation - 30.0).abs() < 1e-9);
+    assert!(back.style.label_upright, "upright flag was dropped");
+    assert!(
+        back.metadata.is_empty(),
+        "sidecar key stays out of metadata"
+    );
+}
+
+#[test]
 fn import_reads_user_object_metadata_links_tooltips_and_tags() {
     let imported = import::import_detailed(&metadata_fixture()).unwrap();
     let page = &imported.pages[0];

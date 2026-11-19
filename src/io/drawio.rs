@@ -18,6 +18,9 @@ use std::fmt::Write as _;
 
 /// Native-only source connector default, carried in the UserObject sidecar.
 const SKETCH_CONNECTOR_DEFAULT: &str = "__sketchConnectorDefault";
+/// Native-only upright-label flag. draw.io has no style key for it, so it
+/// rides in the UserObject sidecar and survives a Sketch round trip.
+const SKETCH_LABEL_UPRIGHT: &str = "__sketchLabelUpright";
 /// Native-only grid color. draw.io has no page setting for this, so the value
 /// rides in the mxGraphModel sidecar and survives a Sketch round trip.
 const SKETCH_GRID_COLOR: &str = "__sketchGridColor";
@@ -409,6 +412,9 @@ fn apply_cell_data(node: &mut Node, cell: &RawCell) {
         && let Ok(ds) = serde_json::from_str::<crate::model::DefaultStyle>(&json)
     {
         node.connector_default = Some(ds);
+    }
+    if let Some(value) = metadata.remove(SKETCH_LABEL_UPRIGHT) {
+        node.style.label_upright = value == "1" || value.eq_ignore_ascii_case("true");
     }
     node.metadata = metadata;
     node.link = cell.link.clone();
@@ -1882,7 +1888,8 @@ fn emit_node(out: &mut String, doc: &Document, id: NodeId, parent: Option<NodeId
         || !n.link.is_empty()
         || !n.tooltip.is_empty()
         || !n.tags.is_empty()
-        || n.connector_default.is_some();
+        || n.connector_default.is_some()
+        || n.style.label_upright;
     if has_data {
         out.push_str("        <UserObject id=\"");
         out.push_str(&node_cell(id));
@@ -1920,6 +1927,9 @@ fn emit_node(out: &mut String, doc: &Document, id: NodeId, parent: Option<NodeId
             && let Ok(json) = serde_json::to_string(ds)
         {
             sidecar.insert(SKETCH_CONNECTOR_DEFAULT.to_string(), json);
+        }
+        if n.style.label_upright {
+            sidecar.insert(SKETCH_LABEL_UPRIGHT.to_string(), "1".into());
         }
         if !sidecar.is_empty() {
             out.push_str(" sketch-data=\"");
