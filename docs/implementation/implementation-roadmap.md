@@ -263,6 +263,24 @@ recording in
 picker is unreliable under bare Xvfb. The implementation was committed as
 727c534; this documentation closeout completes the round.
 
+**Committed (2026-11-19, round 43).** DIA-10 closed on
+`agent/drawio-features`. A page now stores a fade transition and a duration from
+100 to 3000 ms, edited on the Diagram tab. Switching pages arms the fade on the
+next tick so an idle editor clock cannot finish the first frame at once; a
+translucent veil fades out over the new page. Draw.io has no page-transition
+attribute, so export writes `__sketchPageTransition` and
+`__sketchPageTransitionMs` sidecars that draw.io ignores and Sketch restores on
+import. The first failure had neither the model nor the `page_transition` field;
+the first live run then exposed the stale-clock bug. Five focused tests, one
+inspector test, the serial skip suite (516 tests), final checks and a verified
+31.60 s live recording in
+`.artifacts/round43/evidence/evidence-20261119-142023-9dad02/report.md` are in
+`.artifacts/round43/`. The live run seeded the two-page project in JSON, and the
+Diagram tab checkbox is covered by a unit test rather than a live click. The
+implementation was committed as 9cae03e and cb8a4fd; this documentation closeout
+completes the round. DIA-11 animation actions stay blocked on a sandboxed action
+interpreter.
+
 **Scope.**
 
 - A selection context resolver that classifies the current selection as document, single

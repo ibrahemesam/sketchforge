@@ -263,17 +263,17 @@ gaps landed on 2026-10-26: a label without a solid background cuts the line behi
 text, and the gap follows label moves, reroutes, and export. Page view is a view
 preference and is not part of the page file.
 
-**Size:** 231 capabilities in 13 domains. 119 are verified against committed tests or directly exercised code, 22 are implemented without a focused check, 81 are absent, and 9 are analysed or partial.
+**Size:** 231 capabilities in 13 domains. 120 are verified against committed tests or directly exercised code, 22 are implemented without a focused check, 80 are absent, and 9 are analysed or partial.
 
 ## Counts
 
 | Status | Count | Meaning |
 |---|---:|---|
-| VERIFIED | 119 | Committed test or directly exercised code path proves the behavior. |
+| VERIFIED | 120 | Committed test or directly exercised code path proves the behavior. |
 | IMPLEMENTED | 22 | Code exists and the path is readable, but no focused test or this-session runtime check covers it. |
 | IN_PROGRESS | 3 | Partial code at HEAD; the acceptance criteria are not met. |
 | ANALYZED | 6 | draw.io behavior is documented and a native design is recorded, but no code exists. |
-| DISCOVERED | 47 | draw.io behavior is documented here; no code or design exists. |
+| DISCOVERED | 46 | draw.io behavior is documented here; no code or design exists. |
 | BLOCKED | 34 | Work cannot proceed without a missing subsystem, external service, licensing decision, or explicit scope decision. |
 | **Total** | **231** | |
 
@@ -289,7 +289,7 @@ preference and is not part of the page file.
 | GEN Generation, templates, and diagram types | 15 | 0 | 0 | 0 | 0 | 13 | 2 |
 | IO Import, export, clipboard, and files | 21 | 12 | 3 | 0 | 2 | 0 | 4 |
 | CUS Libraries, scratchpad, and custom shapes | 16 | 4 | 0 | 0 | 1 | 6 | 5 |
-| DIA Diagram data: metadata, links, tags, and placeholders | 12 | 0 | 0 | 0 | 1 | 7 | 4 |
+| DIA Diagram data: metadata, links, tags, and placeholders | 12 | 1 | 0 | 0 | 1 | 6 | 4 |
 | STO Storage, sharing, collaboration, and integrations | 11 | 1 | 0 | 0 | 0 | 0 | 10 |
 | UIX Editor UI, panels, search, and accessibility | 14 | 7 | 1 | 2 | 0 | 3 | 1 |
 
@@ -597,7 +597,7 @@ Non-visual data attached to shapes and pages.
 | DIA-07 | Find and replace | Replace changes matching label text one at a time or across all pages. | [Search for shapes, in-diagram text, help and more](https://www.drawio.com/docs/manual/editor/panels/search-omnibox/) | None | **DISCOVERED** | Replace a misspelling in two labels and confirm undo restores both. | No diagram text search or replace transaction. Working tree (2026-11-10): replace runs one undo step per page, steps through matches, skips locked and hidden nodes, and reports the counts. |
 | DIA-08 | Placeholders | Percent-delimited placeholders resolve from shape properties, page properties, and predefined values. | [Work with placeholders in labels and tooltips](https://www.drawio.com/docs/manual/advanced/placeholders/) | None | **BLOCKED** | Type %name% in a label, define name on the shape, and see the resolved value in view and export. | Blocked by DIA-01 and DIA-02. Placeholder expansion also needs a cycle and missing-value policy. Working tree (2026-11-10): percent placeholders resolve in labels, connector labels, text and sticky content, frame names, and tooltips from shape, ancestor, and page metadata, with a visible missing-value fallback and a double percent escape. |
 | DIA-09 | Predefined placeholders | Date, time, page number, page count, and file name placeholders update automatically. | [Predefined placeholders](https://www.drawio.com/docs/reference/predefined-placeholders/) | None | **BLOCKED** | Insert a page number placeholder on two pages and confirm each page shows its own number. | Depends on DIA-08 and on a per-page render context that does not exist. Working tree (2026-11-10): the page context supplies page name, number, count, and file name at render and export time; date masks cover the documented date and time values. |
-| DIA-10 | Page animations | A multi-page diagram can animate page transitions or element actions in the viewer. | [Add actions and animations to a page via Page Setup](https://www.drawio.com/docs/manual/links-tooltips-tags/page-animations/) | None | **DISCOVERED** | Set a fade transition between two pages and play it in a viewer. | No viewer timeline, animation model, or playback surface. |
+| DIA-10 | Page animations | A multi-page diagram can animate page transitions or element actions in the viewer. | [Add actions and animations to a page via Page Setup](https://www.drawio.com/docs/manual/links-tooltips-tags/page-animations/) | src/model/settings.rs, src/io/drawio.rs, src/editor/mod.rs | **VERIFIED** | Set a fade transition between two pages and play it in a viewer. | `page_transition_round_trips_in_native_page`, `page_transition_round_trips_through_drawio`, `switching_to_a_fade_page_starts_a_transition`, `transition_ignores_a_stale_editor_clock`, `fade_transition_changes_a_rendered_frame` and `diagram_tab_exposes_page_transition_controls` cover the page setting, its playback, duration, renderer effect, round trips and Diagram tab controls. Draw.io has no page-transition attribute, so Sketch carries `fade` and the duration in `__sketchPageTransition` and `__sketchPageTransitionMs` sidecars that draw.io ignores. Element animation actions stay deferred in DIA-11. |
 | DIA-11 | Animation actions | Clicking a shape can trigger a defined animation or navigation action through a JSON action list. | [JSON technical reference for animation actions](https://www.drawio.com/docs/reference/animation-actions-json/) | None | **BLOCKED** | Attach an action to a shape, click it in the viewer, and see the target page transition. | Requires DIA-10 plus custom links and a sandboxed action interpreter. |
 | DIA-12 | Links that toggle layers | A custom link can show, hide, or select layers for interactive diagrams. | [Add actions to custom links](https://www.drawio.com/docs/manual/links-tooltips-tags/custom-links/) | None | **BLOCKED** | Link a button to a layer, click it, and confirm only that layer's visibility changes. | Blocked by ORG-13, DIA-03, and DIA-11. |
 

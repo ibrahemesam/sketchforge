@@ -1,6 +1,6 @@
 # Sketch agent session state
 
-Last updated: 2026-11-19 (round 42).
+Last updated: 2026-11-19 (round 43).
 
 ## Objective
 
@@ -19,10 +19,11 @@ pushed as 858d1a0 with the first-run onboarding tour. Round 38 was pushed as
 was pushed as 97dfc51 plus its docs closeout with the print dialog and
 paper-sized PDF output. Round 40 was pushed as a63e090 with the per-page
 background image. Round 41 was pushed as fc0f065 with curved text and ff63722
-with its docs closeout. Round 42 implementation is committed locally as 727c534
-with a preserved custom grid color; its documentation closeout follows in this
-branch. Do not create releases or deploy Vercel; plain `git push` sends commits
-to the fork.
+with its docs closeout. Round 42 was pushed as 727c534 with a preserved custom
+grid color, e9bf2ed with its docs closeout and c43a525 marking it pushed. Round
+43 implementation is committed locally as 9cae03e and cb8a4fd with a page fade
+transition; its documentation closeout follows in this branch. Do not create
+releases or deploy Vercel; plain `git push` sends commits to the fork.
 
 The full sidebar spec was implemented and verified in round 6 (see
 `.opencode/MEMORY.md`). Round 7 closed the transparent connector label gap.
@@ -436,6 +437,26 @@ native picker is not driven under bare Xvfb. The reimport half is covered by a
 test, not the video. Both commits were pushed; the parity docs recorded
 VERIFIED 119 and DISCOVERED 47 at the end of the round.
 
+Round 43 closed DIA-10, page animations. A page now stores a fade transition
+with a duration clamped to 100 to 3000 ms, edited on the Diagram tab. Switching
+pages arms the fade on the next tick, so an idle editor clock cannot finish the
+first frame at once; a translucent veil fades out over the new page. Draw.io has
+no page-transition attribute, so export writes `__sketchPageTransition` and
+`__sketchPageTransitionMs` sidecars that draw.io ignores and Sketch restores on
+import. Five focused tests cover model, timing, stale clock, a GPU frame and
+draw.io round trips; one inspector test covers the panel controls. The first
+live run exposed the stale-clock bug and is saved. The corrected serial skip
+suite passes 516 tests with the known `m2_pages_panel_screenshot` failure
+skipped. fmt, clippy, diff-check and release build pass. A verified 31.60 s Xvfb
+`:105` recording with four passing assertions is in
+`.artifacts/round43/evidence/evidence-20261119-142023-9dad02/report.md`: the red
+page baseline, a mid-veil center of (235, 235, 237) against a settled
+(34, 80, 217), the blue page after 3 s, and the draw.io sidecar with 3000 ms.
+The two-page project was seeded in JSON and the Diagram tab checkbox is covered
+by a unit test rather than a live click. Both code commits need a plain
+`git push`; the parity docs record VERIFIED 120 and DISCOVERED 46 at closeout.
+DIA-11 animation actions stay blocked on a sandboxed action interpreter.
+
 ## Blockers
 
 GEN-04 AI generation stays blocked: it needs a hosted model, credentials,
@@ -451,25 +472,28 @@ in `.opencode/MEMORY.md`).
 
 ## Exact next task
 
-Round 43 should close DIA-10, page animations. The inventory row at
-`feature-inventory.md:600` is still DISCOVERED, and there is no transition model
-or page-switch playback at HEAD. Scope this to a per-page fade transition with a
-duration, selectable from the Diagram tab, applied when the editor switches
-pages, persisted in native JSON, and carried through draw.io with a Sketch
-sidecar if draw.io has no standard page attribute. Keep DIA-11 animation actions
-blocked because they need a sandboxed action interpreter. Start with a failing
-test for the model and page-switch timing. Many DISCOVERED notes are stale,
-including DOC-08, DOC-10, DOC-11, DOC-12, DOC-14, CAN-15, CAN-16, SHP-17,
-SHP-19, CON-09, CON-11, CON-12, CON-15, CON-16, CON-18, CON-19, TXT-06, TXT-19,
-TXT-20, the GEN packs and the DIA metadata rows. Verify a row before writing a
-failure test. Use a fresh scratch folder and reuse Xvfb `:105`, since a new
-display mapped no usable app window in earlier rounds. No release or tag. Do not
-restart UIX-14, TXT-21, STY-23, IO-19, CAN-06, CON-09, CON-13, CON-17, UIX-04,
-STY-13, STY-14, STY-21, STY-22, DOC-09 or TXT-24: their commands, editor tests
-and runtime evidence are already committed. M9 collaboration stays blocked
-without a server, conflict model, and permissions. GEN-04 AI generation and
-GEN-10 vendor stencils also stay blocked. IO-17, IO-18 and IO-20 remain blocked
-or deferred, as do the HTML and PDF parts of DOC-15.
+Round 44 should close CUS-05, custom shape library XML. The inventory row at
+`feature-inventory.md:572` is still ANALYZED and says the shape registry does not
+exist yet; that blocker is gone, and a search for stencil or XML-library import
+in `src/` and `tests/` finds nothing. Scope this to importing draw.io XML shape
+libraries into a custom library folder, inserting an imported shape through the
+Library tab, and exporting the edited library back to XML. Reuse the registry
+and template-library paths rather than adding a second source of truth. Start
+with a failing adapter test. Do not assume other ANALYZED or DISCOVERED rows are
+open: most carry stale working-tree notes and their features are already at
+HEAD, including DOC-08, DOC-10, DOC-11, DOC-12, DOC-14, CAN-15, CAN-16, SHP-17,
+SHP-19, CON-09, CON-10, CON-11, CON-12, CON-15, CON-16, CON-18, CON-19, TXT-06,
+TXT-19, TXT-20, the GEN packs, the DIA metadata rows and UIX-11. UIX-12 and
+UIX-13 are genuine but broad. CUS-11 is documented out of scope. Keep DIA-11
+animation actions blocked on a sandboxed action interpreter. Use a fresh scratch
+folder and reuse Xvfb `:105`, since a new display mapped no usable app window in
+earlier rounds. No release or tag. Do not restart UIX-14, TXT-21, STY-23, IO-19,
+CAN-06, CON-09, CON-13, CON-17, UIX-04, STY-13, STY-14, STY-21, STY-22, DOC-09,
+TXT-24 or DIA-10: their commands, editor tests and runtime evidence are already
+committed. M9 collaboration stays blocked without a server, conflict model, and
+permissions. GEN-04 AI generation and GEN-10 vendor stencils also stay blocked.
+IO-17, IO-18 and IO-20 remain blocked or deferred, as do the HTML and PDF parts
+of DOC-15.
 
 ## Commands
 
