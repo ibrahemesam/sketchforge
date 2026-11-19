@@ -84,6 +84,17 @@ pub fn export_bounds(doc: &Document, roots: &[NodeId]) -> Option<Rect> {
     })
 }
 
+/// Bounds for a whole-page export. A background image needs the page rect so
+/// it is not cropped away, even when the page has no nodes.
+pub fn export_bounds_for_page(doc: &Document, roots: &[NodeId]) -> Option<Rect> {
+    let mut b = export_bounds(doc, roots);
+    if doc.settings.background_image.is_some() && draw::is_whole_page(doc, roots) {
+        let page = doc.settings.page_rect();
+        b = Some(b.map_or(page, |r| r.union(&page)));
+    }
+    b
+}
+
 struct Writer<'a> {
     doc: &'a Document,
     out: String,
@@ -372,7 +383,7 @@ pub fn export(
     let roots: Vec<NodeId> = roots
         .map(|r| r.to_vec())
         .unwrap_or_else(|| doc.layered_root());
-    let b = export_bounds(doc, &roots)?;
+    let b = export_bounds_for_page(doc, &roots)?;
     export_in(doc, &roots, b, background)
 }
 
@@ -400,6 +411,7 @@ pub fn export_in(
             color_attr("fill", bg.to_f32(1.0))
         );
     }
+    w.ops(&draw::background_ops(doc, roots), "  ");
     let mut jw = draw::JumpWalk::new(doc);
     for id in roots {
         let op = draw::inherited_opacity(doc, *id);

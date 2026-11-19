@@ -572,6 +572,13 @@ impl CanvasRenderer {
                 }
             }
         }
+        for list in [&frame.under, &frame.over] {
+            for b in list {
+                if let Some(id) = &b.image {
+                    self.image_bg(device, queue, id);
+                }
+            }
+        }
         self.sync_world(device, &frame.items);
 
         // Screen-space batches (underlay + overlay) are small: rebuilt every frame.
@@ -589,7 +596,7 @@ impl CanvasRenderer {
                     range: start..sidx.len() as u32,
                     clip: b.clip,
                     blend: 0,
-                    image: None,
+                    image: b.image.clone(),
                     world: false,
                 });
             }

@@ -115,7 +115,7 @@ pub fn save_to_dir(dir: &Path, ids: impl IntoIterator<Item = String>) -> std::io
     Ok(())
 }
 
-/// Asset ids referenced by a document's image fills.
+/// Asset ids referenced by a document's image fills and page background.
 pub fn used_by(doc: &crate::model::Document) -> Vec<String> {
     let mut out: Vec<String> = doc
         .nodes
@@ -126,6 +126,9 @@ pub fn used_by(doc: &crate::model::Document) -> Vec<String> {
             _ => None,
         })
         .collect();
+    if let Some(bg) = &doc.settings.background_image {
+        out.push(bg.asset.clone());
+    }
     out.sort();
     out.dedup();
     out
@@ -208,5 +211,19 @@ mod tests {
         let asset = get(&a).unwrap();
         assert_eq!((asset.width, asset.height), (3, 2));
         assert!(register(b"not an image").is_err());
+    }
+
+    #[test]
+    fn used_by_includes_the_page_background() {
+        let img = image::RgbaImage::from_pixel(2, 2, image::Rgba([9, 8, 7, 255]));
+        let asset = register_rgba(&img);
+        let mut doc = crate::model::Document::default();
+        assert!(!used_by(&doc).contains(&asset));
+        doc.settings.background_image = Some(crate::model::BackgroundImage {
+            asset: asset.clone(),
+            mode: crate::model::ImageMode::Fill,
+            opacity: 1.0,
+        });
+        assert_eq!(used_by(&doc), vec![asset]);
     }
 }

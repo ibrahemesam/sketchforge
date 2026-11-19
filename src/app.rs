@@ -681,6 +681,30 @@ impl App {
                     let at = self.ed.camera.screen_to_world(self.ed.viewport * 0.5);
                     self.place_image_file(&p, at);
                 }
+                AppRequest::BackgroundImage => {
+                    let Some(p) = rfd::FileDialog::new()
+                        .add_filter("Images", &["png", "jpg", "jpeg", "gif", "webp"])
+                        .pick_file()
+                    else {
+                        continue;
+                    };
+                    match std::fs::read(&p)
+                        .map_err(|e| e.to_string())
+                        .and_then(|b| crate::assets::register(&b))
+                    {
+                        Ok(asset) => {
+                            self.ed.edit_settings("Set background image", |s| {
+                                s.background_image = Some(crate::model::BackgroundImage {
+                                    asset,
+                                    mode: crate::model::ImageMode::Stretch,
+                                    opacity: 1.0,
+                                });
+                            });
+                            self.ed.status = format!("Background image: {}", p.display());
+                        }
+                        Err(e) => self.error(format!("Could not load {}: {e}", p.display())),
+                    }
+                }
                 AppRequest::New => self.new_project(),
                 AppRequest::Open => {
                     if self.session.project.is_some() {

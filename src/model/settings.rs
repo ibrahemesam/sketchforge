@@ -5,7 +5,7 @@
 //! defaults travel with the file and participate in undo/redo through
 //! `history::Recording`.
 
-use super::{Color, Style, TextStyle};
+use super::{Color, ImageMode, Style, TextStyle};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
@@ -199,6 +199,24 @@ impl DefaultStyle {
     }
 }
 
+fn one() -> f64 {
+    1.0
+}
+fn is_one(x: &f64) -> bool {
+    *x == 1.0
+}
+
+/// An image drawn behind the grid on one page (draw.io's Background Image).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct BackgroundImage {
+    /// Content hash of an image registered in [`crate::assets`].
+    pub asset: String,
+    #[serde(default)]
+    pub mode: ImageMode,
+    #[serde(default = "one", skip_serializing_if = "is_one")]
+    pub opacity: f64,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct DiagramSettings {
@@ -221,6 +239,9 @@ pub struct DiagramSettings {
     /// Background used when the page is drawn in dark mode.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub background_color_dark: Option<Color>,
+    /// Image painted behind the grid and content on this page.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub background_image: Option<BackgroundImage>,
     /// How fixed and explicit dark colors adapt in dark mode.
     #[serde(default)]
     pub adaptive_colors: AdaptiveColors,
@@ -258,6 +279,7 @@ impl Default for DiagramSettings {
             background_enabled: false,
             background_color: Color::WHITE,
             background_color_dark: None,
+            background_image: None,
             adaptive_colors: AdaptiveColors::Auto,
             shadow: false,
             sketch: false,
@@ -347,5 +369,23 @@ mod tests {
             mode.resolve(green, Some(Color::rgb(0x0a, 0x3d, 0x0e))),
             Color::rgb(0x0a, 0x3d, 0x0e)
         );
+    }
+
+    #[test]
+    fn background_image_defaults_to_none_and_round_trips() {
+        let s = DiagramSettings::default();
+        assert_eq!(s.background_image, None);
+        let json = serde_json::to_string(&s).unwrap();
+        assert!(!json.contains("background_image"), "omitted when absent");
+
+        let mut s = s;
+        s.background_image = Some(BackgroundImage {
+            asset: "abc123".into(),
+            mode: ImageMode::Tile,
+            opacity: 0.5,
+        });
+        let json = serde_json::to_string(&s).unwrap();
+        let back: DiagramSettings = serde_json::from_str(&json).unwrap();
+        assert_eq!(back.background_image, s.background_image);
     }
 }

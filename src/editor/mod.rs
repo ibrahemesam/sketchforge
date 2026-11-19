@@ -130,6 +130,8 @@ pub enum AppRequest {
     SaveAs,
     /// Pick an image file and place it on the canvas.
     PlaceImage,
+    /// Pick an image file to use as this page's background.
+    BackgroundImage,
     /// Pick an image for fill layer `.1` of these layers.
     ImageFill(Vec<NodeId>, usize),
     /// Ask before opening an external link.

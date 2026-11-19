@@ -743,11 +743,45 @@ fn background_dialog(ctx: &egui::Context, ed: &mut Editor, st: &mut UiState) {
             if let Some(c) = swatches(ui, draft) {
                 draft = c;
             }
+            ui.separator();
             ui.label(
-                RichText::new("Only a solid color can be set. Background images and page references are not supported yet.")
+                RichText::new("Background image")
                     .size(theme::SECONDARY)
                     .color(theme::pal(ui).secondary),
             );
+            let has_image = ed.doc.settings.background_image.is_some();
+            ui.horizontal(|ui| {
+                if ui.button("Choose image…").clicked() {
+                    ed.requests.push(AppRequest::BackgroundImage);
+                }
+                if has_image && ui.button("Clear").clicked() {
+                    ed.edit_settings("Clear background image", |s| s.background_image = None);
+                }
+            });
+            if has_image {
+                ui.horizontal(|ui| {
+                    ui.label("Fit");
+                    let modes = [
+                        (crate::model::ImageMode::Fill, "Fill"),
+                        (crate::model::ImageMode::Fit, "Fit"),
+                        (crate::model::ImageMode::Stretch, "Stretch"),
+                        (crate::model::ImageMode::Tile, "Tile"),
+                    ];
+                    if let Some(mode) =
+                        combo(ui, "bg-image-mode", st.background_image_mode, &modes, 90.0)
+                    {
+                        st.background_image_mode = mode;
+                    }
+                });
+                ui.horizontal(|ui| {
+                    ui.label("Opacity");
+                    ui.add(
+                        egui::Slider::new(&mut st.background_image_opacity, 0.0..=1.0)
+                            .text("")
+                            .show_value(true),
+                    );
+                });
+            }
             ui.horizontal(|ui| {
                 if ui.button("Apply").clicked() {
                     do_apply = true;
@@ -767,6 +801,10 @@ fn background_dialog(ctx: &egui::Context, ed: &mut Editor, st: &mut UiState) {
             s.background_color = draft;
             s.background_color_dark = Some(dark_draft);
             s.background_enabled = true;
+            if let Some(bg) = s.background_image.as_mut() {
+                bg.mode = st.background_image_mode;
+                bg.opacity = st.background_image_opacity;
+            }
         });
         open = false;
     }
@@ -1568,6 +1606,13 @@ fn diagram_tab(ui: &mut Ui, ed: &mut Editor, st: &mut UiState, vis: f32) {
                 .clicked()
             {
                 st.background_draft = Some(ed.doc.settings.background_color);
+                if let Some(bg) = &ed.doc.settings.background_image {
+                    st.background_image_mode = bg.mode;
+                    st.background_image_opacity = bg.opacity;
+                } else {
+                    st.background_image_mode = crate::model::ImageMode::Stretch;
+                    st.background_image_opacity = 1.0;
+                }
                 st.background_open = true;
             }
         });
@@ -5648,6 +5693,50 @@ mod tests {
         assert!(text.contains("Adaptive Colors"), "{text}");
         assert!(text.contains("Dark background"), "{text}");
         assert!(text.contains("Automatic"), "{text}");
+    }
+
+    #[test]
+    fn background_dialog_exposes_image_controls() {
+        fn collect(shape: &egui::Shape, out: &mut String) {
+            match shape {
+                egui::Shape::Text(text) => {
+                    out.push_str(&text.galley.job.text);
+                    out.push('\n');
+                }
+                egui::Shape::Vec(shapes) => {
+                    for shape in shapes {
+                        collect(shape, out);
+                    }
+                }
+                _ => {}
+            }
+        }
+        let ctx = egui::Context::default();
+        crate::ui::setup_style(&ctx);
+        let mut ed = Editor::default();
+        let mut st = UiState {
+            background_open: true,
+            ..Default::default()
+        };
+        let input = egui::RawInput {
+            screen_rect: Some(egui::Rect::from_min_size(
+                egui::Pos2::ZERO,
+                egui::vec2(800.0, 600.0),
+            )),
+            ..Default::default()
+        };
+        let mut first = ctx.run_ui(input.clone(), |ui| {
+            super::dialogs(ui.ctx(), &mut ed, &mut st)
+        });
+        first.textures_delta.clear();
+        let mut out = ctx.run_ui(input, |ui| super::dialogs(ui.ctx(), &mut ed, &mut st));
+        out.textures_delta.clear();
+        let mut text = String::new();
+        for clipped in &out.shapes {
+            collect(&clipped.shape, &mut text);
+        }
+        assert!(text.contains("Background image"), "{text}");
+        assert!(text.contains("Choose image…"), "{text}");
     }
 
     #[test]

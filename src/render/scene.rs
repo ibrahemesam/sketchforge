@@ -982,6 +982,33 @@ fn fmt_num(x: f64) -> String {
     }
 }
 
+/// Tessellate a page background image in screen space and add it to an
+/// underlay. The caller sets the batch clip to the page so Fill mode crops.
+fn background_image_batch(under: &mut MeshBuilder, page: Rect, bg: &crate::model::BackgroundImage) {
+    use crate::model::Paint;
+    let paint = Paint::Image {
+        asset: bg.asset.clone(),
+        mode: bg.mode,
+        opacity: bg.opacity,
+    };
+    let Some(spec) = draw::paint_spec(&paint, page, 1.0) else {
+        return;
+    };
+    let ops = [draw::DrawOp::Fill {
+        path: crate::vector::rounded_rect(page, [0.0; 4]),
+        paint: spec,
+        even_odd: false,
+    }];
+    for piece in Tess::new(1.0).ops(&ops) {
+        if piece.mesh.is_empty() {
+            continue;
+        }
+        under.set_image(piece.image);
+        under.append_mesh(&piece.mesh);
+        under.set_image(None);
+    }
+}
+
 /// Full interactive canvas: background grid, document, overlay.
 pub fn canvas(
     ed: &Editor,
@@ -1018,6 +1045,13 @@ pub fn canvas(
         let shadow = Rect::new(page.x + 4.0, page.y + 5.0, page.w, page.h);
         under.rect(shadow, [0.0, 0.0, 0.0, 0.25]);
         under.rect(page, rgba(page_bg));
+    }
+    if let Some(bg) = &settings.background_image
+        && let Some(clip) = page.intersection(&v.canvas_rect())
+    {
+        under.set_clip(Some(clip));
+        background_image_batch(&mut under, page, bg);
+        under.set_clip(Some(v.canvas_rect()));
     }
     if show_grid {
         // Page view confines the grid to the printable page, as in draw.io. The
@@ -1114,6 +1148,20 @@ pub fn export_frame(
     let mut under = MeshBuilder::default();
     if let Some(bg) = background {
         under.rect(Rect::new(0.0, 0.0, size_px.x, size_px.y), rgba(bg));
+    }
+    if let Some(bg) = &doc.settings.background_image {
+        let v = View {
+            doc,
+            camera,
+            viewport: size_px,
+            offset: V2::ZERO,
+        };
+        let page = v.rect_to_screen(&doc.settings.page_rect());
+        if let Some(clip) = page.intersection(&Rect::new(0.0, 0.0, size_px.x, size_px.y)) {
+            under.set_clip(Some(clip));
+            background_image_batch(&mut under, page, bg);
+            under.set_clip(None);
+        }
     }
     // The caller bakes the appearance into `doc`; re-resolving here would invert
     // automatic dark colors a second time.

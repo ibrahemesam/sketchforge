@@ -1,6 +1,6 @@
 //! PNG export through the offscreen GPU renderer.
 
-use super::svg::export_bounds;
+use super::svg::export_bounds_for_page;
 use crate::geom::{Camera, V2, v2};
 use crate::model::{Color, ColorMode, Document, NodeId};
 use crate::render::gpu::Headless;
@@ -46,7 +46,7 @@ pub fn render_with_mode(
     let roots: Vec<NodeId> = roots
         .map(|r| r.to_vec())
         .unwrap_or_else(|| doc.layered_root());
-    let b = export_bounds(doc, &roots).ok_or("nothing to export")?;
+    let b = export_bounds_for_page(doc, &roots).ok_or("nothing to export")?;
     let scale = scale.min(MAX_EDGE / b.w.max(b.h)).max(1e-3);
     let size = [
         (b.w * scale).ceil().max(1.0) as u32,

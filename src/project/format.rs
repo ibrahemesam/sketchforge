@@ -662,4 +662,35 @@ mod tests {
         assert_eq!(restored, &asset);
         assert!(crate::assets::get(restored).is_some());
     }
+
+    #[test]
+    fn embedded_bundle_carries_a_background_only_asset() {
+        let img = image::RgbaImage::from_fn(4, 3, |_, _| image::Rgba([30, 200, 90, 255]));
+        let asset = crate::assets::register_rgba(&img);
+        let mut doc = Document::default();
+        doc.settings.background_image = Some(crate::model::BackgroundImage {
+            asset: asset.clone(),
+            mode: crate::model::ImageMode::Tile,
+            opacity: 0.5,
+        });
+        let pages = vec![PageData {
+            id: "bg".into(),
+            name: "Background".into(),
+            doc,
+            camera: None,
+        }];
+        let json = pages_to_json("Board", &pages, None);
+        assert!(json.contains(&asset), "asset embedded");
+        let (_, back, _) = pages_from_json(&json).unwrap();
+        let bg = back[0]
+            .doc
+            .settings
+            .background_image
+            .as_ref()
+            .expect("background image restored");
+        assert_eq!(bg.asset, asset);
+        assert_eq!(bg.mode, crate::model::ImageMode::Tile);
+        assert!((bg.opacity - 0.5).abs() < 1e-9);
+        assert!(crate::assets::get(&asset).is_some());
+    }
 }

@@ -535,6 +535,10 @@ pub fn export(pages: &[PdfPage]) -> Vec<u8> {
                 num(b.h)
             );
         }
+        w.ops(
+            &draw::background_ops(pg.doc, &pg.roots),
+            crate::model::BlendMode::Normal,
+        );
         let mut jw = draw::JumpWalk::new(pg.doc);
         for r in &pg.roots {
             let op = draw::inherited_opacity(pg.doc, *r);
@@ -624,7 +628,7 @@ pub fn pages_for<'a>(
                 .filter_map(|f| {
                     Some(PdfPage {
                         doc,
-                        bounds: crate::io::svg::export_bounds(doc, &[f])?,
+                        bounds: crate::io::svg::export_bounds_for_page(doc, &[f])?,
                         roots: vec![f],
                         background,
                         paper: None,
@@ -635,7 +639,7 @@ pub fn pages_for<'a>(
                 .collect();
         }
     }
-    match crate::io::svg::export_bounds(doc, &roots) {
+    match crate::io::svg::export_bounds_for_page(doc, &roots) {
         Some(b) => vec![PdfPage {
             doc,
             roots,
@@ -660,8 +664,8 @@ pub fn print_pdf(doc: &Document, roots: &[NodeId], opts: &PrintOptions) -> Vec<u
             (h, w)
         }
     };
-    let bounds =
-        crate::io::svg::export_bounds(doc, roots).unwrap_or_else(|| Rect::new(0.0, 0.0, pw, ph));
+    let bounds = crate::io::svg::export_bounds_for_page(doc, roots)
+        .unwrap_or_else(|| Rect::new(0.0, 0.0, pw, ph));
     let scale = match opts.scale {
         PrintScale::Fit => {
             let avail_w = (pw - 2.0 * opts.margin_pt).max(1.0);

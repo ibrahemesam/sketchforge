@@ -394,6 +394,38 @@ impl JumpWalk {
     }
 }
 
+/// True when `roots` are exactly the document's top-level paint order, i.e. a
+/// whole-page export rather than a frame or selection.
+pub fn is_whole_page(doc: &Document, roots: &[NodeId]) -> bool {
+    let all = doc.layered_root();
+    all.len() == roots.len() && all.iter().all(|r| roots.contains(r))
+}
+
+/// The page's background image as one world-space fill op, in paint order
+/// before the nodes. Frame and selection exports omit it.
+pub fn background_ops(doc: &Document, roots: &[NodeId]) -> Vec<DrawOp> {
+    let Some(bg) = &doc.settings.background_image else {
+        return Vec::new();
+    };
+    if !is_whole_page(doc, roots) {
+        return Vec::new();
+    }
+    let page = doc.settings.page_rect();
+    let paint = Paint::Image {
+        asset: bg.asset.clone(),
+        mode: bg.mode,
+        opacity: bg.opacity,
+    };
+    let Some(paint) = paint_spec(&paint, page, 1.0) else {
+        return Vec::new();
+    };
+    vec![DrawOp::Fill {
+        path: vector::rounded_rect(page, [0.0; 4]),
+        paint,
+        even_odd: false,
+    }]
+}
+
 /// Draw ops for one node with no page-wide effect defaults.
 pub fn node_draw(n: &Node, wr: Rect, opacity: f64) -> NodeDraw {
     node_draw_with(n, wr, opacity, false, false, None, &[], false, 0.0)

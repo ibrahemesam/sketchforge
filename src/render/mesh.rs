@@ -55,10 +55,12 @@ impl Mesh {
     }
 }
 
-/// A run of triangles sharing one clip rectangle (logical px, None = whole canvas).
+/// A run of triangles sharing one clip rectangle and image texture
+/// (logical px, None = whole canvas).
 pub struct Batch {
     pub clip: Option<Rect>,
     pub mesh: Mesh,
+    pub image: Option<String>,
 }
 
 impl Mesh {
@@ -81,6 +83,7 @@ impl Default for MeshBuilder {
             batches: vec![Batch {
                 clip: None,
                 mesh: Mesh::default(),
+                image: None,
             }],
             fill: FillTessellator::new(),
             stroke: StrokeTessellator::new(),
@@ -104,8 +107,31 @@ impl MeshBuilder {
             self.batches.push(Batch {
                 clip,
                 mesh: Mesh::default(),
+                image: cur.image.clone(),
             });
         }
+    }
+
+    /// Switch the image texture used by the current batch.
+    pub fn set_image(&mut self, image: Option<String>) {
+        let cur = &self.batches.last().unwrap();
+        if cur.image == image {
+            return;
+        }
+        if cur.mesh.is_empty() {
+            self.batches.last_mut().unwrap().image = image;
+        } else {
+            self.batches.push(Batch {
+                clip: cur.clip,
+                mesh: Mesh::default(),
+                image,
+            });
+        }
+    }
+
+    /// Append a pre-tessellated mesh to the current batch.
+    pub fn append_mesh(&mut self, mesh: &Mesh) {
+        self.buffers().append(mesh);
     }
 
     fn buffers(&mut self) -> &mut Mesh {

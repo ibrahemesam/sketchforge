@@ -15,7 +15,7 @@ pub mod templates;
 
 use crate::editor::shortcuts::{self, Action};
 use crate::editor::{Editor, Tool};
-use crate::model::{Color, NodeId, NodeKind, SchemeScope};
+use crate::model::{Color, ImageMode, NodeId, NodeKind, SchemeScope};
 use crate::theme::{self, Icon};
 use egui::{Align2, Color32, RichText, Ui};
 use std::collections::{HashMap, HashSet};
@@ -89,6 +89,10 @@ pub struct UiState {
     pub background_draft: Option<Color>,
     /// Dark page background color while the dialog is open, before Apply.
     pub background_dark_draft: Option<Color>,
+    /// Background image placement while the dialog is open, before Apply.
+    pub background_image_mode: ImageMode,
+    /// Background image opacity while the dialog is open, before Apply.
+    pub background_image_opacity: f64,
     /// Page layers dialog (draw.io layers), separate from the z-order panel.
     pub layers_dialog: Option<inspector::LayersDialog>,
     /// Quick-add picker opened by double-clicking empty canvas (draw.io).
