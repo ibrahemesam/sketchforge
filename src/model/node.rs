@@ -1354,6 +1354,40 @@ mod tests {
     }
 
     #[test]
+    fn paragraph_list_styles_round_trip_in_native_json() {
+        use crate::model::{ListKind, ParagraphStyle};
+        let mut n = Node::new(
+            NodeId(9),
+            NodeKind::Text {
+                text: "one\ntwo\nthree".into(),
+                font_size: 16.0,
+                auto_width: true,
+                align: TextAlign::Left,
+            },
+            Rect::new(0.0, 0.0, 120.0, 60.0),
+        );
+        n.text_style.paragraphs = vec![
+            ParagraphStyle {
+                list: ListKind::Bullet,
+                indent: 0,
+            },
+            ParagraphStyle {
+                list: ListKind::Bullet,
+                indent: 2,
+            },
+            ParagraphStyle::default(),
+        ];
+        let s = serde_json::to_string(&n).unwrap();
+        assert!(s.contains("\"list\":\"bullet\""), "{s}");
+        assert!(s.contains("\"indent\":2"), "{s}");
+        let back: Node = serde_json::from_str(&s).unwrap();
+        assert_eq!(back.text_style.paragraphs.len(), 3);
+        assert_eq!(back.text_style.paragraphs[0].list, ListKind::Bullet);
+        assert_eq!(back.text_style.paragraphs[1].indent, 2);
+        assert_eq!(back.text_style.paragraphs[2].list, ListKind::None);
+    }
+
+    #[test]
     fn connector_head_defaults_round_trip_without_stored_keys() {
         let n = Node::new(
             NodeId(8),

@@ -377,6 +377,37 @@ impl TextScript {
     }
 }
 
+/// List marker shown at the start of a text paragraph.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum ListKind {
+    #[default]
+    None,
+    Bullet,
+    Number,
+}
+
+impl ListKind {
+    pub fn is_none(&self) -> bool {
+        *self == ListKind::None
+    }
+}
+
+/// Per-paragraph list setting. Paragraphs are split on hard line breaks, so a
+/// text node with three lines has three entries. Missing entries stay unstyled.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(default)]
+pub struct ParagraphStyle {
+    #[serde(skip_serializing_if = "ListKind::is_none")]
+    pub list: ListKind,
+    #[serde(skip_serializing_if = "is_zero_u8")]
+    pub indent: u8,
+}
+
+fn is_zero_u8(v: &u8) -> bool {
+    *v == 0
+}
+
 /// Style overrides for a range of characters `[start, end)` (char indices).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub struct TextSpan {
@@ -425,6 +456,10 @@ pub struct TextStyle {
     pub script: TextScript,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub spans: Vec<TextSpan>,
+    /// List settings by hard-break paragraph. Kept empty for ordinary text so
+    /// old documents and shape labels do not change size.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub paragraphs: Vec<ParagraphStyle>,
 }
 
 impl TextScript {

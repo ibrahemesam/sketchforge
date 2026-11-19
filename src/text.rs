@@ -11,7 +11,7 @@ mod fonts;
 pub use fonts::library_epoch;
 
 use crate::geom::{Rect, V2, v2};
-use crate::model::{CharStyle, Color, TextAlign, TextStyle};
+use crate::model::{CharStyle, Color, ListKind, TextAlign, TextStyle};
 use crate::vector::VPath;
 use lyon::path::Path;
 use lyon::tessellation::{BuffersBuilder, FillOptions, FillTessellator, FillVertex, VertexBuffers};
@@ -339,14 +339,16 @@ pub fn layout_rich(
         None => line_height(size),
     };
     // Break into lines: hard breaks on '\n', soft breaks at spaces when wrapping.
-    let mut ranges: Vec<(usize, usize)> = Vec::new();
+    let mut ranges: Vec<(usize, usize, usize, bool)> = Vec::new();
     let mut start = 0;
+    let mut para_idx = 0usize;
     while start <= chars.len() {
         let hard_end = chars[start..]
             .iter()
             .position(|c| *c == '\n')
             .map_or(chars.len(), |p| start + p);
         let mut line_start = start;
+        let mut first_of_para = true;
         if let Some(maxw) = max_width {
             let mut x = 0.0;
             let mut last_space: Option<usize> = None;
@@ -362,7 +364,8 @@ pub fn layout_rich(
                         _ => i,
                     };
                     let skip_space = chars.get(brk) == Some(&' ');
-                    ranges.push((line_start, brk));
+                    ranges.push((line_start, brk, para_idx, first_of_para));
+                    first_of_para = false;
                     line_start = if skip_space { brk + 1 } else { brk };
                     i = line_start;
                     x = 0.0;
@@ -373,15 +376,17 @@ pub fn layout_rich(
                 i += 1;
             }
         }
-        ranges.push((line_start, hard_end));
+        ranges.push((line_start, hard_end, para_idx, first_of_para));
         start = hard_end + 1;
+        para_idx += 1;
     }
 
     let mut lines = Vec::new();
     let mut glyphs = Vec::new();
     let mut max_line_w: f64 = 0.0;
     let mut top = 0.0;
-    for (s, e) in ranges.iter().copied() {
+    let mut number = 0usize;
+    for (s, e, para_idx, first_of_para) in ranges.iter().copied() {
         // Line metrics from the largest size on the line (or the char before an empty line).
         let sizes = styles[s..e].iter().map(|c| c.size);
         let max_size = sizes
@@ -395,8 +400,43 @@ pub fn layout_rich(
         let lh = lh_of(max_size);
         let natural = line_height(max_size);
         let baseline = top + ascent(max_size) + (lh - natural) * 0.5;
-        let mut x = 0.0;
-        let mut carets = vec![0.0];
+        let para = ts.paragraphs.get(para_idx);
+        let indent = para.map_or(0.0, |p| p.indent as f64 * font_size * 1.5);
+        let list = para.map_or(ListKind::None, |p| p.list);
+        if first_of_para && list == ListKind::Number {
+            number += 1;
+        }
+        let marker = if first_of_para {
+            match list {
+                ListKind::Bullet => Some("•".to_string()),
+                ListKind::Number => Some(format!("{number}.")),
+                ListKind::None => None,
+            }
+        } else {
+            None
+        };
+        let mut x = indent;
+        if let Some(marker) = marker {
+            for ch in marker.chars() {
+                let face = face_for_char(ch, ts.bold, ts.italic);
+                let (gid, advance) = advance_in(face, ch, max_size);
+                glyphs.push(PlacedGlyph {
+                    gid,
+                    face,
+                    size: max_size,
+                    color,
+                    x,
+                    baseline,
+                    advance,
+                    char_index: s,
+                    underline: false,
+                    strike: false,
+                });
+                x += advance;
+            }
+            x += font_size * 0.35;
+        }
+        let mut carets = vec![x];
         for i in s..e {
             let st = styles[i];
             let (gid, a) = adv[i];
@@ -1199,6 +1239,7 @@ fn layout_vertical(
             align: None,
             script: st.script,
             spans: Vec::new(),
+            paragraphs: Vec::new(),
         };
         let mut l = layout_rich(
             &ch.to_string(),
@@ -1410,6 +1451,53 @@ mod tests {
         let empty = layout("", 20.0, None, TextAlign::Left);
         assert_eq!(empty.lines.len(), 1);
         assert_eq!(empty.caret(0), (0.0, 0.0, line_height(20.0)));
+    }
+
+    #[test]
+    fn list_markers_indent_and_number_paragraphs() {
+        use crate::model::{ListKind, ParagraphStyle};
+        let text = "one\ntwo\nthree";
+        let ts = TextStyle {
+            paragraphs: vec![
+                ParagraphStyle {
+                    list: ListKind::Bullet,
+                    indent: 0,
+                },
+                ParagraphStyle {
+                    list: ListKind::Bullet,
+                    indent: 1,
+                },
+                ParagraphStyle {
+                    list: ListKind::Number,
+                    indent: 0,
+                },
+            ],
+            ..TextStyle::default()
+        };
+        let plain = layout_rich(
+            text,
+            16.0,
+            Color::INK,
+            &TextStyle::default(),
+            None,
+            TextAlign::Left,
+        );
+        let list = layout_rich(text, 16.0, Color::INK, &ts, None, TextAlign::Left);
+        assert_eq!(list.lines.len(), 3);
+        assert!(list.glyphs.len() > plain.glyphs.len(), "markers add glyphs");
+        let first_x = list.glyphs.iter().rfind(|g| g.char_index == 0).unwrap().x;
+        let second_x = list.glyphs.iter().rfind(|g| g.char_index == 4).unwrap().x;
+        let third_x = list.glyphs.iter().rfind(|g| g.char_index == 8).unwrap().x;
+        assert!(first_x > 8.0, "bullet offsets its text: {first_x}");
+        assert!(
+            second_x > first_x + 16.0,
+            "indented bullet moves right: {first_x} {second_x}"
+        );
+        assert!(
+            third_x > 8.0,
+            "numbered marker also offsets text: {third_x}"
+        );
+        assert!(list.width > plain.width, "markers grow the measured width");
     }
 
     #[test]

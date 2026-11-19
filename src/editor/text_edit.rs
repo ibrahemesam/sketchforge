@@ -2,8 +2,13 @@
 //! text styling (bold, italic, underline, strikethrough, size, color).
 
 use super::{Editor, Key, TextEdit};
-use crate::model::{Color, NodeId, NodeKind, Paint, TextSpan};
+use crate::model::{Color, ListKind, Node, NodeId, NodeKind, Paint, ParagraphStyle, TextSpan};
 use crate::text;
+
+fn paragraph_count(n: &Node) -> usize {
+    n.edited_text()
+        .map_or(1, |t| t.chars().filter(|&c| c == '\n').count() + 1)
+}
 
 impl Editor {
     fn text_len(&self, id: NodeId, idx: usize) -> usize {
@@ -18,6 +23,25 @@ impl Editor {
         let te = self.text_edit.as_ref()?;
         let a = te.anchor?;
         (a != te.caret).then(|| (a.min(te.caret), a.max(te.caret)))
+    }
+
+    /// Paragraph containing the caret in the open text edit of `id`, or the
+    /// first paragraph when that node is not being edited. Inspector actions
+    /// use this so Indent and Outdent follow the caret instead of always
+    /// changing the first line.
+    pub fn active_paragraph(&self, id: NodeId) -> usize {
+        let Some(te) = self.text_edit.as_ref().filter(|te| te.id == id) else {
+            return 0;
+        };
+        let Some(text) = self.doc.get(id).and_then(|n| n.edited_label(te.label)) else {
+            return 0;
+        };
+        let caret = te
+            .anchor
+            .unwrap_or(te.caret)
+            .min(te.caret)
+            .min(text.chars().count());
+        text.chars().take(caret).filter(|&c| c == '\n').count()
     }
 
     /// Replace the selection (or insert at the caret), keeping style spans attached.
@@ -435,6 +459,81 @@ impl Editor {
             crate::model::TextScript::Sub
         };
         self.style_text("script", |s| s.script = Some(next));
+    }
+
+    /// Apply a list marker to every hard-break paragraph of the selected text.
+    /// Applying the active marker again removes it. All paragraphs change in
+    /// one undo step, and the saved style omits entries that stay unstyled.
+    pub fn set_list_paragraphs(&mut self, kind: ListKind) {
+        let ids: Vec<NodeId> = self
+            .selection
+            .iter()
+            .copied()
+            .filter(|id| {
+                self.doc
+                    .get(*id)
+                    .is_some_and(|n| n.supports_label() || n.kind.text().is_some())
+            })
+            .collect();
+        if ids.is_empty() {
+            return;
+        }
+        self.begin("Change list style");
+        for id in &ids {
+            let mut tx = self.tx();
+            let Some(n) = tx.node_mut(*id) else { continue };
+            let count = paragraph_count(n);
+            let all = (0..count).all(|i| {
+                n.text_style
+                    .paragraphs
+                    .get(i)
+                    .is_some_and(|p| p.list == kind)
+            });
+            let next = if all { ListKind::None } else { kind };
+            n.text_style
+                .paragraphs
+                .resize(count, ParagraphStyle::default());
+            for p in &mut n.text_style.paragraphs {
+                p.list = next;
+            }
+        }
+        for id in &ids {
+            self.fit_text(*id);
+        }
+    }
+
+    /// Indent or outdent one paragraph, clamped to eight levels. One undo step.
+    pub fn set_paragraph_indent(&mut self, para: usize, delta: i32) {
+        let ids: Vec<NodeId> = self
+            .selection
+            .iter()
+            .copied()
+            .filter(|id| {
+                self.doc
+                    .get(*id)
+                    .is_some_and(|n| n.supports_label() || n.kind.text().is_some())
+            })
+            .collect();
+        if ids.is_empty() {
+            return;
+        }
+        self.begin("Change list indent");
+        for id in &ids {
+            let mut tx = self.tx();
+            let Some(n) = tx.node_mut(*id) else { continue };
+            let count = paragraph_count(n);
+            if para >= count {
+                continue;
+            }
+            n.text_style
+                .paragraphs
+                .resize(count, ParagraphStyle::default());
+            let cur = n.text_style.paragraphs[para].indent as i32;
+            n.text_style.paragraphs[para].indent = (cur + delta).clamp(0, 8) as u8;
+        }
+        for id in &ids {
+            self.fit_text(*id);
+        }
     }
 }
 

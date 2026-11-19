@@ -4740,7 +4740,7 @@ fn text_tab(
     st: &mut UiState,
     vis: f32,
     ids: &[NodeId],
-    _first: &Node,
+    first: &Node,
 ) {
     let Some(_guard) = section_begin(
         ui,
@@ -4759,6 +4759,10 @@ fn text_tab(
             "Border",
             "Shadow",
             "Formatted text",
+            "Bulleted list",
+            "Numbered list",
+            "Indent",
+            "Outdent",
             "Opacity",
             "Clear formatting",
         ],
@@ -4964,6 +4968,53 @@ fn text_tab(
                 crate::model::WritingDir::Vertical
             };
             apply(ed, "writing direction", ids, |n| n.dir = v);
+        }
+    });
+
+    let active_para = ed.active_paragraph(first.id);
+    ui.label(
+        RichText::new(
+            "List buttons apply to all paragraphs. Indent and Outdent affect the active paragraph.",
+        )
+        .size(theme::SECONDARY)
+        .color(theme::pal(ui).secondary),
+    );
+    let list_state = first
+        .text_style
+        .paragraphs
+        .get(active_para)
+        .copied()
+        .unwrap_or_default();
+    ui.horizontal(|ui| {
+        if icon_toggle(
+            ui,
+            "•",
+            list_state.list == crate::model::ListKind::Bullet,
+            "Bulleted list",
+        ) {
+            ed.set_list_paragraphs(crate::model::ListKind::Bullet);
+        }
+        if icon_toggle(
+            ui,
+            "1.",
+            list_state.list == crate::model::ListKind::Number,
+            "Numbered list",
+        ) {
+            ed.set_list_paragraphs(crate::model::ListKind::Number);
+        }
+        if ui
+            .button("Indent")
+            .on_hover_text("Indent this paragraph")
+            .clicked()
+        {
+            ed.set_paragraph_indent(active_para, 1);
+        }
+        if ui
+            .button("Outdent")
+            .on_hover_text("Outdent this paragraph")
+            .clicked()
+        {
+            ed.set_paragraph_indent(active_para, -1);
         }
     });
 
@@ -5614,6 +5665,28 @@ mod tests {
         assert!(text.contains("Scope"), "{text}");
         assert!(text.contains("Selection"), "{text}");
         assert!(text.contains("1 changed, 0 skipped"), "{text}");
+    }
+
+    #[test]
+    fn text_tab_exposes_list_and_indent_controls() {
+        let text = tab_panel_text(crate::ui::InspectorTab::Text, "", Some(NodeId(9)));
+        assert!(text.contains('•'), "{text}");
+        assert!(text.contains("1."), "{text}");
+        assert!(text.contains("Indent"), "{text}");
+        assert!(text.contains("Outdent"), "{text}");
+    }
+
+    #[test]
+    fn text_tab_help_lists_applies_to_all_paragraphs() {
+        let text = tab_panel_text(crate::ui::InspectorTab::Text, "", Some(NodeId(9)));
+        assert!(
+            text.contains("List buttons apply to all paragraphs"),
+            "{text}"
+        );
+        assert!(
+            text.contains("Indent and Outdent affect the active paragraph"),
+            "{text}"
+        );
     }
 
     #[test]

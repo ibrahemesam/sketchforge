@@ -2024,6 +2024,67 @@ fn clear_formatting_strips_character_overrides() {
 }
 
 #[test]
+fn bulleted_list_stores_metadata_and_outdent_joins_undo() {
+    use crate::model::ListKind;
+    let mut e = ed();
+    let kind = NodeKind::Text {
+        text: "one\ntwo\nthree".into(),
+        font_size: 16.0,
+        auto_width: true,
+        align: TextAlign::Left,
+    };
+    let id = e.add_node(
+        Node::new(NodeId(0), kind, Rect::new(100.0, 100.0, 200.0, 60.0)),
+        None,
+    );
+    e.select(vec![id]);
+    e.set_list_paragraphs(ListKind::Bullet);
+    let style = &e.doc.get(id).unwrap().text_style;
+    assert_eq!(style.paragraphs.len(), 3);
+    assert!(style.paragraphs.iter().all(|p| p.list == ListKind::Bullet));
+    e.set_paragraph_indent(1, 1);
+    assert_eq!(e.doc.get(id).unwrap().text_style.paragraphs[1].indent, 1);
+    e.undo();
+    assert_eq!(e.doc.get(id).unwrap().text_style.paragraphs[1].indent, 0);
+    e.redo();
+    assert_eq!(e.doc.get(id).unwrap().text_style.paragraphs[1].indent, 1);
+}
+
+#[test]
+fn active_paragraph_follows_caret_and_selection_start() {
+    let mut e = ed();
+    let id = e.add_node(
+        Node::new(
+            NodeId(0),
+            NodeKind::Text {
+                text: "one\ntwo\nthree".into(),
+                font_size: 16.0,
+                auto_width: true,
+                align: TextAlign::Left,
+            },
+            Rect::new(100.0, 100.0, 200.0, 60.0),
+        ),
+        None,
+    );
+    e.text_edit = Some(TextEdit {
+        id,
+        label: 0,
+        caret: 8,
+        anchor: Some(5),
+    });
+    assert_eq!(e.active_paragraph(id), 1);
+    e.text_edit = Some(TextEdit {
+        id,
+        label: 0,
+        caret: 10,
+        anchor: None,
+    });
+    assert_eq!(e.active_paragraph(id), 2);
+    e.text_edit = None;
+    assert_eq!(e.active_paragraph(id), 0);
+}
+
+#[test]
 fn text_padding_grows_box_and_offsets_content() {
     let mut e = ed();
     let kind = NodeKind::Text {
