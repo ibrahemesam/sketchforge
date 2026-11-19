@@ -2823,7 +2823,14 @@ fn update_styles(ed: &mut Editor, a: &Args) -> ToolResult {
                         Parent::of(tx.doc(), &page_id, tx.doc().get(*id).and_then(|n| n.parent));
                     let old = tx.doc().get(*id).unwrap().rect;
                     let mut n = tx.doc().get(*id).unwrap().clone();
-                    let applied = css::apply(&mut n, &styles, &parent.ctx());
+                    let mut applied = css::apply(&mut n, &styles, &parent.ctx());
+                    // draw.io's Text Path is a style flag rather than a CSS
+                    // property. Keep it beside the other text style keys.
+                    if let Some((_, value)) = styles.iter().find(|(k, _)| k == "textPath") {
+                        let on = value == "1" || value.eq_ignore_ascii_case("true");
+                        n.text_style.curve = on.then_some(0.6);
+                        applied.ignored.retain(|k| k != "textPath");
+                    }
                     let mut warn = None;
                     if let Some((src, mode)) = &applied.image {
                         match image_asset(src) {

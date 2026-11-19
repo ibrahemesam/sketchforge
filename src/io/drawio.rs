@@ -1486,6 +1486,9 @@ fn apply_text_style(n: &mut Node, st: &ParsedStyle) {
     if let Some(align) = st.get("align") {
         n.text_style.align = Some(align_for(Some(align)));
     }
+    if st.flag("textPath") {
+        n.text_style.curve = Some(0.6);
+    }
 }
 
 fn apply_label_style(n: &mut Node, st: &ParsedStyle) {
@@ -1519,6 +1522,9 @@ fn apply_label_style(n: &mut Node, st: &ParsedStyle) {
     }
     if st.flag("textShadow") || st.flag("fontShadow") {
         n.text_shadow = true;
+    }
+    if st.flag("textPath") {
+        n.text_style.curve = Some(0.6);
     }
 }
 
@@ -2272,6 +2278,9 @@ fn style_options(out: &mut String, style: &mut String, n: &Node) {
     }
     if let Some(family) = &n.text_style.family {
         let _ = write!(style, "fontFamily={family};");
+    }
+    if n.text_style.curve.is_some() {
+        style.push_str("textPath=1;");
     }
 }
 

@@ -454,6 +454,10 @@ pub struct TextStyle {
     /// Base script position for the whole run; spans may override it.
     #[serde(default, skip_serializing_if = "TextScript::is_normal")]
     pub script: TextScript,
+    /// Curved text height as a fraction of the font size. `None` is a straight
+    /// text run; `Some(0.6)` is the fixed arc used by draw.io's Text Path.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub curve: Option<f64>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub spans: Vec<TextSpan>,
     /// List settings by hard-break paragraph. Kept empty for ordinary text so

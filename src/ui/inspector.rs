@@ -5015,6 +5015,11 @@ fn text_tab(
             };
             apply(ed, "writing direction", ids, |n| n.dir = v);
         }
+        let curved = !dir_caps.is_empty() && dir_caps.iter().all(|n| n.text_style.curve.is_some());
+        if !dir_caps.is_empty() && icon_toggle(ui, "ARC", curved, "Text on a curve") {
+            let curve = if curved { None } else { Some(0.6) };
+            apply(ed, "text curve", ids, |n| n.text_style.curve = curve);
+        }
     });
 
     let active_para = ed.active_paragraph(first.id);
@@ -5764,6 +5769,12 @@ mod tests {
         assert!(text.contains("1."), "{text}");
         assert!(text.contains("Indent"), "{text}");
         assert!(text.contains("Outdent"), "{text}");
+    }
+
+    #[test]
+    fn text_tab_exposes_curve_toggle() {
+        let text = tab_panel_text(crate::ui::InspectorTab::Text, "", Some(NodeId(9)));
+        assert!(text.contains("ARC"), "{text}");
     }
 
     #[test]

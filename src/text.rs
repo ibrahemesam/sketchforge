@@ -1201,6 +1201,26 @@ fn effective_text_style(n: &crate::model::Node) -> Cow<'_, TextStyle> {
     }
 }
 
+/// Lift the middle of a straight run into an arc. Glyphs keep their upright
+/// orientation; their baselines follow a quadratic curve across the run. The
+/// layout grows downward by the curve height so the arc stays inside the box.
+fn apply_curve(mut l: TextLayout, font_size: f64, curve: Option<f64>) -> TextLayout {
+    let Some(curve) = curve.filter(|c| c.is_finite() && *c > 0.0) else {
+        return l;
+    };
+    let lift = curve.min(1.0) * font_size * 0.9;
+    let span = l.width.max(1.0);
+    for g in &mut l.glyphs {
+        let t = ((g.x + g.advance * 0.5) / span).clamp(0.0, 1.0);
+        g.baseline += lift * (1.0 - 4.0 * t * (1.0 - t));
+    }
+    for line in &mut l.lines {
+        line.baseline += lift;
+    }
+    l.height += lift;
+    l
+}
+
 /// Stack characters top to bottom, one per line (draw.io's vertical Writing
 /// Direction). Each character keeps its own weight, slant, size and color.
 fn layout_vertical(
@@ -1238,6 +1258,7 @@ fn layout_vertical(
             letter_spacing: ts.letter_spacing,
             align: None,
             script: st.script,
+            curve: None,
             spans: Vec::new(),
             paragraphs: Vec::new(),
         };
@@ -1360,12 +1381,15 @@ pub fn layout_node(n: &crate::model::Node) -> Option<TextLayout> {
         let wide = (!auto_width).then_some(wide);
         // Any bidi content, or an explicit direction override, goes through
         // the bidi layout; the prefix below steers its paragraph direction.
-        if rtl || arabic::has_arabic(text) || !matches!(n.dir, crate::model::WritingDir::Auto) {
-            return Some(layout_bidi(
-                text, *font_size, color, &ts, wide, *align, para,
-            ));
-        }
-        return Some(layout_rich(text, *font_size, color, &ts, wide, *align));
+        let l = if rtl
+            || arabic::has_arabic(text)
+            || !matches!(n.dir, crate::model::WritingDir::Auto)
+        {
+            layout_bidi(text, *font_size, color, &ts, wide, *align, para)
+        } else {
+            layout_rich(text, *font_size, color, &ts, wide, *align)
+        };
+        return Some(apply_curve(l, *font_size, ts.curve));
     }
     if n.is_frame() {
         return Some(layout_rich(
@@ -1407,13 +1431,17 @@ fn layout_shape_label(n: &crate::model::Node, text: &str) -> Option<TextLayout> 
     } else {
         None
     };
-    Some(layout_rich(
-        text,
+    Some(apply_curve(
+        layout_rich(
+            text,
+            size,
+            color,
+            &ts,
+            width,
+            n.text_style.align.unwrap_or(TextAlign::Center),
+        ),
         size,
-        color,
-        &ts,
-        width,
-        n.text_style.align.unwrap_or(TextAlign::Center),
+        ts.curve,
     ))
 }
 
