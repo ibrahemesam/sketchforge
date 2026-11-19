@@ -408,7 +408,9 @@ documentation closeout completes the round.
 
 **Round 51 (committed 4e5b64d, pushed).** Closed stale parity rows DIA-02, DIA-06, CUS-16, DIA-01, SHP-17, UIX-04 and UIX-11 as evidence-only doc updates against HEAD behavior and existing tests. DIA-07 was implemented and verified with focused checks: replace-one/current-match support in `src/find.rs` and `src/ui/findbar.rs`, covered by `replace_one_changes_only_the_current_match_and_is_one_undo_step` and `cargo test --lib find`. Parity docs recorded VERIFIED 135 and IN_PROGRESS 3 at that commit.
 
-**Round 52 (local, commit/push pending).** Closed stale DISCOVERED rows CON-09, CON-11, CON-15, TXT-20, GEN-06, CUS-07, CUS-08, CUS-09 and CUS-12 as evidence-only doc updates against HEAD behavior and existing tests. No application code changed. Parity docs now record VERIFIED 144, DISCOVERED 24 and IN_PROGRESS 3. Full `cargo test` and release build were not rerun.
+**Round 52 (committed 5ffd939, pushed).** Closed stale DISCOVERED rows CON-09, CON-11, CON-15, TXT-20, GEN-06, CUS-07, CUS-08, CUS-09 and CUS-12 as evidence-only doc updates against HEAD behavior and existing tests. No application code changed.
+
+**Round 53 (local, commit/push pending).** Closed stale ANALYZED/DISCOVERED rows CON-10, CON-12, CON-16, CON-19, DOC-08, DOC-10 and DOC-11 as evidence-only doc updates against HEAD behavior and existing tests. No application code changed. Parity docs now record VERIFIED 151, ANALYZED 3, DISCOVERED 18 and IN_PROGRESS 3. Full `cargo test` and release build were not rerun.
 
 **Scope.**
 

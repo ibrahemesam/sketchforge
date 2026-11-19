@@ -1,6 +1,6 @@
 # Sketch agent session state
 
-Last updated: 2026-11-19 (round 52 stale-row closures, local pending commit/push).
+Last updated: 2026-11-19 (round 53 stale-row closures, local pending commit/push).
 
 ## Objective
 
@@ -627,12 +627,15 @@ CUS-16, DIA-01, SHP-17, UIX-04 and UIX-11 closed as evidence-only doc updates,
 and DIA-07 replace-current-match was implemented and verified with focused
 checks.
 
-Round 52 (local, pending commit/push) closed stale DISCOVERED rows CON-09,
-CON-11, CON-15, TXT-20, GEN-06, CUS-07, CUS-08, CUS-09 and CUS-12 as
-evidence-only doc updates against HEAD behavior and existing tests. No
-application code changed. Parity docs record VERIFIED 144, DISCOVERED 24 and
-IN_PROGRESS 3. `git diff --check` and parity doc checks should pass before
-commit. Full `cargo test` and release build were not rerun.
+Round 52 was committed as `5ffd939` and pushed: stale CON/CUS/GEN/TXT rows were
+closed as evidence-only doc updates.
+
+Round 53 (local, pending commit/push) closed stale ANALYZED/DISCOVERED rows
+CON-10, CON-12, CON-16, CON-19, DOC-08, DOC-10 and DOC-11 as evidence-only doc
+updates against HEAD behavior and existing tests. No application code changed.
+Parity docs record VERIFIED 151, ANALYZED 3, DISCOVERED 18 and IN_PROGRESS 3.
+`git diff --check` and parity doc checks should pass before commit. Full
+`cargo test` and release build were not rerun.
 
 ## Blockers
 
@@ -648,14 +651,14 @@ commit. Full `cargo test` and release build were not rerun.
 
 ## Exact next task
 
-Commit and `git push --quiet` the round 52 evidence-only parity/doc closures on
+Commit and `git push --quiet` the round 53 evidence-only parity/doc closures on
 `agent/drawio-features`, keeping parity checks passing. After pushing, continue
-verifying the next stale `DISCOVERED` rows at HEAD (high-value candidates:
-CON-10, DOC-08, DOC-10, DOC-11, DOC-14, CAN-15, CAN-16, TXT-19, CON-12, CON-16,
-CON-19 and template/diagram-pack rows that may already be implemented, but
-confirm each carefully against source and tests). Capture a failing test before
-fixes when a real code gap exists; otherwise close as evidence-only with cited
-HEAD identifiers and update verification/session docs. Do not restart completed
+verifying the next stale rows at HEAD (high-value candidates: DOC-14, DIA-08,
+DIA-09, CAN-15, CAN-16, TXT-19, CON-13/CON-17 status consistency, and
+template/diagram-pack rows such as GEN-01/02/03/05/07/08/09/11/12/13/14/15 where
+"working tree" notes may now be committed). Capture a failing test before fixes
+when a real code gap exists; otherwise close as evidence-only with cited HEAD
+identifiers and update verification/session docs. Do not restart completed
 rounds. Keep blocked/deferred items blocked. No release, tag, or PR.
 
 ## Commands
