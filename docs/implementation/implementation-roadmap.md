@@ -224,6 +224,19 @@ a verified 490.87 s live recording is in
 printed PDF beside it. The implementation was committed as 97dfc51; this
 documentation closeout completes the round.
 
+**Committed (2026-11-19, round 40).** DOC-09 closed on
+`agent/drawio-features`. A page stores an image asset id, fit mode and opacity.
+The asset registry owns the bytes by content hash, and save, embedded bundles and
+reload carry them. The renderer paints the image in screen space behind the grid
+and content, and PNG, SVG and PDF exports include it for whole-page scopes. The
+Background dialog gains Choose image, Clear, fit mode and opacity controls. The
+first failure had no background image model. Focused tests, the serial skip suite
+(503 tests), final checks and a verified 37.10 s live recording in
+`.artifacts/round40/evidence/evidence-20261119-132330-5a28e0/report.md` are in
+`.artifacts/round40/`. Using another page as a background stays deferred because
+it needs cycle checks. The implementation was committed as a63e090; this
+documentation closeout completes the round.
+
 **Scope.**
 
 - A selection context resolver that classifies the current selection as document, single

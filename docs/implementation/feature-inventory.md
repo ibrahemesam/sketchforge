@@ -253,8 +253,8 @@ Runtime screenshots are in `.artifacts/drawio-sidebar/`, `.artifacts/round17/`,
 `.artifacts/round29/`, `.artifacts/round30/`, `.artifacts/round31/`,
 `.artifacts/round32/`, and `.artifacts/round33/`.
 
-Still absent or deliberately limited: page background images and page-reference
-backgrounds, paper-aware export and print geometry, HTML and PDF diagram-data carriers,
+Still absent or deliberately limited: page-reference backgrounds,
+paper-aware export and print geometry, HTML and PDF diagram-data carriers,
 draw.io's own embedded metadata format, a generic property bag beyond `Style` JSON,
 custom shape library XML and public galleries, a parametric custom shape editor, a shape
 properties dialog, and the rest of the inventory rows below.
@@ -263,23 +263,23 @@ gaps landed on 2026-10-26: a label without a solid background cuts the line behi
 text, and the gap follows label moves, reroutes, and export. Page view is a view
 preference and is not part of the page file.
 
-**Size:** 231 capabilities in 13 domains. 116 are verified against committed tests or directly exercised code, 22 are implemented without a focused check, 84 are absent, and 9 are analysed or partial.
+**Size:** 231 capabilities in 13 domains. 117 are verified against committed tests or directly exercised code, 22 are implemented without a focused check, 83 are absent, and 9 are analysed or partial.
 
 ## Counts
 
 | Status | Count | Meaning |
 |---|---:|---|
-| VERIFIED | 116 | Committed test or directly exercised code path proves the behavior. |
+| VERIFIED | 117 | Committed test or directly exercised code path proves the behavior. |
 | IMPLEMENTED | 22 | Code exists and the path is readable, but no focused test or this-session runtime check covers it. |
 | IN_PROGRESS | 3 | Partial code at HEAD; the acceptance criteria are not met. |
 | ANALYZED | 6 | draw.io behavior is documented and a native design is recorded, but no code exists. |
-| DISCOVERED | 50 | draw.io behavior is documented here; no code or design exists. |
+| DISCOVERED | 49 | draw.io behavior is documented here; no code or design exists. |
 | BLOCKED | 34 | Work cannot proceed without a missing subsystem, external service, licensing decision, or explicit scope decision. |
 | **Total** | **231** | |
 
 | Domain | Rows | VERIFIED | IMPLEMENTED | IN_PROGRESS | ANALYZED | DISCOVERED | BLOCKED |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| DOC Document, projects, pages, and diagram settings | 15 | 8 | 0 | 1 | 0 | 5 | 1 |
+| DOC Document, projects, pages, and diagram settings | 15 | 9 | 0 | 1 | 0 | 4 | 1 |
 | CAN Canvas, navigation, grid, and guides | 16 | 12 | 1 | 0 | 0 | 3 | 0 |
 | SHP Shapes, frames, transforms, and paths | 26 | 18 | 5 | 0 | 0 | 2 | 1 |
 | CON Connectors and arrows | 21 | 11 | 2 | 0 | 1 | 7 | 0 |
@@ -333,7 +333,7 @@ Project lifecycle, pages, and settings that belong to a page or document.
 | DOC-06 | Multiple pages with independent state | A project holds any number of pages; each page keeps its own canvas, camera, selection, and undo history. | [Add multiple pages to your diagrams](https://www.drawio.com/docs/manual/pages/) | src/editor/pages.rs, src/ui/pages.rs | **VERIFIED** | Edit page A, switch to B, undo in B, and return to A; A keeps its content, camera, and history. | One page is active at a time. Test: `m2_pages_keep_separate_canvases_history_and_cameras`. |
 | DOC-07 | Page add, rename, duplicate, delete, and reorder | The Pages list supports creating, renaming, duplicating, deleting, and dragging pages into a new order. | [Add multiple pages to your diagrams](https://www.drawio.com/docs/manual/pages/) | src/editor/pages.rs, src/ui/pages.rs | **VERIFIED** | Every page action survives save and reopen, including order and names. | Deleting the last page is guarded. Tests: `pages_persist_with_names_order_and_deletions`, `m2_copy_paste_between_pages_and_projects`. |
 | DOC-08 | Page background color | The Diagram tab sets a background color that prints and exports with the page. | [Set global diagram options in the format panel](https://www.drawio.com/docs/manual/editor/panels/diagram-options/) | None | **DISCOVERED** | Two pages keep different background colors across reload, and exports include the active page color. | No background field at HEAD. Page settings are not page-scoped yet. |
-| DOC-09 | Background image or another page as background | A page can use an image or a diagram page behind its content. | [Set global diagram options in the format panel](https://www.drawio.com/docs/manual/editor/panels/diagram-options/) | None | **DISCOVERED** | Set an image background, reload, and export with the background preserved. | Needs asset ownership and page-reference checks before implementation. |
+| DOC-09 | Page background image | A page can use an image behind its content; another page as a background is deferred pending cycle checks. | [Set global diagram options in the format panel](https://www.drawio.com/docs/manual/editor/panels/diagram-options/) | src/model/settings.rs, src/assets.rs, src/render/draw.rs, src/render/scene.rs, src/render/mesh.rs, src/render/gpu.rs, src/io/svg.rs, src/io/png.rs, src/io/pdf.rs, src/ui/inspector.rs, src/app.rs | **VERIFIED** | Set a page image, save and reload, then export to PNG, SVG and PDF; the image persists and draws behind the grid and content without moving nodes. | Assets are owned by content hash and travel with embedded page bundles. Tests: `background_image_survives_project_save_and_reload`, `background_image_exports_to_svg_and_pdf`, `background_image_renders_in_png_export`, `background_image_draws_behind_grid_without_moving_content`, `embedded_bundle_carries_a_background_only_asset`, `background_image_defaults_to_none_and_round_trips`, `background_dialog_exposes_image_controls`, `used_by_includes_the_page_background`. Live Xvfb evidence in `.artifacts/round40/evidence/`. |
 | DOC-10 | Paper size and orientation | The Diagram tab selects A4, Letter, and other paper sizes plus portrait or landscape. | [Set global diagram options in the format panel](https://www.drawio.com/docs/manual/editor/panels/diagram-options/) | None | **DISCOVERED** | The page outline and print/PDF dimensions follow the selected paper size and orientation. | No paper model at HEAD. An uncommitted attempt to add one is excluded from this baseline. |
 | DOC-11 | Page view | Page view constrains the grid and printable area to the selected paper instead of filling the canvas. | [Set global diagram options in the format panel](https://www.drawio.com/docs/manual/editor/panels/diagram-options/) | None | **DISCOVERED** | Toggle page view and see the page boundary at the selected paper size without moving content. | Depends on DOC-10. |
 | DOC-12 | Per-page grid size, color, and visibility | Each page remembers its own grid spacing, color, and whether the grid is shown. | [Set global diagram options in the format panel](https://www.drawio.com/docs/manual/editor/panels/diagram-options/) | src/options.rs, src/editor/mod.rs | **IN_PROGRESS** | Two pages keep different grid settings across page switches, save, and reload. | Grid size is app-global at HEAD in options.json and Editor::grid_step. There is no grid color and no page-scoped field. Uncommitted work is excluded. |

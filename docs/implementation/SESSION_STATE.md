@@ -1,6 +1,6 @@
 # Sketch agent session state
 
-Last updated: 2026-11-19 (round 39).
+Last updated: 2026-11-19 (round 40).
 
 ## Objective
 
@@ -16,10 +16,10 @@ Branch `agent/drawio-features` tracks `fork/main`, which points at
 7261dfd with the repo presentation and MIT license. Round 37 implementation was
 pushed as 858d1a0 with the first-run onboarding tour. Round 38 was pushed as
 5802ded plus its docs closeout with paragraph lists and indentation. Round 39
-implementation is committed locally as 97dfc51 with the print dialog and
-paper-sized PDF output; its documentation closeout is committed after it in this
-branch. Do not create releases or deploy Vercel; plain `git push` sends commits
-to the fork.
+was pushed as 97dfc51 plus its docs closeout with the print dialog and
+paper-sized PDF output. Round 40 was pushed as a63e090 with the per-page
+background image, followed by its docs closeout in this branch. Do not create
+releases or deploy Vercel; plain `git push` sends commits to the fork.
 
 The full sidebar spec was implemented and verified in round 6 (see
 `.opencode/MEMORY.md`). Round 7 closed the transparent connector label gap.
@@ -380,8 +380,26 @@ assertions is in
 `.artifacts/round39/evidence/evidence-20261119-124018-fd7149/report.md`, with the
 printed Letter PDF saved beside it. The dialog position shifts between opens,
 so live clicks used a fresh open each time; fixed pixel coordinates are not
-reliable across opens. The code commit 97dfc51 still needs a plain `git push`;
-the parity docs now record VERIFIED 116 and DISCOVERED 50.
+reliable across opens. Both commits were pushed; the parity docs recorded
+VERIFIED 116 and DISCOVERED 50 at the end of the round.
+
+Round 40 closed DOC-09, the per-page background image. A page stores an image
+asset id, fit mode and opacity; the registry owns the bytes by content hash, and
+save, embedded bundles and reload carry them. The renderer paints the image in
+screen space behind the grid and content, and PNG, SVG and PDF exports include
+it for whole-page scopes only. The Background dialog gained Choose image, Clear,
+fit mode and opacity controls. The first failure had no background image model
+and is in `.artifacts/round40/failure.log`. Four integration tests and five lib
+tests pass; the serial skip suite passes 503 tests with the known
+`m2_pages_panel_screenshot` failure skipped. fmt, clippy, diff-check and release
+build pass. A verified 37.10 s Xvfb `:105` recording with five passing
+assertions is in
+`.artifacts/round40/evidence/evidence-20261119-132330-5a28e0/report.md`. The
+image had to be seeded into a scratch project because native rfd dialogs do not
+appear under bare Xvfb. A fresh Xvfb display mapped no usable app window, so
+the working display and `xdotool windowfocus` were reused. Both commits were
+pushed; the parity docs recorded VERIFIED 117 and DISCOVERED 49 at the end of
+the round.
 
 ## Blockers
 
@@ -398,19 +416,20 @@ in `.opencode/MEMORY.md`).
 
 ## Exact next task
 
-Round 40 should close DOC-09, a background image or another page as a page
-background. Confirm the inventory row first and check whether any background
-image work landed; several DISCOVERED rows carry stale "no code at HEAD" notes
-even though the feature is committed, so verify before writing a failure test.
-The scoped target is a background image asset on a page: it survives save and
-reload, renders behind the grid without moving content, and exports into PNG,
-SVG and PDF. Reuse `crate::assets` for ownership and the page settings model for
-scope; another page as a background can stay deferred if it needs cycle checks.
-Start with a failing test in `tests/` for persistence and export. Use a fresh
-scratch folder and a new Xvfb display for live evidence. No release or tag.
-Do not restart UIX-14, TXT-21, STY-23, IO-19, CAN-06, CON-09, CON-13, CON-17,
-UIX-04, STY-13, STY-14, STY-21, or STY-22: their commands, editor tests and
-runtime evidence are already committed. M9 collaboration stays blocked without
+Round 41 should close TXT-19, vertical text. The inventory row at
+`feature-inventory.md:452` is still DISCOVERED, and the model at HEAD only uses
+writing direction for bidi order; there is no vertical stacking or Text tab
+toggle. Check the row and the renderer again before writing the failure test:
+many DISCOVERED limitation notes are stale, including CON-11, CON-12, CON-18,
+DOC-08 and the generated packs, which are already committed. The scoped target
+is a per-text vertical mode that stacks glyphs downward while the node stays
+upright, reports the swapped box size for hit testing, survives save and reload,
+and exports in PNG and SVG. Do not reuse shape rotation from SHP-19. Start with
+a failing test for the model and renderer, then add the Text tab control. Use a
+fresh scratch folder and a new Xvfb display for live evidence. No release or
+tag. Do not restart UIX-14, TXT-21, STY-23, IO-19, CAN-06, CON-09, CON-13,
+CON-17, UIX-04, STY-13, STY-14, STY-21, STY-22 or DOC-09: their commands,
+editor tests and runtime evidence are already committed. M9 collaboration stays blocked without
 a server, conflict model, and permissions. GEN-04 AI generation and GEN-10
 vendor stencils also stay blocked. IO-17, IO-18 and IO-20 remain blocked or
 deferred, as do the HTML and PDF parts of DOC-15.
