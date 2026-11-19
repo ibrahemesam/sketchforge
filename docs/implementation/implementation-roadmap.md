@@ -426,7 +426,9 @@ documentation closeout completes the round.
 
 **Round 60 (committed 8f85118, pushed).** Closed stale DISCOVERED rows GEN-07, GEN-08, GEN-09, GEN-11, GEN-12, GEN-13, GEN-14 and GEN-15 as evidence-only doc updates against HEAD bundled template packs and existing tests, with limitations preserved where acceptance remains partial. No application code changed.
 
-**Round 61 (local, commit/push pending).** Cleaned stale "Working tree" wording on blocked rows DOC-15, GEN-04 and GEN-10 to reflect committed HEAD state while keeping statuses/acceptance limitations unchanged. No application code changed. Parity totals unchanged (VERIFIED 167, IMPLEMENTED 29, DISCOVERED 2, BLOCKED 29, ANALYZED 1 and IN_PROGRESS 3). Full `cargo test` and release build were not rerun.
+**Round 61 (committed 8734350, pushed).** Cleaned stale "Working tree" wording on blocked rows DOC-15, GEN-04 and GEN-10 to reflect committed HEAD state while keeping statuses/acceptance limitations unchanged. No application code changed.
+
+**Round 62 (local, commit/push pending).** Closed stale DISCOVERED row CUS-11 as an evidence-only doc update against HEAD shape metadata/property editing and existing tests. No application code changed. Parity docs now record VERIFIED 167, IMPLEMENTED 30, DISCOVERED 1, BLOCKED 29, ANALYZED 1 and IN_PROGRESS 3. Full `cargo test` and release build were not rerun.
 
 **Scope.**
 

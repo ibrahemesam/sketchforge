@@ -1,6 +1,6 @@
 # Sketch agent session state
 
-Last updated: 2026-11-19 (round 61 blocked-row wording cleanup, local pending commit/push).
+Last updated: 2026-11-19 (round 62 shape-properties row closure, local pending commit/push).
 
 ## Objective
 
@@ -651,13 +651,15 @@ closed with a focused layout test and parity doc updates.
 Round 60 was committed as `8f85118` and pushed: stale diagram-pack rows were
 closed as evidence-only doc updates with partial-acceptance limitations.
 
-Round 61 (local, pending commit/push) cleaned stale "Working tree" wording on
-blocked rows DOC-15, GEN-04 and GEN-10 to reflect committed HEAD state while
-keeping statuses and acceptance limitations unchanged. No application code
-changed. Parity totals unchanged (VERIFIED 167, IMPLEMENTED 29, DISCOVERED 2,
-BLOCKED 29, ANALYZED 1 and IN_PROGRESS 3). `git diff --check` and parity doc
-checks should pass before commit. Full `cargo test` and release build were not
-rerun.
+Round 61 was committed as `8734350` and pushed: stale blocked-row wording was
+cleaned to reflect committed HEAD state.
+
+Round 62 (local, pending commit/push) closed stale DISCOVERED row CUS-11 as an
+evidence-only doc update against HEAD shape metadata/property editing and
+existing tests. No application code changed. Parity docs record VERIFIED 167,
+IMPLEMENTED 30, DISCOVERED 1, BLOCKED 29, ANALYZED 1 and IN_PROGRESS 3.
+`git diff --check` and parity doc checks should pass before commit. Full
+`cargo test` and release build were not rerun.
 
 ## Blockers
 
@@ -673,11 +675,11 @@ rerun.
 
 ## Exact next task
 
-Commit and `git push --quiet` the round 61 blocked-row wording cleanup on
-`agent/drawio-features`, keeping parity checks passing. After pushing, continue
-verifying remaining stale rows at HEAD (remaining DISCOVERED rows CUS-11 and
-UIX-12 appear genuinely absent/unaudited; inspect for any other stale
-"working tree" notes or rows whose HEAD evidence now satisfies acceptance).
+Commit and `git push --quiet` the round 62 shape-properties parity/doc closure
+on `agent/drawio-features`, keeping parity checks passing. After pushing,
+continue verifying remaining stale rows at HEAD (remaining DISCOVERED row UIX-12
+appears genuinely unaudited/absent as specified; inspect for any other rows
+whose HEAD evidence now satisfies acceptance or needs corrected evidence).
 Capture a failing test before fixes when a real code gap exists; otherwise close
 as evidence-only with cited HEAD identifiers and update verification/session
 docs. Do not restart completed rounds. Keep blocked/deferred items blocked. No
