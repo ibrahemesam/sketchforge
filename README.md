@@ -2,36 +2,30 @@
 
 ![Sketchforge hero](docs/assets/hero.webp)
 
-[![Rust](https://img.shields.io/badge/Rust-1.95%2B-orange.svg)](https://www.rust-lang.org)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Platforms](https://img.shields.io/badge/platforms-macOS%20%7C%20Linux-lightgrey.svg)](#build-and-run)
+[![Platforms](https://img.shields.io/badge/platforms-macOS%20%7C%20Linux-lightgrey.svg)](#get-started)
 
-Sketchforge is a local-first infinite canvas for diagrams, whiteboards and vector sketches. It runs as a native Rust app on `wgpu`, `winit` and `egui`. Projects live in plain folders on your disk. Nothing needs an account, a cloud service or a browser tab.
+Sketchforge is a native infinite canvas for diagrams, whiteboards and vector sketches. Your work stays in a folder on your computer. There is no account, no cloud sync and no browser tab to keep open.
 
-It is also a vibe-coded project. Most of the implementation was written by AI agents from prompts, then built, tested and corrected in this repo. That is part of its history, not a marketing line. If you want a hand-designed, stable product, this is not it yet. If you want a fast canvas you can inspect, fork and push further, you are in the right place.
-
-## What you can do
-
-- Draw frames, shapes, paths and text on an infinite canvas.
-- Edit vectors with booleans, corners and snapping.
-- Connect shapes with arrows that re-route when you move things.
-- Switch to whiteboard mode for rough shapes, sticky notes, a laser pointer and a shape library.
-- Work across pages and projects, with undo and redo for each page.
-- Import SVG and Excalidraw files. Import and export draw.io diagrams.
-- Export PNG, SVG and PDF, including frame exports at 1x or 2x.
-- Drive the running app from an MCP client to create shapes, edit styles and export files.
+Use it for system diagrams, brainstorm boards, UI sketches or a quick drawing you want to keep editable. Shapes stay as shapes, arrows follow the nodes they connect and the canvas keeps going in every direction.
 
 ![Feature gallery](docs/assets/features.webp)
 
-## Why it exists
+## What you can do
 
-Sketchforge grew out of a clean-room study of Paper Desktop. `analysis/PAPER_ARCHITECTURE.md` records what that app does, based on a licensed copy. No Paper code, shaders, icons, fonts or assets are in this repo. Sketchforge is not affiliated with or endorsed by Paper.
+- Draw frames, shapes, freehand paths, sticky notes and text.
+- Connect shapes with arrows that reroute when you move either end.
+- Switch to whiteboard mode for rough strokes, a laser pointer and a shape library.
+- Edit vectors with booleans, corners and snapping.
+- Work across pages and keep a separate undo history for each one.
+- Search for nodes, then edit their styles, labels, tags and links in the right panel.
+- Import SVG, Excalidraw and draw.io diagrams. Export back to draw.io XML.
+- Export PNG, SVG and PDF, including single frames at 1x or 2x.
+- Drive the running app from an MCP client when you want scripts to draw for you.
 
-The old app name was Sketch, and before that paper-rs. The file format and environment variables still accept the old names.
+## Get started
 
-## Quick start
-
-You need Rust 1.95 or newer. Install it with [rustup](https://rustup.rs).
+You need Rust 1.95 or newer. Install it with [rustup](https://rustup.rs), then build and run the app:
 
 ```sh
 cargo build --release
@@ -43,19 +37,11 @@ cargo build --release
 
 On macOS the release build uses Metal. On Linux it uses Vulkan through wgpu. Shortcuts use `Cmd` on macOS and `Ctrl` elsewhere.
 
-### Optional MCP bridge
+A first-run tour shows the three basic moves: draw a shape, connect two shapes and export the result. Press `/` any time to see the full shortcut list. Press `Escape` to close the tour.
 
-Build `sketch-rs-mcp` with the main binary and point an MCP client at it. The bridge talks to the running app over localhost and exposes tools for selection, creation, styling, export and project navigation.
+## Your files
 
-```sh
-cargo build --release --bin sketch-rs-mcp
-```
-
-The app listens on `SKETCH_RS_MCP_PORT` when that variable is set. See `src/mcp/tools.rs` for the current tool list.
-
-## Where your files go
-
-Each project is a folder.
+Each project is a folder, and each page is a JSON file.
 
 ```text
 ~/Documents/sketch-rs/<project>/
@@ -64,13 +50,11 @@ Each project is a folder.
     650eff920501e1d1.json
 ```
 
-Pages are JSON files. They are versioned and migrate on load. Autosave writes through a temporary file and renames it into place, so a crash should not leave a half-written page. Set `SKETCH_RS_HOME` to put projects somewhere else.
+Sketchforge writes through a temporary file before it replaces a page, so a crash should not leave a half-written document. Set `SKETCH_RS_HOME` if you want projects somewhere else.
 
 Sketchforge moves `~/Documents/paper-rs` to `~/Documents/sketch-rs` on first launch. It still opens `.paper-rs` documents and the old `PAPER_RS_*` environment variables.
 
 ## Controls
-
-The app shows a shortcut sheet from the help menu. The ones people use first:
 
 | Action | macOS | Linux |
 | --- | --- | --- |
@@ -88,25 +72,27 @@ The app shows a shortcut sheet from the help menu. The ones people use first:
 
 Trackpad pinch zooms on macOS. Middle drag and space drag pan everywhere.
 
-## Repo layout
+## Import, export and automation
 
-```text
-src/app.rs              winit loop and window setup
-src/editor/             tools, input, history, pages, commands
-src/model/              nodes, styles, paint, layers, document settings
-src/render/             wgpu scene, tessellation, draw ops, rough strokes
-src/io/                 project files, SVG/PDF/PNG, Excalidraw and draw.io
-src/ui/                 sidebar, inspector, palette, find and templates
-src/mcp/                tools, HTML/CSS mapping, localhost server
-tests/                  headless render, import/export, MCP and theme checks
-docs/screenshots/       images produced by cargo test
-docs/assets/            README artwork
-site/                   static download page, see site/README.md
-scripts/                release and README art generators
-AGENTS.md               workflow for coding agents
+The right panel handles PNG, SVG, PDF and draw.io exports. Frames export at 1x or 2x. The command line can also export a page without opening the window.
+
+For scripted work, build the optional MCP bridge and point an MCP client at the running app:
+
+```sh
+cargo build --release --bin sketch-rs-mcp
 ```
 
-## Checks
+Set `SKETCH_RS_MCP_PORT` before starting Sketchforge. The bridge talks over localhost and exposes tools for selection, creation, styling, search, export and page navigation. See `src/mcp/tools.rs` for the current tool list.
+
+## Project background
+
+Sketchforge is a clean-room reimplementation modeled on Paper Desktop. `analysis/PAPER_ARCHITECTURE.md` records what that app does, based on a licensed copy. No Paper code, shaders, icons, fonts or assets are in this repo. Sketchforge is not affiliated with or endorsed by Paper.
+
+The old app name was Sketch, and before that paper-rs. The file format and environment variables still accept the old names. Most of the implementation was written by AI agents from prompts, then built, tested and corrected in this repo.
+
+## Development
+
+Pull requests and patches are welcome. Keep changes local-first and avoid adding analytics or network calls. `AGENTS.md` describes the agent workflow, and `site/README.md` covers the download page.
 
 ```sh
 cargo fmt --check
@@ -116,7 +102,7 @@ cargo build --release
 git diff --check
 ```
 
-The GPU-backed tests draw real frames. On a machine without a usable adapter, most of them return early. `m2_pages_panel_screenshot` is currently flaky in headless Linux runs and is skipped in the command above.
+The GPU-backed tests draw real frames. On a machine without a usable adapter, most of them return early. `m2_pages_panel_screenshot` is currently flaky in headless Linux runs and is skipped in the command above. Tests rewrite images under `docs/screenshots/`, so restore those files unless a change is meant to update them. Generated evidence belongs under the ignored `.artifacts/` folder.
 
 The site has its own checks:
 
@@ -126,13 +112,7 @@ npm run check
 npm run build
 ```
 
-## Known gaps
-
-This is a working app, not a finished clone. Collaboration, cloud stencils and AI generation are not implemented. Some draw.io styles are imported as approximations. HTML and PDF export cover documents but not every browser-specific detail. The README screenshots are regenerated by tests, so a GPU change can make them differ from the committed files.
-
-## Contributing
-
-Issues and patches are welcome. Keep changes local-first, avoid adding analytics or network calls, and run the checks above. Generated images under `docs/screenshots/` should only change when the change is meant to update them. Generated evidence belongs under the ignored `.artifacts/` folder.
+Collaboration, cloud stencils and AI generation are not implemented. Some draw.io styles import as approximations. HTML and PDF export cover documents but not every browser-specific detail.
 
 ## License
 
