@@ -1,6 +1,6 @@
 # Sketch agent session state
 
-Last updated: 2026-11-19 (round 48).
+Last updated: 2026-11-19 (welcome dialog and README).
 
 ## Objective
 
@@ -30,8 +30,9 @@ pushed. Round 46 was pushed as 221cf0f with the MCP reverse_connectors tool,
 904a29e with its docs closeout and 083ab91 marking it pushed. Round 47 was pushed
 as 2ec2fbd with MCP tag search, a610877 with its docs closeout and 45df3b6
 marking it pushed. Round 48 was pushed as cca0145 with tooltip truncation and
-ac17535 with its docs closeout. Do not create releases or deploy Vercel; plain
-`git push` sends commits to the fork.
+ac17535 with its docs closeout. The welcome text fix was pushed as a85f308 and
+the product-focused README as 87fced5. Do not create releases or deploy Vercel;
+plain `git push` sends commits to the fork.
 
 The full sidebar spec was implemented and verified in round 6 (see
 `.opencode/MEMORY.md`). Round 7 closed the transparent connector label gap.
@@ -569,6 +570,18 @@ stopped and replaced. The code was committed after the recording so the report
 names `unknown`. Implementation committed as cca0145; both commits were pushed
 and parity docs recorded VERIFIED 125, ANALYZED 5 and DISCOVERED 42 at closeout.
 
+The user then reported overlapping welcome text and asked for a product-focused
+README. The dialog passed 1.45 to egui as a line height, but egui reads it as
+points. The body galley was 2 px tall, so both lines drew on top of each other.
+The line height is now 18.0, and `welcome_body` owns the body text. The focused
+test builds a galley and asserts a height of at least 30 px. It fails with the
+old value and passes at 36 px with the fix. Evidence is in
+`.artifacts/welcome-fix/`. The README now leads with product value, use cases,
+file ownership and shortcuts. Developer details stay at the bottom. Links and
+the Rust 1.95 requirement were checked. fmt, clippy, release build, diff-check,
+the parity docs check and 537 serial tests pass with the known screenshot test
+skipped, and screenshots were restored. All commits were pushed.
+
 ## Blockers
 
 GEN-04 AI generation stays blocked: it needs a hosted model, credentials,
@@ -585,7 +598,10 @@ in `.opencode/MEMORY.md`).
 ## Exact next task
 
 Round 49 should close a stale DISCOVERED row that is already implemented at
-HEAD, starting with DIA-03, custom links. `Node.link` is a field in
+HEAD, starting with DIA-03, custom links. The welcome text fix and README
+rewrite are done and need no further work. Round 49 work is still stashed as
+`stash@{0}` with its first failure in `.artifacts/round49/failure.log`.
+`Node.link` is a field in
 `src/model/node.rs`, `src/editor/mod.rs` follows Cmd/Ctrl click, the Data tab has
 an Open Link button, page targets switch pages, external targets are limited to
 http, https and mailto with confirmation, draw.io maps the link attribute and
