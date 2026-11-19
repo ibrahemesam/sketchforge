@@ -237,6 +237,19 @@ first failure had no background image model. Focused tests, the serial skip suit
 it needs cycle checks. The implementation was committed as a63e090; this
 documentation closeout completes the round.
 
+**Committed (2026-11-19, round 41).** TXT-24 closed on
+`agent/drawio-features`. `TextStyle.curve` stores a fixed arc height, and layout
+lifts glyph baselines along the arc while keeping the glyphs upright. The Text
+tab gains an ARC toggle, draw.io style maps `textPath=1;` in both directions, and
+MCP `update_styles` accepts `textPath`. The first failure had no `curve` field.
+Four focused tests, the serial skip suite (507 tests), final checks and a
+verified 38.60 s live recording in
+`.artifacts/round41/evidence/evidence-20261119-134656-0f3f64/report.md` are in
+`.artifacts/round41/`. The live run toggled the path through MCP rather than the
+ARC button because bare Xvfb does not place that control reliably. draw.io's
+isometric-face mode stays deferred. The implementation was committed as fc0f065;
+this documentation closeout completes the round.
+
 **Scope.**
 
 - A selection context resolver that classifies the current selection as document, single

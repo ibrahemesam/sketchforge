@@ -263,17 +263,17 @@ gaps landed on 2026-10-26: a label without a solid background cuts the line behi
 text, and the gap follows label moves, reroutes, and export. Page view is a view
 preference and is not part of the page file.
 
-**Size:** 231 capabilities in 13 domains. 117 are verified against committed tests or directly exercised code, 22 are implemented without a focused check, 83 are absent, and 9 are analysed or partial.
+**Size:** 231 capabilities in 13 domains. 118 are verified against committed tests or directly exercised code, 22 are implemented without a focused check, 82 are absent, and 9 are analysed or partial.
 
 ## Counts
 
 | Status | Count | Meaning |
 |---|---:|---|
-| VERIFIED | 117 | Committed test or directly exercised code path proves the behavior. |
+| VERIFIED | 118 | Committed test or directly exercised code path proves the behavior. |
 | IMPLEMENTED | 22 | Code exists and the path is readable, but no focused test or this-session runtime check covers it. |
 | IN_PROGRESS | 3 | Partial code at HEAD; the acceptance criteria are not met. |
 | ANALYZED | 6 | draw.io behavior is documented and a native design is recorded, but no code exists. |
-| DISCOVERED | 49 | draw.io behavior is documented here; no code or design exists. |
+| DISCOVERED | 48 | draw.io behavior is documented here; no code or design exists. |
 | BLOCKED | 34 | Work cannot proceed without a missing subsystem, external service, licensing decision, or explicit scope decision. |
 | **Total** | **231** | |
 
@@ -283,7 +283,7 @@ preference and is not part of the page file.
 | CAN Canvas, navigation, grid, and guides | 16 | 12 | 1 | 0 | 0 | 3 | 0 |
 | SHP Shapes, frames, transforms, and paths | 26 | 18 | 5 | 0 | 0 | 2 | 1 |
 | CON Connectors and arrows | 21 | 11 | 2 | 0 | 1 | 7 | 0 |
-| TXT Text, labels, and typography | 25 | 14 | 4 | 0 | 0 | 4 | 3 |
+| TXT Text, labels, and typography | 25 | 15 | 4 | 0 | 0 | 3 | 3 |
 | STY Styles, effects, and themes | 23 | 18 | 5 | 0 | 0 | 0 | 0 |
 | ORG Structure: groups, frames, components, layout, and layers | 16 | 11 | 1 | 0 | 1 | 0 | 3 |
 | GEN Generation, templates, and diagram types | 15 | 0 | 0 | 0 | 0 | 13 | 2 |
@@ -454,7 +454,7 @@ Editing and laying out text inside shapes and on the canvas.
 | TXT-21 | Lists and indentation | Bulleted and numbered lists plus indent and outdent operate on label paragraphs. | [Change the style of text and labels](https://www.drawio.com/docs/manual/styles/text-styles/) | src/model/paint.rs, src/model/node.rs, src/editor/text_edit.rs, src/text.rs, src/ui/inspector.rs | **VERIFIED** | Create a three-item bulleted list and outdent the second item. | The Text tab applies a marker to every hard-break paragraph and indents the active one. Marker glyphs, numbering and indent survive native save and load. List buttons apply to all paragraphs; Indent and Outdent apply to the active paragraph only. Tests: `list_markers_indent_and_number_paragraphs`, `paragraph_list_styles_round_trip_in_native_json`, `bulleted_list_stores_metadata_and_outdent_joins_undo`, `active_paragraph_follows_caret_and_selection_start`, `text_tab_exposes_list_and_indent_controls`, `text_tab_help_lists_applies_to_all_paragraphs`. Live Xvfb evidence in `.artifacts/round38/evidence/evidence-20261119-120150-d532e5/report.md` covers bullets, numbering, indent, outdent, undo and reload. No draw.io HTML list mapping or on-canvas marker drag yet. |
 | TXT-22 | HTML label editing | The HTML button switches a label to editable markup and back to a visual representation. | [Change the style of text and labels](https://www.drawio.com/docs/manual/styles/text-styles/) | None | **BLOCKED** | Edit a label as HTML with a link and bold run, switch back, and preserve both. | Labels are plain text plus spans. There is no HTML parser or sanitizer, and accepting raw HTML would add a security surface. |
 | TXT-23 | Math typesetting | TeX or AsciiMath delimiters render as typeset math in labels. | [Use mathematical typesetting in text and labels](https://www.drawio.com/docs/manual/text/math-typesetting/) | None | **BLOCKED** | Type a formula, render it, and export it as vector output. | No math layout engine is linked. Adding one is a large dependency and font decision. |
-| TXT-24 | Curved and slanted text | Text follows a curve or an isometric face in the Misc shape library. | [Change the style of text and labels](https://www.drawio.com/docs/manual/styles/text-styles/) | None | **DISCOVERED** | Place text on a curve, edit the string, and confirm the glyphs follow the path. | No text-on-path support. The pen and text models are separate. |
+| TXT-24 | Curved and slanted text | Text follows a curve or an isometric face in the Misc shape library. | [Change the style of text and labels](https://www.drawio.com/docs/manual/styles/text-styles/) | src/text.rs | **VERIFIED** | Place text on a curve, edit the string, and confirm the glyphs follow the path. | `text_on_curve_positions_glyphs_along_an_arc`, `text_curve_round_trips_in_native_json`, `text_curve_round_trips_through_drawio_style` and `text_tab_exposes_curve_toggle` cover a fixed arc and its draw.io `textPath` mapping. draw.io's separate isometric-face mode stays deferred. |
 | TXT-25 | IME preedit | Composing text with an input method shows the preedit string before commit. | [Text and labels in draw.io](https://www.drawio.com/docs/manual/text/) | src/app.rs, src/editor/text_edit.rs | **BLOCKED** | Type with a Japanese IME and see the candidate window and underlined preedit at the caret. | Committed IME text works, but preedit is not drawn. This is a winit/egui integration gap recorded in README. |
 
 ## STY: Styles, effects, and themes

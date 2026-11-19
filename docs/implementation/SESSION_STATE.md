@@ -1,6 +1,6 @@
 # Sketch agent session state
 
-Last updated: 2026-11-19 (round 40).
+Last updated: 2026-11-19 (round 41).
 
 ## Objective
 
@@ -18,7 +18,8 @@ pushed as 858d1a0 with the first-run onboarding tour. Round 38 was pushed as
 5802ded plus its docs closeout with paragraph lists and indentation. Round 39
 was pushed as 97dfc51 plus its docs closeout with the print dialog and
 paper-sized PDF output. Round 40 was pushed as a63e090 with the per-page
-background image, followed by its docs closeout in this branch. Do not create
+background image. Round 41 implementation is committed locally as fc0f065 with
+curved text; its documentation closeout follows in this branch. Do not create
 releases or deploy Vercel; plain `git push` sends commits to the fork.
 
 The full sidebar spec was implemented and verified in round 6 (see
@@ -401,6 +402,23 @@ the working display and `xdotool windowfocus` were reused. Both commits were
 pushed; the parity docs recorded VERIFIED 117 and DISCOVERED 49 at the end of
 the round.
 
+Round 41 closed TXT-24, curved text. `TextStyle.curve` stores a fixed arc height
+as a fraction of the font size, and `apply_curve` lifts glyph baselines along a
+quadratic arc while keeping glyphs upright. The Text tab gained an ARC toggle,
+draw.io style maps `textPath=1;` in both directions, and MCP `update_styles`
+accepts `textPath`. TXT-19 was checked first and rejected: `WritingDir::Vertical`
+and `layout_vertical` already implement vertical text at HEAD. The first failure
+is in `.artifacts/round41/failure.log`. Four focused tests pass; both the first
+full run and the final run after the MCP change pass 507 tests with the known
+`m2_pages_panel_screenshot` failure skipped. fmt, clippy, diff-check and release
+build pass. A verified 38.60 s Xvfb `:105` recording with four passing
+assertions is in
+`.artifacts/round41/evidence/evidence-20261119-134656-0f3f64/report.md`. The ARC
+button was not clicked live because its position is unreliable under bare Xvfb;
+Text Path was toggled through MCP. Native and draw.io round trips are covered by
+tests, not a live save and reopen. Code commit fc0f065 still needs a plain
+`git push`; the parity docs record VERIFIED 118 and DISCOVERED 48 at closeout.
+
 ## Blockers
 
 GEN-04 AI generation stays blocked: it needs a hosted model, credentials,
@@ -416,20 +434,20 @@ in `.opencode/MEMORY.md`).
 
 ## Exact next task
 
-Round 41 should close TXT-19, vertical text. The inventory row at
-`feature-inventory.md:452` is still DISCOVERED, and the model at HEAD only uses
-writing direction for bidi order; there is no vertical stacking or Text tab
-toggle. Check the row and the renderer again before writing the failure test:
-many DISCOVERED limitation notes are stale, including CON-11, CON-12, CON-18,
-DOC-08 and the generated packs, which are already committed. The scoped target
-is a per-text vertical mode that stacks glyphs downward while the node stays
-upright, reports the swapped box size for hit testing, survives save and reload,
-and exports in PNG and SVG. Do not reuse shape rotation from SHP-19. Start with
-a failing test for the model and renderer, then add the Text tab control. Use a
-fresh scratch folder and a new Xvfb display for live evidence. No release or
-tag. Do not restart UIX-14, TXT-21, STY-23, IO-19, CAN-06, CON-09, CON-13,
-CON-17, UIX-04, STY-13, STY-14, STY-21, STY-22 or DOC-09: their commands,
-editor tests and runtime evidence are already committed. M9 collaboration stays blocked without
+Round 42 should close CAN-06, grid color. The inventory row at
+`feature-inventory.md:355` is still DISCOVERED, but a page already stores
+`grid_color`, the renderer takes it, and the Diagram tab exposes a color button
+and a reset control. Verify that code before writing a failure test; many
+DISCOVERED limitation notes are stale, including CON-11, CON-12, CON-18, DOC-08
+and the generated packs. The real gap is draw.io `gridColor` import/export and
+focused coverage for the page setting and panel copy. Start with a failing
+draw.io round-trip test and an inspector test, then add the missing mapping.
+Use a fresh scratch folder and a new Xvfb display for live evidence; the custom
+color can be seeded in page JSON if the rfd color picker cannot be driven under
+bare Xvfb. No release or tag. Do not restart UIX-14, TXT-21, STY-23, IO-19,
+CAN-06's existing page setting work, CON-09, CON-13, CON-17, UIX-04, STY-13,
+STY-14, STY-21, STY-22, DOC-09 or TXT-24: their commands, editor tests and
+runtime evidence are already committed. M9 collaboration stays blocked without
 a server, conflict model, and permissions. GEN-04 AI generation and GEN-10
 vendor stencils also stay blocked. IO-17, IO-18 and IO-20 remain blocked or
 deferred, as do the HTML and PDF parts of DOC-15.
