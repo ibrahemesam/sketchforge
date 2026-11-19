@@ -1,6 +1,6 @@
 # Sketch agent session state
 
-Last updated: 2026-11-19 (round 58 stale-row closures, local pending commit/push).
+Last updated: 2026-11-19 (round 59 vertical text closure, local pending commit/push).
 
 ## Objective
 
@@ -642,13 +642,15 @@ reporting and endpoint-mode rows were closed as evidence-only doc updates.
 Round 57 was committed as `15863fe` and pushed: stale head-style and
 generation rows were closed as evidence-only doc updates.
 
-Round 58 (local, pending commit/push) closed stale BLOCKED rows CUS-13 and
-CUS-14 as evidence-only doc updates against HEAD behavior and existing tests
-(custom template libraries and template library format). No application code
-changed. Parity docs record VERIFIED 166, IMPLEMENTED 21, DISCOVERED 11,
-BLOCKED 29, ANALYZED 1 and IN_PROGRESS 3. `git diff --check` and parity doc
-checks should pass before commit. Full `cargo test` and release build were not
-rerun.
+Round 58 was committed as `6080801` and pushed: stale template library rows
+were closed as evidence-only doc updates.
+
+Round 59 (local, pending commit/push) closed stale DISCOVERED row TXT-19 as a
+code+doc verification update against HEAD vertical text behavior, adding
+vertical_text_stacks_characters_downward in `src/text.rs`. Parity docs record
+VERIFIED 167, IMPLEMENTED 21, DISCOVERED 10, BLOCKED 29, ANALYZED 1 and
+IN_PROGRESS 3. `git diff --check` and parity doc checks should pass before
+commit. Clippy, full `cargo test`, and release build were not rerun.
 
 ## Blockers
 
@@ -664,15 +666,15 @@ rerun.
 
 ## Exact next task
 
-Commit and `git push --quiet` the round 58 evidence-only parity/doc closures on
+Commit and `git push --quiet` the round 59 TXT-19 parity/doc closure on
 `agent/drawio-features`, keeping parity checks passing. After pushing, continue
-verifying the next stale rows at HEAD (high-value candidates: TXT-19 and
-GEN-07/08/09/11/12/13/14/15 where "working tree" notes may now be committed but
-acceptance may be only partially satisfied; read carefully before changing
-status). Capture a failing test before fixes when a real code gap exists;
-otherwise close as evidence-only with cited HEAD identifiers and update
-verification/session docs. Do not restart completed rounds. Keep
-blocked/deferred items blocked. No release, tag, or PR.
+verifying the next stale rows at HEAD (high-value candidates: GEN-07/08/09/11/
+12/13/14/15 where "working tree" notes may now be committed but acceptance may
+be only partially satisfied; read carefully before changing status). Capture a
+failing test before fixes when a real code gap exists; otherwise close as
+evidence-only with cited HEAD identifiers and update verification/session docs.
+Do not restart completed rounds. Keep blocked/deferred items blocked. No
+release, tag, or PR.
 
 ## Commands
 

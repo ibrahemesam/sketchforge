@@ -420,7 +420,9 @@ documentation closeout completes the round.
 
 **Round 57 (committed 15863fe, pushed).** Closed stale IMPLEMENTED/DISCOVERED rows CON-13 and GEN-01/02/03/05 as evidence-only doc updates against HEAD behavior and existing tests. No application code changed.
 
-**Round 58 (local, commit/push pending).** Closed stale BLOCKED rows CUS-13 and CUS-14 as evidence-only doc updates against HEAD behavior and existing tests. No application code changed. Parity docs now record VERIFIED 166, IMPLEMENTED 21, DISCOVERED 11, BLOCKED 29, ANALYZED 1 and IN_PROGRESS 3. Full `cargo test` and release build were not rerun.
+**Round 58 (committed 6080801, pushed).** Closed stale BLOCKED rows CUS-13 and CUS-14 as evidence-only doc updates against HEAD behavior and existing tests. No application code changed.
+
+**Round 59 (local, commit/push pending).** Closed stale DISCOVERED row TXT-19 as a code+doc verification update: added vertical_text_stacks_characters_downward in `src/text.rs` and updated parity docs against HEAD vertical text behavior. Parity docs now record VERIFIED 167, IMPLEMENTED 21, DISCOVERED 10, BLOCKED 29, ANALYZED 1 and IN_PROGRESS 3. Clippy, full `cargo test`, and release build were not rerun.
 
 **Scope.**
 

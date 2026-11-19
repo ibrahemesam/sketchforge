@@ -263,17 +263,17 @@ gaps landed on 2026-10-26: a label without a solid background cuts the line behi
 text, and the gap follows label moves, reroutes, and export. Page view is a view
 preference and is not part of the page file.
 
-**Size:** 231 capabilities in 13 domains. 166 are verified against committed tests or directly exercised code, 21 are implemented without a focused check, 40 are absent, and 4 are analysed or partial.
+**Size:** 231 capabilities in 13 domains. 167 are verified against committed tests or directly exercised code, 21 are implemented without a focused check, 39 are absent, and 4 are analysed or partial.
 
 ## Counts
 
 | Status | Count | Meaning |
 |---|---:|---|
-| VERIFIED | 166 | Committed test or directly exercised code path proves the behavior. |
+| VERIFIED | 167 | Committed test or directly exercised code path proves the behavior. |
 | IMPLEMENTED | 21 | Code exists and the path is readable, but no focused test or this-session runtime check covers it. |
 | IN_PROGRESS | 3 | Partial code at HEAD or in the tracked working state; the acceptance criteria are not met. |
 | ANALYZED | 1 | draw.io behavior is documented and a native design is recorded, but no code exists. |
-| DISCOVERED | 11 | draw.io behavior is documented here; no code or design exists. |
+| DISCOVERED | 10 | draw.io behavior is documented here; no code or design exists. |
 | BLOCKED | 29 | Work cannot proceed without a missing subsystem, external service, licensing decision, or explicit scope decision. |
 | **Total** | **231** | |
 
@@ -283,7 +283,7 @@ preference and is not part of the page file.
 | CAN Canvas, navigation, grid, and guides | 16 | 15 | 1 | 0 | 0 | 0 | 0 |
 | SHP Shapes, frames, transforms, and paths | 26 | 20 | 5 | 0 | 0 | 0 | 1 |
 | CON Connectors and arrows | 21 | 20 | 1 | 0 | 0 | 0 | 0 |
-| TXT Text, labels, and typography | 25 | 17 | 4 | 0 | 0 | 1 | 3 |
+| TXT Text, labels, and typography | 25 | 18 | 4 | 0 | 0 | 0 | 3 |
 | STY Styles, effects, and themes | 23 | 18 | 5 | 0 | 0 | 0 | 0 |
 | ORG Structure: groups, frames, components, layout, and layers | 16 | 11 | 1 | 0 | 1 | 0 | 3 |
 | GEN Generation, templates, and diagram types | 15 | 5 | 0 | 0 | 0 | 8 | 2 |
@@ -449,7 +449,7 @@ Editing and laying out text inside shapes and on the canvas.
 | TXT-16 | Text border | A text box can draw a border using the shape stroke width and color. | [Change the style of text and labels](https://www.drawio.com/docs/manual/styles/text-styles/) | src/model/node.rs, src/render/draw.rs, src/ui/inspector.rs | **IMPLEMENTED** | Enable Border, set a color, and confirm a 1 px outline follows the text box radius. | The border forces stroke width to 1.0 when enabled. No focused test. |
 | TXT-17 | Text shadow | A soft offset shadow is drawn behind glyphs. | [Change the style of text and labels](https://www.drawio.com/docs/manual/styles/text-styles/) | src/model/node.rs, src/render/draw.rs, src/ui/inspector.rs | **IMPLEMENTED** | Enable Shadow and confirm a soft dark copy appears behind the text without moving the layout. | No focused test. The shadow alpha and offset are fixed. |
 | TXT-18 | Clear formatting | Clear formatting removes character overrides from a range or the whole layer. | [Change the style of text and labels](https://www.drawio.com/docs/manual/styles/text-styles/) | src/editor/text_edit.rs, src/ui/inspector.rs | **VERIFIED** | Apply bold, color, and a larger size to one word, clear it, and confirm the base style returns. | Base size and color stay. Test: `clear_formatting_strips_character_overrides`. |
-| TXT-19 | Vertical text | Text can run top to bottom while the shape stays upright. | [Change the style of text and labels](https://www.drawio.com/docs/manual/styles/text-styles/) | None | **DISCOVERED** | Toggle Vertical and confirm glyphs stack downward and the box reports the expected size. | Writing direction affects bidi order but does not rotate or stack glyphs. |
+| TXT-19 | Vertical text | Text can run top to bottom while the shape stays upright. | [Change the style of text and labels](https://www.drawio.com/docs/manual/styles/text-styles/) | src/model/node.rs, src/text.rs, src/ui/inspector.rs, src/editor/tests.rs | **VERIFIED** | Toggle Vertical and confirm glyphs stack downward and the box reports the expected size. | `WritingDir::Vertical` is stored on nodes, `layout_vertical` stacks characters into descending lines/baselines, and the inspector exposes a vertical writing direction toggle. vertical_text_stacks_characters_downward and `writing_direction_overrides_paragraph_bidi` cover layout behavior and direction handling. The row was stale. |
 | TXT-20 | Superscript and subscript | Selected characters can be raised or lowered with a smaller size. | [Change the style of text and labels](https://www.drawio.com/docs/manual/styles/text-styles/) | src/model/paint.rs, src/text.rs, src/editor/text_edit.rs, src/editor/tests.rs, src/ui/inspector.rs | **VERIFIED** | Apply superscript to a footnote marker and confirm its baseline and size change. | Text styles and spans carry script state, layout raises or lowers glyphs at reduced size, and the inspector/editor provide superscript and subscript toggles for selections or whole text layers. `superscript_raises_and_shrinks_the_glyph`, `subscript_lowers_and_shrinks_the_glyph` and `superscript_and_subscript_toggle_on_text_and_undo` cover the behavior. The row was stale. |
 | TXT-21 | Lists and indentation | Bulleted and numbered lists plus indent and outdent operate on label paragraphs. | [Change the style of text and labels](https://www.drawio.com/docs/manual/styles/text-styles/) | src/model/paint.rs, src/model/node.rs, src/editor/text_edit.rs, src/text.rs, src/ui/inspector.rs | **VERIFIED** | Create a three-item bulleted list and outdent the second item. | The Text tab applies a marker to every hard-break paragraph and indents the active one. Marker glyphs, numbering and indent survive native save and load. List buttons apply to all paragraphs; Indent and Outdent apply to the active paragraph only. Tests: `list_markers_indent_and_number_paragraphs`, `paragraph_list_styles_round_trip_in_native_json`, `bulleted_list_stores_metadata_and_outdent_joins_undo`, `active_paragraph_follows_caret_and_selection_start`, `text_tab_exposes_list_and_indent_controls`, `text_tab_help_lists_applies_to_all_paragraphs`. Live Xvfb evidence in `.artifacts/round38/evidence/evidence-20261119-120150-d532e5/report.md` covers bullets, numbering, indent, outdent, undo and reload. No draw.io HTML list mapping or on-canvas marker drag yet. |
 | TXT-22 | HTML label editing | The HTML button switches a label to editable markup and back to a visual representation. | [Change the style of text and labels](https://www.drawio.com/docs/manual/styles/text-styles/) | None | **BLOCKED** | Edit a label as HTML with a link and bold run, switch back, and preserve both. | Labels are plain text plus spans. There is no HTML parser or sanitizer, and accepting raw HTML would add a security surface. |

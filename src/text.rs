@@ -1790,4 +1790,34 @@ mod tests {
             assert_eq!(a.face, b.face);
         }
     }
+
+    #[test]
+    fn vertical_text_stacks_characters_downward() {
+        let l = layout_vertical(
+            "ABC",
+            20.0,
+            Color::INK,
+            &TextStyle::default(),
+            TextAlign::Left,
+        );
+        assert_eq!(l.lines.len(), 3, "one line per character");
+        assert!(
+            l.height > line_height(20.0),
+            "stacked height grew: {}",
+            l.height
+        );
+        assert!(l.width > 0.0);
+        for pair in l.lines.windows(2) {
+            assert!(pair[1].top > pair[0].top, "lines descend: {:?}", l.lines);
+            assert!(
+                pair[1].baseline > pair[0].baseline,
+                "baselines descend: {:?}",
+                l.lines
+            );
+        }
+        let tops: Vec<f64> = l.glyphs.iter().map(|g| g.baseline).collect();
+        let mut sorted = tops.clone();
+        sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        assert_eq!(tops, sorted, "glyph baselines go downward: {tops:?}");
+    }
 }
