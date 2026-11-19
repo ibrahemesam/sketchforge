@@ -355,6 +355,25 @@ committed after the recording, so the report names `unknown`. The
 implementation was committed as 2ec2fbd; this documentation closeout completes
 the round.
 
+**Committed (2026-11-19, round 48).** DIA-04 closed on
+`agent/drawio-features`. The data side was already at HEAD: `Node.tooltip`, the
+Data tab editor, find and replace, draw.io's tooltip attribute and
+`get_node_info` reporting. The unmet part was the acceptance criterion that
+the tooltip "truncates cleanly". The first failure showed a 600-character
+tooltip at full length instead of 201 characters. `tooltip_display_text` now
+clips resolved text to 200 characters on a character boundary with a trailing
+ellipsis, wraps at 260 px and constrains the popup to the canvas. Two unit
+tests, the serial skip suite (536 tests), final checks and a verified 20.00 s
+live recording in
+`.artifacts/round48/evidence/evidence-20261119-160259-ac7a91/report.md` are in
+`.artifacts/round48/`. Unlike recent MCP-only rounds, this flow hovered the
+shape with real `xdotool` pointer moves on Xvfb `:105` and measured a bounded
+261x84 px popup that clears on leave. A 1024-character tooltip was seeded in
+the page JSON; the ellipsis is checked by the unit test rather than OCR. Two
+earlier recordings were stopped and replaced. The code was committed after the
+recording, so the report names `unknown`. The implementation was committed as
+cca0145; this documentation closeout completes the round.
+
 **Scope.**
 
 - A selection context resolver that classifies the current selection as document, single

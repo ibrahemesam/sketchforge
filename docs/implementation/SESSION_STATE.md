@@ -1,6 +1,6 @@
 # Sketch agent session state
 
-Last updated: 2026-11-19 (round 47).
+Last updated: 2026-11-19 (round 48).
 
 ## Objective
 
@@ -28,8 +28,10 @@ marking it pushed. Round 45 was pushed as c7941e0 with installed font families
 exposed to MCP and draw.io, e7cce0a with its docs closeout and e6dcb21 marking it
 pushed. Round 46 was pushed as 221cf0f with the MCP reverse_connectors tool,
 904a29e with its docs closeout and 083ab91 marking it pushed. Round 47 was pushed
-as 2ec2fbd with MCP tag search and a610877 with its docs closeout. Do not create
-releases or deploy Vercel; plain `git push` sends commits to the fork.
+as 2ec2fbd with MCP tag search, a610877 with its docs closeout and 45df3b6
+marking it pushed. Round 48 implementation is committed locally as cca0145 with
+tooltip truncation, and this update is its docs closeout. Do not create releases
+or deploy Vercel; plain `git push` sends commits to the fork.
 
 The full sidebar spec was implemented and verified in round 6 (see
 `.opencode/MEMORY.md`). Round 7 closed the transparent connector label gap.
@@ -546,8 +548,26 @@ tags load through `get_node_info`, `tag: web` finds two shapes and `tag: *API*`
 finds one, and `select_nodes` selects both matches and changes 4897 canvas
 pixels. The calls went over HTTP rather than clicking the editor find bar, and
 the code was committed after the recording so the report names `unknown`.
-Implementation committed as 2ec2fbd; both commits were pushed and parity docs
-recorded VERIFIED 124, ANALYZED 5 and DISCOVERED 43 at closeout.
+Implementation committed as 2ec2fbd; all three commits were pushed and parity
+docs recorded VERIFIED 124, ANALYZED 5 and DISCOVERED 43 at closeout.
+
+Round 48 closed DIA-04, tooltips. The data side was already at HEAD: the node
+field, Data tab editor, find support, draw.io mapping and `get_node_info`
+reporting. The unmet acceptance criterion was that the tooltip "truncates
+cleanly". The first failure showed a 600-character tooltip at full length.
+`tooltip_display_text` now clips resolved text to 200 characters on a character
+boundary with a trailing ellipsis, wraps at 260 px and constrains the popup to
+the canvas. Two unit tests pass; the serial skip suite passes 536 tests with the
+known `m2_pages_panel_screenshot` failure skipped, and screenshots were restored.
+fmt, clippy, diff-check and release build pass. A verified 20.00 s Xvfb `:105`
+recording with three passing assertions is in
+`.artifacts/round48/evidence/evidence-20261119-160259-ac7a91/report.md`: real
+`xdotool` pointer moves hover a seeded 1024-character tooltip, the popup is
+bounded at 261x84 px inside the canvas and clears when the pointer leaves. The
+ellipsis is checked by the unit test, not OCR. Two earlier recordings were
+stopped and replaced. The code was committed after the recording so the report
+names `unknown`. Implementation committed as cca0145; parity docs recorded
+VERIFIED 125, ANALYZED 5 and DISCOVERED 42 at closeout.
 
 ## Blockers
 
@@ -564,27 +584,31 @@ in `.opencode/MEMORY.md`).
 
 ## Exact next task
 
-Round 48 should close a stale DISCOVERED row that is already implemented at
-HEAD, starting with DIA-04, tooltips. `Node.tooltip` is a field in
-`src/model/node.rs`, the hover renderer and Data tab handle it, `find.rs`
-searches and replaces it, and draw.io maps the tooltip attribute, but the
-inventory row still says tooltips are only egui chrome. Verify the row against
-HEAD, find a focused gap worth closing, and capture a failing test before
-changing code. MCP reporting, editing or placeholder resolution may be the gap.
-Other stale candidates are DIA-03 links, CAN-15 connection points and CUS-16
-library previews; each must be checked at HEAD first. Do not assume any ANALYZED
-or DISCOVERED row is open. UIX-12 and UIX-13 are genuine but broad. CUS-11 is
-documented out of scope. Keep DIA-11 animation actions blocked on a sandboxed
-action interpreter. Use a fresh scratch folder and reuse Xvfb `:105`, and start
-the recorder with `DISPLAY=:105` or it captures the blank `:0` screen; drive the
-app with `env -u WAYLAND_DISPLAY` or it picks the Wayland backend and maps no X11
-window. No release or tag. Do not restart UIX-14, TXT-21, STY-23, IO-19, CAN-06,
-CON-09, CON-13, CON-17, UIX-04, STY-13, STY-14, STY-21, STY-22, DOC-09, TXT-24,
-DIA-10, CUS-05, TXT-06, CON-18 or DIA-05: their commands, editor tests and
-runtime evidence are already committed. M9 collaboration stays blocked without a
-server, conflict model, and permissions. GEN-04 AI generation and GEN-10 vendor
-stencils also stay blocked. IO-17, IO-18 and IO-20 remain blocked or deferred,
-as do the HTML and PDF parts of DOC-15.
+Round 49 should close a stale DISCOVERED row that is already implemented at
+HEAD, starting with DIA-03, custom links. `Node.link` is a field in
+`src/model/node.rs`, `src/editor/mod.rs` follows Cmd/Ctrl click, the Data tab has
+an Open Link button, page targets switch pages, external targets are limited to
+http, https and mailto with confirmation, draw.io maps the link attribute and
+`get_node_info` reports it, but the inventory row still says there is no link
+field or safe-open policy. Verify the row against HEAD, find a focused gap worth
+closing, and capture a failing test before changing code. MCP editing of the
+link field may be the gap. Other stale candidates are CAN-15 connection points
+and CUS-16 library previews; each must be checked at HEAD first. Do not assume
+any ANALYZED or DISCOVERED row is open. UIX-12 and UIX-13 are genuine but broad.
+CUS-11 is documented out of scope. Keep DIA-11 animation actions blocked on a
+sandboxed action interpreter. Use a fresh scratch folder and reuse Xvfb `:105`,
+and start the recorder with `DISPLAY=:105` or it captures the blank `:0` screen;
+drive the app with `env -u WAYLAND_DISPLAY` or it picks the Wayland backend and
+maps no X11 window. PIL `ImageGrab.grab(xdisplay=':105')` is much faster than
+spawning ffmpeg for each screenshot when probing hover positions; hover needs
+intermediate pointer moves, a direct jump from outside the canvas can be
+dropped during layout. No release or tag. Do not restart UIX-14, TXT-21, STY-23,
+IO-19, CAN-06, CON-09, CON-13, CON-17, UIX-04, STY-13, STY-14, STY-21, STY-22,
+DOC-09, TXT-24, DIA-10, CUS-05, TXT-06, CON-18, DIA-05 or DIA-04: their
+commands, editor tests and runtime evidence are already committed. M9
+collaboration stays blocked without a server, conflict model, and permissions.
+GEN-04 AI generation and GEN-10 vendor stencils also stay blocked. IO-17, IO-18
+and IO-20 remain blocked or deferred, as do the HTML and PDF parts of DOC-15.
 
 ## Commands
 
