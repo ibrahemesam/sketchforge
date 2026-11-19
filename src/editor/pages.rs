@@ -126,10 +126,9 @@ impl Editor {
         }
         self.meta_dirty = true; // the active page is remembered in the manifest
         self.sync_page_settings();
-        self.page_transition_start = match self.doc.settings.page_transition {
-            crate::model::PageTransition::Fade => Some(self.now_ms),
-            crate::model::PageTransition::None => None,
-        };
+        self.page_transition_start = None;
+        self.page_transition_pending =
+            self.doc.settings.page_transition == crate::model::PageTransition::Fade;
         self.refresh_page_contexts();
         self.revision += 1;
         self.doc_stamp = super::next_stamp();

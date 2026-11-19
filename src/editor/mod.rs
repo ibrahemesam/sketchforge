@@ -317,6 +317,8 @@ pub struct Editor {
     pub now_ms: f64,
     /// When the current page fade started. None outside a transition.
     pub page_transition_start: Option<f64>,
+    /// Set by a page switch; the next tick stamps the real frame time.
+    pub page_transition_pending: bool,
     /// Route for new arrows.
     pub arrow_route: crate::model::Route,
     /// Grid spacing in world units, mirrored from the page settings.
@@ -390,6 +392,7 @@ impl Editor {
             laser: Vec::new(),
             now_ms: 0.0,
             page_transition_start: None,
+            page_transition_pending: false,
             arrow_route: crate::model::Route::Straight,
             grid_step,
             sticky_color: Color::rgb(0xff, 0xdf, 0x6b),
@@ -486,6 +489,9 @@ impl Editor {
     /// Opacity of the fade veil at `now`, from 1 at the start to 0 at the end.
     /// A smoothstep keeps the start and finish from snapping.
     pub fn page_transition_alpha(&self, now: f64) -> f64 {
+        if self.page_transition_pending {
+            return 1.0;
+        }
         let Some(start) = self.page_transition_start else {
             return 0.0;
         };

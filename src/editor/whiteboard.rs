@@ -839,6 +839,10 @@ impl Editor {
     pub fn tick(&mut self, now: f64) {
         self.now_ms = now;
         self.laser.retain(|(_, t)| now - t < LASER_DECAY_MS);
+        if self.page_transition_pending {
+            self.page_transition_start = Some(now);
+            self.page_transition_pending = false;
+        }
         if self.page_transition_alpha(now) == 0.0 {
             self.page_transition_start = None;
         }

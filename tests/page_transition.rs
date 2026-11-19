@@ -64,6 +64,7 @@ fn switching_to_a_fade_page_starts_a_transition() {
     ed.tick(1000.0);
     assert_eq!(ed.page_transition_alpha(1000.0), 0.0);
     ed.switch_page(i);
+    ed.tick(1000.0);
     assert_eq!(ed.page_transition_alpha(1000.0), 1.0);
     assert_eq!(ed.page_transition_alpha(1200.0), 0.5);
     assert_eq!(ed.page_transition_alpha(1400.0), 0.0);
@@ -72,6 +73,19 @@ fn switching_to_a_fade_page_starts_a_transition() {
     assert!(!ed.animating(1400.0));
     ed.switch_page(0);
     assert_eq!(ed.page_transition_alpha(1400.0), 0.0);
+}
+
+#[test]
+fn transition_ignores_a_stale_editor_clock() {
+    let mut ed = editor_with_fade_page();
+    let i = ed.pages.len() - 1;
+    ed.now_ms = 0.0;
+    ed.switch_page(i);
+    assert_eq!(ed.page_transition_alpha(5000.0), 1.0);
+    ed.tick(5000.0);
+    assert_eq!(ed.page_transition_alpha(5000.0), 1.0);
+    assert_eq!(ed.page_transition_alpha(5200.0), 0.5);
+    assert!(!ed.page_transition_pending);
 }
 
 #[test]
