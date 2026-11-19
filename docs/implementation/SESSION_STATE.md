@@ -1,6 +1,6 @@
 # Sketch agent session state
 
-Last updated: 2026-11-19 (round 38).
+Last updated: 2026-11-19 (round 39).
 
 ## Objective
 
@@ -14,10 +14,12 @@ format sidebar (`drawio_features_opencode_spec.md`, in
 Branch `agent/drawio-features` tracks `fork/main`, which points at
 `ibrahemesam/sketchforge` on GitHub. Round 36 implementation was pushed as
 7261dfd with the repo presentation and MIT license. Round 37 implementation was
-pushed as 858d1a0 with the first-run onboarding tour. Round 38 implementation is
-committed locally as 5802ded with paragraph lists and indentation; its
-documentation closeout is committed after it in this branch. Do not create
-releases or deploy Vercel; plain `git push` sends commits to the fork.
+pushed as 858d1a0 with the first-run onboarding tour. Round 38 was pushed as
+5802ded plus its docs closeout with paragraph lists and indentation. Round 39
+implementation is committed locally as 97dfc51 with the print dialog and
+paper-sized PDF output; its documentation closeout is committed after it in this
+branch. Do not create releases or deploy Vercel; plain `git push` sends commits
+to the fork.
 
 The full sidebar spec was implemented and verified in round 6 (see
 `.opencode/MEMORY.md`). Round 7 closed the transparent connector label gap.
@@ -361,8 +363,25 @@ clippy, diff-check and the release build pass. A verified 778 s Xvfb `:104`
 recording with passing assertions is in
 `.artifacts/round38/evidence/evidence-20261119-120150-d532e5/report.md`. Debug
 instrumentation was removed before the last release build; screenshots were
-restored after test runs. The code commit 5802ded still needs a plain `git push`;
-the parity docs now record VERIFIED 115 and DISCOVERED 51.
+restored after test runs. Both commits were pushed; the parity docs recorded
+VERIFIED 115 and DISCOVERED 51 at the end of the round.
+
+Round 39 closed IO-19, print. Ctrl/Cmd+P opens a Print dialog with paper,
+orientation, fit or custom scale, margin, and page or selection scope.
+`io::pdf` writes a paper-sized MediaBox and centers the scaled content inside
+the margins. The primary Print button writes to the project folder (or a temp
+folder when no project is open) so printing is deterministic under bare Xvfb;
+Choose location keeps the rfd save dialog. The first failure had no print API
+and is in `.artifacts/round39/failure.log`. Eight focused and integration tests
+pass; the serial skip suite passes 495 tests with the known
+`m2_pages_panel_screenshot` failure skipped. fmt, clippy, diff-check and release
+build pass. A verified 490.87 s Xvfb `:105` recording with four passing
+assertions is in
+`.artifacts/round39/evidence/evidence-20261119-124018-fd7149/report.md`, with the
+printed Letter PDF saved beside it. The dialog position shifts between opens,
+so live clicks used a fresh open each time; fixed pixel coordinates are not
+reliable across opens. The code commit 97dfc51 still needs a plain `git push`;
+the parity docs now record VERIFIED 116 and DISCOVERED 50.
 
 ## Blockers
 
@@ -379,19 +398,22 @@ in `.opencode/MEMORY.md`).
 
 ## Exact next task
 
-Round 39 should close CAN-06, a per-page grid color override. Capture a failure
-first: a test should require a page to store a grid color that survives save and
-load and is used by the grid renderer instead of the theme-derived default.
-The Diagram tab should offer a color control that edits it in one undo step, and
-the chosen color should stay stable across light and dark chrome. Confirm the
-current inventory row and whether any grid color work already exists before
-starting; pick the next genuinely uncovered DISCOVERED row if CAN-06 has landed.
-Do not restart UIX-14, TXT-21, STY-23, CON-09, CON-13, CON-17, UIX-04, STY-13,
-STY-14, STY-21, or STY-22: their commands, editor tests and runtime evidence are
-already committed. M9 collaboration stays blocked without a server, conflict
-model, and permissions. GEN-04 AI generation and GEN-10 vendor stencils also
-stay blocked. IO-17, IO-18, IO-19, and IO-20 remain blocked or deferred, as do
-the HTML and PDF parts of DOC-15.
+Round 40 should close DOC-09, a background image or another page as a page
+background. Confirm the inventory row first and check whether any background
+image work landed; several DISCOVERED rows carry stale "no code at HEAD" notes
+even though the feature is committed, so verify before writing a failure test.
+The scoped target is a background image asset on a page: it survives save and
+reload, renders behind the grid without moving content, and exports into PNG,
+SVG and PDF. Reuse `crate::assets` for ownership and the page settings model for
+scope; another page as a background can stay deferred if it needs cycle checks.
+Start with a failing test in `tests/` for persistence and export. Use a fresh
+scratch folder and a new Xvfb display for live evidence. No release or tag.
+Do not restart UIX-14, TXT-21, STY-23, IO-19, CAN-06, CON-09, CON-13, CON-17,
+UIX-04, STY-13, STY-14, STY-21, or STY-22: their commands, editor tests and
+runtime evidence are already committed. M9 collaboration stays blocked without
+a server, conflict model, and permissions. GEN-04 AI generation and GEN-10
+vendor stencils also stay blocked. IO-17, IO-18 and IO-20 remain blocked or
+deferred, as do the HTML and PDF parts of DOC-15.
 
 ## Commands
 

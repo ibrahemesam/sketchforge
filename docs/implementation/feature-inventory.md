@@ -263,17 +263,17 @@ gaps landed on 2026-10-26: a label without a solid background cuts the line behi
 text, and the gap follows label moves, reroutes, and export. Page view is a view
 preference and is not part of the page file.
 
-**Size:** 231 capabilities in 13 domains. 115 are verified against committed tests or directly exercised code, 22 are implemented without a focused check, 85 are absent, and 9 are analysed or partial.
+**Size:** 231 capabilities in 13 domains. 116 are verified against committed tests or directly exercised code, 22 are implemented without a focused check, 84 are absent, and 9 are analysed or partial.
 
 ## Counts
 
 | Status | Count | Meaning |
 |---|---:|---|
-| VERIFIED | 115 | Committed test or directly exercised code path proves the behavior. |
+| VERIFIED | 116 | Committed test or directly exercised code path proves the behavior. |
 | IMPLEMENTED | 22 | Code exists and the path is readable, but no focused test or this-session runtime check covers it. |
 | IN_PROGRESS | 3 | Partial code at HEAD; the acceptance criteria are not met. |
 | ANALYZED | 6 | draw.io behavior is documented and a native design is recorded, but no code exists. |
-| DISCOVERED | 51 | draw.io behavior is documented here; no code or design exists. |
+| DISCOVERED | 50 | draw.io behavior is documented here; no code or design exists. |
 | BLOCKED | 34 | Work cannot proceed without a missing subsystem, external service, licensing decision, or explicit scope decision. |
 | **Total** | **231** | |
 
@@ -287,7 +287,7 @@ preference and is not part of the page file.
 | STY Styles, effects, and themes | 23 | 18 | 5 | 0 | 0 | 0 | 0 |
 | ORG Structure: groups, frames, components, layout, and layers | 16 | 11 | 1 | 0 | 1 | 0 | 3 |
 | GEN Generation, templates, and diagram types | 15 | 0 | 0 | 0 | 0 | 13 | 2 |
-| IO Import, export, clipboard, and files | 21 | 11 | 3 | 0 | 2 | 1 | 4 |
+| IO Import, export, clipboard, and files | 21 | 12 | 3 | 0 | 2 | 0 | 4 |
 | CUS Libraries, scratchpad, and custom shapes | 16 | 4 | 0 | 0 | 1 | 6 | 5 |
 | DIA Diagram data: metadata, links, tags, and placeholders | 12 | 0 | 0 | 0 | 1 | 7 | 4 |
 | STO Storage, sharing, collaboration, and integrations | 11 | 1 | 0 | 0 | 0 | 0 | 10 |
@@ -555,7 +555,7 @@ Moving diagram data in and out of Sketch.
 | IO-16 | draw.io XML export | The project can be written as .drawio XML for draw.io and compatible tools. | [Manually edit the XML source of your draw.io diagram](https://www.drawio.com/docs/manual/advanced/diagram-source-edit/) | None | **BLOCKED** | Export a page, reopen it in draw.io, and compare geometry, text, connectors, and groups. | Blocked by the import adapter and by the shape registry (M4) that maps native nodes to mxGraph cells. Working tree (2026-11-08): the inspector, the CLI, and the export API write every page as one uncompressed .drawio file, and the two-page fixture reimports with the same pages, layers, and supported shapes. |
 | IO-17 | VSDX, Gliffy, and Lucidchart import | Visio, Gliffy, and Lucidchart files import into a new project. | [draw.io import formats and sources](https://www.drawio.com/docs/manual/import/import-formats/) | None | **BLOCKED** | Import one file of each format and confirm pages and relationships survive. | Each format needs a separate parser and mapping. No parser is present, and VSDX is a binary container. |
 | IO-18 | HTML embed export | A diagram can be embedded in a web page as an interactive or static viewer. | [Generate code to embed a diagram in a webpage](https://www.drawio.com/docs/manual/export/embed-html/) | None | **BLOCKED** | Export HTML, open it in a browser, and confirm the diagram renders without the desktop app. | Requires a browser renderer or a prebuilt viewer bundle. The project has no web runtime and no network viewer. |
-| IO-19 | Print | The current page or selection prints with the chosen paper size and scale. | [Export, embed, publish and print diagrams](https://www.drawio.com/docs/manual/export/) | None | **DISCOVERED** | Open the print dialog, print a page, and confirm margins and scale match the preview. | Only file export exists. Printing would depend on paper settings (DOC-10). |
+| IO-19 | Print | The current page or selection prints with the chosen paper size and scale. | [Export, embed, publish and print diagrams](https://www.drawio.com/docs/manual/export/) | src/ui/print.rs, src/io/pdf.rs | **VERIFIED** | Open the print dialog, print a page, and confirm margins and scale match the preview. | Paper, orientation, fit/custom scale and margin are session settings; native printing hands a paper-sized PDF to the OS. Tests: `print_pdf_uses_paper_size_and_orientation_for_mediabox`, `print_pdf_a4_fit_keeps_content_inside_margins`, `print_pdf_percent_scale_changes_transform_without_page_size`, `output_dir_prefers_the_project_folder`. |
 | IO-20 | Open from URL and share as URL | A diagram can be opened from a URL or shared as a compressed link. | [Share draw.io diagrams stored on cloud platforms](https://www.drawio.com/docs/manual/collaboration/share-diagrams/) | None | **BLOCKED** | Paste a share URL, open it, and recover the same diagram without an account. | The app has no diagram URL codec and no network fetch. Local-first storage is a deliberate boundary. |
 | IO-21 | Import loss reporting | Unsupported import features are listed after import instead of disappearing silently. | [draw.io import formats and sources](https://www.drawio.com/docs/manual/import/import-formats/) | None | **ANALYZED** | Import a file with unsupported features and see a readable list of what was dropped or approximated. | Current importers report hard errors but do not produce a structured loss report. ADR-011 makes the report part of every future adapter. Working tree (2026-11-08): import returns page, shape, connector, and layer counts plus per-cell approximations, drops, and warnings; the app shows them in a dismissible report window and the CLI prints the summary and diagnostics. |
 

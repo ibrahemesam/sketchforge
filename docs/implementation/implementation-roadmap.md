@@ -212,6 +212,18 @@ mcp test binary, so the final run used one test thread and passed 486 tests.
 The implementation was committed as 5802ded; this documentation closeout
 completes the round.
 
+**Committed (2026-11-19, round 39).** IO-19 closed on
+`agent/drawio-features`. Ctrl/Cmd+P opens a Print dialog with paper, orientation,
+fit or custom scale, margin, and page or selection scope. `io::pdf` emits a
+paper-sized MediaBox and centers the scaled content inside the margins. The
+primary button writes the PDF to the project folder without a native picker so
+the result is deterministic; Choose location keeps the rfd save dialog. The
+first failure had no print API. Focused, integration and final checks pass, and
+a verified 490.87 s live recording is in
+`.artifacts/round39/evidence/evidence-20261119-124018-fd7149/report.md` with the
+printed PDF beside it. The implementation was committed as 97dfc51; this
+documentation closeout completes the round.
+
 **Scope.**
 
 - A selection context resolver that classifies the current selection as document, single
