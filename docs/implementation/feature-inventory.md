@@ -263,24 +263,24 @@ gaps landed on 2026-10-26: a label without a solid background cuts the line behi
 text, and the gap follows label moves, reroutes, and export. Page view is a view
 preference and is not part of the page file.
 
-**Size:** 231 capabilities in 13 domains. 154 are verified against committed tests or directly exercised code, 22 are implemented without a focused check, 49 are absent, and 6 are analysed or partial.
+**Size:** 231 capabilities in 13 domains. 156 are verified against committed tests or directly exercised code, 22 are implemented without a focused check, 47 are absent, and 6 are analysed or partial.
 
 ## Counts
 
 | Status | Count | Meaning |
 |---|---:|---|
-| VERIFIED | 154 | Committed test or directly exercised code path proves the behavior. |
+| VERIFIED | 156 | Committed test or directly exercised code path proves the behavior. |
 | IMPLEMENTED | 22 | Code exists and the path is readable, but no focused test or this-session runtime check covers it. |
 | IN_PROGRESS | 3 | Partial code at HEAD or in the tracked working state; the acceptance criteria are not met. |
 | ANALYZED | 3 | draw.io behavior is documented and a native design is recorded, but no code exists. |
-| DISCOVERED | 17 | draw.io behavior is documented here; no code or design exists. |
+| DISCOVERED | 15 | draw.io behavior is documented here; no code or design exists. |
 | BLOCKED | 32 | Work cannot proceed without a missing subsystem, external service, licensing decision, or explicit scope decision. |
 | **Total** | **231** | |
 
 | Domain | Rows | VERIFIED | IMPLEMENTED | IN_PROGRESS | ANALYZED | DISCOVERED | BLOCKED |
 |---|---:|---:|---:|---:|---:|---:|---:|
 | DOC Document, projects, pages, and diagram settings | 15 | 13 | 0 | 1 | 0 | 0 | 1 |
-| CAN Canvas, navigation, grid, and guides | 16 | 13 | 1 | 0 | 0 | 2 | 0 |
+| CAN Canvas, navigation, grid, and guides | 16 | 15 | 1 | 0 | 0 | 0 | 0 |
 | SHP Shapes, frames, transforms, and paths | 26 | 20 | 5 | 0 | 0 | 0 | 1 |
 | CON Connectors and arrows | 21 | 19 | 2 | 0 | 0 | 0 | 0 |
 | TXT Text, labels, and typography | 25 | 17 | 4 | 0 | 0 | 1 | 3 |
@@ -361,8 +361,8 @@ Moving around the canvas and the alignment aids that support placement.
 | CAN-12 | Marquee selection | Drag on empty canvas to select intersecting content, including children of a grazed frame. | [Work with shapes in draw.io](https://www.drawio.com/docs/manual/shapes/) | src/editor/mod.rs, src/editor/hit.rs | **VERIFIED** | Drag a marquee across a frame and confirm its children select without selecting the frame itself. | A frame body starts a marquee instead of moving the frame. Test: `marquee_selects_children_of_grazed_frame_but_not_the_frame`. |
 | CAN-13 | Shift multi-select and selection cycling | Shift-click adds or removes items; Tab cycles siblings and Enter selects the parent. | [Keyboard shortcuts](https://www.drawio.com/docs/reference/shortcuts/) | src/editor/mod.rs, src/editor/hit.rs | **VERIFIED** | Build a selection by clicking and Shift-clicking, then enter and leave a group with Enter and Tab. | Selection is not part of undo history. Test: `click_shift_click_and_marquee_selection`. |
 | CAN-14 | Hover connection arrows | Hovering an unselected shape shows four directional knobs that create a connected shape or connector. | [Connect shapes quickly](https://www.drawio.com/docs/manual/connectors/connect-shapes/) | src/editor/mod.rs, src/editor/whiteboard.rs | **VERIFIED** | Press a hover knob and drag to an empty spot; a connected shape or arrow is created in one gesture. | Frames bind only from their edge. Test: `press_hover_knob_and_drag_connects_two_unselected_shapes`. |
-| CAN-15 | Fixed connection points | Small crosses mark fixed attachment points on a shape while hovering, and connectors can attach to them. | [Customise the connection points on a shape](https://www.drawio.com/docs/manual/shapes/shape-connection-points-customise/) | src/connector.rs | **DISCOVERED** | Show fixed points on hover and attach an endpoint to one; the endpoint keeps that relative point when the shape resizes. | Attachment currently uses a normalized point on the outline but does not expose draw.io-style crosses or named points. Working tree (2026-11-13): crosses mark the eight anchors on hover or while a connector end is dragged, an end snaps within 12 px, and the stored fraction keeps a snapped corner across resize. |
-| CAN-16 | Rulers and manual guides | Rulers along the canvas edges and draggable manual guides support layout outside shape snapping. | [Change the diagram editor grid](https://www.drawio.com/docs/manual/editor/panels/editor-grid-change/) | None | **DISCOVERED** | Drag a guide from a ruler, place shapes against it, and keep the guide after reload. | Only transient shape and grid guides exist at HEAD. Working tree (2026-11-14): a page-level Rulers toggle draws 18 px strips with 1-2-5 tick spacing, guides drag from a ruler and move or delete by dragging or dropping on it, moves and the dragged resize edge snap to guides ahead of alignment and grid snaps, Clear Guides empties the list, and rulers plus guides persist in the page file. |
+| CAN-15 | Fixed connection points | Small crosses mark fixed attachment points on a shape while hovering, and connectors can attach to them. | [Customise the connection points on a shape](https://www.drawio.com/docs/manual/shapes/shape-connection-points-customise/) | src/connector.rs, src/editor/whiteboard.rs, src/render/scene.rs, src/model/settings.rs, src/ui/inspector.rs | **VERIFIED** | Show fixed points on hover and attach an endpoint to one; the endpoint keeps that relative point when the shape resizes. | Fixed anchors are computed and snapped through `snap_fixed_state`, `fixed_points` and `global_fixed` in `src/connector.rs`, drawn as crosses in `src/render/scene.rs` when connection_points is enabled, and endpoint drops store snapped fractions in `src/editor/whiteboard.rs`. `snap_fixed_uses_the_nearest_point_only_inside_the_tolerance` and `dropping_a_connector_end_near_a_fixed_point_stores_that_point` cover snapping and keeping the corner through resize. The row was stale. |
+| CAN-16 | Rulers and manual guides | Rulers along the canvas edges and draggable manual guides support layout outside shape snapping. | [Change the diagram editor grid](https://www.drawio.com/docs/manual/editor/panels/editor-grid-change/) | src/model/settings.rs, src/render/scene.rs, src/editor/mod.rs, src/editor/snap.rs, src/ui/inspector.rs, src/project/format.rs, src/io/file.rs | **VERIFIED** | Drag a guide from a ruler, place shapes against it, and keep the guide after reload. | Pages store `rulers` and `manual_guides`, rulers and guides render in `src/render/scene.rs`, create/move/delete and snapping behavior is implemented in editor/snap code, and the inspector exposes Rulers and Clear Guides. `dragging_from_a_ruler_adds_a_guide_with_undo`, `moving_a_shape_snaps_to_a_manual_guide`, `resizing_snaps_the_dragged_edge_to_a_manual_guide` and `manual_guides_snap_any_anchor_and_report_the_hit` cover the behavior, with persistence covered by page/settings handling. The row was stale. |
 
 ## SHP: Shapes, frames, transforms, and paths
 

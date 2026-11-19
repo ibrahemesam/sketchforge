@@ -1,6 +1,6 @@
 # Sketch agent session state
 
-Last updated: 2026-11-19 (round 54 stale-row closures, local pending commit/push).
+Last updated: 2026-11-19 (round 55 stale-row closures, local pending commit/push).
 
 ## Objective
 
@@ -630,16 +630,15 @@ checks.
 Round 52 was committed as `5ffd939` and pushed: stale CON/CUS/GEN/TXT rows were
 closed as evidence-only doc updates.
 
-Round 53 was committed as `a47c473` and pushed: stale connector label/flow and
-page-setting rows were closed as evidence-only doc updates.
+Round 54 was committed as `133f255` and pushed: stale placeholder and diagram
+property rows were closed as evidence-only doc updates.
 
-Round 54 (local, pending commit/push) closed stale BLOCKED/DISCOVERED rows
-DIA-08, DIA-09 and DOC-14 as evidence-only doc updates against HEAD behavior and
-existing tests (placeholders, predefined values, page context and diagram
-properties). No application code changed. Parity docs record VERIFIED 154,
-ANALYZED 3, DISCOVERED 17, BLOCKED 32 and IN_PROGRESS 3. `git diff --check` and
-parity doc checks should pass before commit. Full `cargo test` and release build
-were not rerun.
+Round 55 (local, pending commit/push) closed stale DISCOVERED rows CAN-15 and
+CAN-16 as evidence-only doc updates against HEAD behavior and existing tests
+(fixed connection points and rulers/manual guides). No application code
+changed. Parity docs record VERIFIED 156, DISCOVERED 15 and IN_PROGRESS 3.
+`git diff --check` and parity doc checks should pass before commit. Full
+`cargo test` and release build were not rerun.
 
 ## Blockers
 
@@ -655,15 +654,15 @@ were not rerun.
 
 ## Exact next task
 
-Commit and `git push --quiet` the round 54 evidence-only parity/doc closures on
+Commit and `git push --quiet` the round 55 evidence-only parity/doc closures on
 `agent/drawio-features`, keeping parity checks passing. After pushing, continue
-verifying the next stale rows at HEAD (high-value candidates: CAN-15, CAN-16,
-TXT-19, CON-13, CON-17, IO-15/16/21 status consistency, and GEN/template rows
-such as GEN-01/02/03/05/06/07/08/09/11/12/13/14/15 and CUS-13/14 where "working
-tree" notes may now be committed). Capture a failing test before fixes when a
-real code gap exists; otherwise close as evidence-only with cited HEAD
-identifiers and update verification/session docs. Do not restart completed
-rounds. Keep blocked/deferred items blocked. No release, tag, or PR.
+verifying the next stale rows at HEAD (high-value candidates: TXT-19, CON-13,
+CON-17, IO-15/16/21 status consistency, and GEN/template rows such as
+GEN-01/02/03/05/07/08/09/11/12/13/14/15 and CUS-13/14 where "working tree"
+notes may now be committed). Capture a failing test before fixes when a real
+code gap exists; otherwise close as evidence-only with cited HEAD identifiers
+and update verification/session docs. Do not restart completed rounds. Keep
+blocked/deferred items blocked. No release, tag, or PR.
 
 ## Commands
 

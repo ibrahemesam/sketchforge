@@ -412,7 +412,9 @@ documentation closeout completes the round.
 
 **Round 53 (committed a47c473, pushed).** Closed stale ANALYZED/DISCOVERED rows CON-10, CON-12, CON-16, CON-19, DOC-08, DOC-10 and DOC-11 as evidence-only doc updates against HEAD behavior and existing tests. No application code changed.
 
-**Round 54 (local, commit/push pending).** Closed stale BLOCKED/DISCOVERED rows DIA-08, DIA-09 and DOC-14 as evidence-only doc updates against HEAD behavior and existing tests. No application code changed. Parity docs now record VERIFIED 154, ANALYZED 3, DISCOVERED 17, BLOCKED 32 and IN_PROGRESS 3. Full `cargo test` and release build were not rerun.
+**Round 54 (committed 133f255, pushed).** Closed stale BLOCKED/DISCOVERED rows DIA-08, DIA-09 and DOC-14 as evidence-only doc updates against HEAD behavior and existing tests. No application code changed.
+
+**Round 55 (local, commit/push pending).** Closed stale DISCOVERED rows CAN-15 and CAN-16 as evidence-only doc updates against HEAD behavior and existing tests. No application code changed. Parity docs now record VERIFIED 156, DISCOVERED 15 and IN_PROGRESS 3. Full `cargo test` and release build were not rerun.
 
 **Scope.**
 
