@@ -1,6 +1,6 @@
 # Sketch agent session state
 
-Last updated: 2026-11-19 (round 50 SHP-19 draw.io upright-label sidecar).
+Last updated: 2026-11-19 (round 51 stale-row closures and DIA-07, local pending commit/push).
 
 ## Objective
 
@@ -620,45 +620,44 @@ clippy, diff-check and release build pass. A CLI export of a seeded rotated
 upright-labeled shape produced `.artifacts/round50/io/upright.drawio` with
 `rotation=30` and the sidecar, and reimporting it produced
 `.artifacts/round50/io/imported-node.json` with rotation 30 and `label_upright`
-true. The implementation and docs commits (`30636ea`, `b7ce024`) were pushed. Parity
-docs record VERIFIED 127, ANALYZED 5 and DISCOVERED 40 at closeout.
+true. The implementation and docs commits (`30636ea`, `b7ce024`) were pushed.
+
+Round 51 (local, pending commit/push) closed stale rows DIA-02, DIA-06, CUS-16,
+DIA-01, SHP-17, UIX-04 and UIX-11 as evidence-only doc updates against HEAD
+behavior and existing tests. DIA-07 was implemented and verified locally:
+`replace_one` and `Query::replace_one_at` in `src/find.rs` plus Replace-current-
+match wiring in `src/ui/findbar.rs`, with
+`replace_one_changes_only_the_current_match_and_is_one_undo_step` and
+`cargo test --lib find` passing alongside `cargo fmt --check`,
+`cargo clippy --all-targets -- -D warnings`, `git diff --check`, and
+`python3 .artifacts/check_parity_docs.py`. Full `cargo test` and release build
+were not rerun in this round. Parity docs record VERIFIED 135 and IN_PROGRESS 3.
 
 ## Blockers
 
-GEN-04 AI generation stays blocked: it needs a hosted model, credentials,
-network access, and privacy terms. GEN-10 vendor cloud stencils stay blocked on
-trademark and asset licensing. M9 collaboration stays blocked without a server,
-conflict model, and permissions. Custom-folder selection uses the rfd picker,
-which does not display under bare Xvfb without a desktop portal; the load and
-error paths are tested directly. Bare Xvfb has no window manager, so some
-synthetic keys do not reach winit dialogs and keyboard-only dialog paths are
-covered by egui `run_ui` tests. Note: `/tmp/opencode` is wiped between days; the
-MCP helper and scratch projects must be recreated (the helper source is recorded
-in `.opencode/MEMORY.md`).
+- No blockers. M9 collaboration remains deferred pending a server, a conflict
+  model, and permissions. GEN-04 AI generation and GEN-10 vendor stencils remain
+  blocked. IO-17, IO-18 and IO-20 remain blocked or deferred, as do the HTML
+  and PDF parts of DOC-15.
+- Stale installed MCP binary at `~/.cargo/bin/sketch-rs-mcp` lacks the most
+  recent tools in this tree. Run `cargo install --path . --bin sketch-rs-mcp`
+  to expose them outside `cargo run --bin`. Token-guarded HTTP/MCP endpoints on
+  port 3333 are the reliable path for runtime verification (see
+  `.opencode/MEMORY.md`).
 
 ## Exact next task
 
-Round 50 closed SHP-19. Pick the next stale DISCOVERED row only after checking
-it against HEAD. Start with DIA-02, DIA-06, DIA-07, or CUS-16: many rows are
-marked DISCOVERED but already implemented, so confirm the real gap in source
-and tests before changing code. Capture a failing test first. If a row is
-already satisfied, update the inventory and evidence instead of adding code. Do
-not assume any ANALYZED or DISCOVERED row is open. UIX-12 and UIX-13 are genuine
-but broad. CUS-11 is documented out of scope. Keep DIA-11 animation actions
-blocked on a sandboxed action interpreter. Use a fresh scratch folder and reuse
-Xvfb `:105`, and start the recorder with `DISPLAY=:105` or it captures the blank
-`:0` screen; drive the app with `env -u WAYLAND_DISPLAY` or it picks the Wayland
-backend and maps no X11 window. PIL `ImageGrab.grab(xdisplay=':105')` is much
-faster than spawning ffmpeg for each screenshot when probing hover positions;
-hover needs intermediate pointer moves, a direct jump from outside the canvas
-can be dropped during layout. No release or tag. Do not restart UIX-14, TXT-21,
-STY-23, IO-19, CAN-06, CON-09, CON-13, CON-17, UIX-04, STY-13, STY-14, STY-21,
-STY-22, DOC-09, TXT-24, DIA-10, CUS-05, TXT-06, CON-18, DIA-05, DIA-04, DIA-03 or
-SHP-19: their commands, editor tests and runtime evidence are already
-committed. M9 collaboration stays blocked without a server, conflict model, and
-permissions. GEN-04 AI generation and GEN-10 vendor stencils also stay blocked.
-IO-17, IO-18 and IO-20 remain blocked or deferred, as do the HTML and PDF parts
-of DOC-15.
+Commit and `git push --quiet` the round 51 work in logical commits on
+`agent/drawio-features` (evidence-only stale-row parity/doc closures, then
+DIA-07 replace-one implementation/tests/docs as appropriate), keeping docs and
+parity checks passing in each committed state. After pushing, continue verifying
+the next stale `DISCOVERED` rows at HEAD (start with clearly stale rows such as
+DOC-08, DOC-10, DOC-11 or CAN-12 only after careful source/test confirmation;
+many diagram-data/placeholder/template rows are genuinely blocked or analyzed).
+Capture a failing test before fixes when a real code gap exists; otherwise close
+as evidence-only with cited HEAD identifiers and update verification/session
+docs. Do not restart completed rounds. Keep blocked/deferred items blocked. No
+release, tag, or PR.
 
 ## Commands
 

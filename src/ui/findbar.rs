@@ -143,6 +143,7 @@ pub fn draw(ctx: &egui::Context, ed: &mut Editor, st: &mut UiState, canvas: egui
     let mut close = false;
     let mut step: Option<bool> = None;
     let mut replace_all = false;
+    let mut replace_one = false;
     egui::Area::new("find-bar".into())
         .order(egui::Order::Foreground)
         .anchor(Align2::RIGHT_TOP, [-16.0, 44.0])
@@ -231,6 +232,16 @@ pub fn draw(ctx: &egui::Context, ed: &mut Editor, st: &mut UiState, canvas: egui
                             }
                             if ui
                                 .add_enabled(
+                                    !st.find.matches.is_empty(),
+                                    egui::Button::new("Replace"),
+                                )
+                                .on_hover_text("Replace the current match")
+                                .clicked()
+                            {
+                                replace_one = true;
+                            }
+                            if ui
+                                .add_enabled(
                                     !st.find.query.is_empty(),
                                     egui::Button::new("Replace All"),
                                 )
@@ -284,6 +295,36 @@ pub fn draw(ctx: &egui::Context, ed: &mut Editor, st: &mut UiState, canvas: egui
         });
     if ctx.input(|i| i.key_pressed(egui::Key::Escape)) {
         close = true;
+    }
+    if replace_one && !st.find.matches.is_empty() {
+        let m = st.find.matches[st.find.current.min(st.find.matches.len() - 1)].clone();
+        match find::replace_one(
+            ed,
+            &m,
+            &st.find.query,
+            &st.find.replacement,
+            st.find.regex,
+            st.find.case_sensitive,
+        ) {
+            Ok(r) => {
+                st.find.status = if r.replaced > 0 {
+                    "Replaced 1 match.".to_string()
+                } else if r.skipped > 0 {
+                    "Skipped 1 match.".to_string()
+                } else {
+                    "Nothing to replace.".to_string()
+                };
+            }
+            Err(e) => st.find.error = Some(e),
+        }
+        st.find.invalidate();
+        st.find.refresh(ed);
+        if !st.find.matches.is_empty() && st.find.current >= st.find.matches.len() {
+            st.find.current = 0;
+        }
+        if let Some(m) = st.find.matches.get(st.find.current).cloned() {
+            focus_match(ed, &m);
+        }
     }
     if replace_all {
         let had_query = !st.find.query.is_empty();

@@ -119,10 +119,70 @@ impl Query {
             replace_literal(text, &self.literal, replacement, self.case_sensitive)
         }
     }
+
+    /// Replace one match at character offsets `start..end`, if it still matches.
+    pub fn replace_one_at(
+        &self,
+        text: &str,
+        start: usize,
+        end: usize,
+        replacement: &str,
+    ) -> Option<String> {
+        let chars: Vec<char> = text.chars().collect();
+        if end > chars.len() || start >= end {
+            return None;
+        }
+        if let Some(re) = &self.regex {
+            let bs = byte_index(text, start);
+            let be = byte_index(text, end);
+            let mut found = None;
+            for caps in re.captures_iter(text) {
+                if let Some(m) = caps.get(0)
+                    && m.start() == bs
+                    && m.end() == be
+                {
+                    found = Some(caps);
+                    break;
+                }
+            }
+            let caps = found?;
+            let mut rep = String::new();
+            caps.expand(replacement, &mut rep);
+            let mut out = String::with_capacity(text.len().saturating_sub(be - bs) + rep.len());
+            out.push_str(&text[..bs]);
+            out.push_str(&rep);
+            out.push_str(&text[be..]);
+            Some(out)
+        } else {
+            if end - start != self.literal.len() {
+                return None;
+            }
+            for (k, c) in self.literal.iter().enumerate() {
+                if !same_char(chars[start + k], *c, self.case_sensitive) {
+                    return None;
+                }
+            }
+            let mut out = String::with_capacity(text.len());
+            out.extend(chars[..start].iter());
+            out.push_str(replacement);
+            out.extend(chars[end..].iter());
+            Some(out)
+        }
+    }
 }
 
 fn char_at(text: &str, byte: usize) -> usize {
     text[..byte].chars().count()
+}
+
+fn byte_index(text: &str, char_index: usize) -> usize {
+    if char_index == 0 {
+        return 0;
+    }
+    text.char_indices()
+        .nth(char_index)
+        .map(|(i, _)| i)
+        .unwrap_or(text.len())
 }
 
 fn same_char(a: char, b: char, case_sensitive: bool) -> bool {
@@ -334,6 +394,90 @@ pub struct ReplaceReport {
     pub pages: usize,
 }
 
+/// Replace one match. A stale, missing, non-replaceable or locked target is
+/// reported as skipped rather than an error.
+pub fn replace_one(
+    ed: &mut Editor,
+    m: &FindMatch,
+    pattern: &str,
+    replacement: &str,
+    use_regex: bool,
+    case_sensitive: bool,
+) -> Result<ReplaceReport, String> {
+    let query = Query::new(pattern, use_regex, case_sensitive)?;
+    let mut report = ReplaceReport::default();
+    if m.page >= ed.pages.len() {
+        return Err("Match page is missing.".into());
+    }
+    let doc = ed.page_doc(m.page);
+    if let Some(id) = m.node {
+        let Some(n) = doc.get(id) else {
+            report.skipped += 1;
+            return Ok(report);
+        };
+        if !m.field.replaceable()
+            || !(doc.is_effectively_visible(id) && !doc.is_effectively_locked(id))
+        {
+            report.skipped += 1;
+            return Ok(report);
+        }
+        let Some(text) = node_field_text(n, &m.field) else {
+            report.skipped += 1;
+            return Ok(report);
+        };
+        let Some(new) = query.replace_one_at(&text, m.start, m.end, replacement) else {
+            report.skipped += 1;
+            return Ok(report);
+        };
+        let mut replaced = 0usize;
+        ed.with_page(m.page, |ed| {
+            ed.edit("Replace", |tx| {
+                if let Some(node) = tx.node_mut(id) {
+                    set_node_field(node, &m.field, new.clone());
+                    replaced = 1;
+                }
+            });
+        });
+        if replaced > 0 {
+            report.replaced = 1;
+            report.pages = 1;
+        } else {
+            report.skipped += 1;
+        }
+    } else {
+        if !m.field.replaceable() {
+            report.skipped += 1;
+            return Ok(report);
+        }
+        let FindField::PageValue(key) = &m.field else {
+            report.skipped += 1;
+            return Ok(report);
+        };
+        let Some(text) = doc.settings.metadata.get(key).cloned() else {
+            report.skipped += 1;
+            return Ok(report);
+        };
+        let Some(new) = query.replace_one_at(&text, m.start, m.end, replacement) else {
+            report.skipped += 1;
+            return Ok(report);
+        };
+        let mut replaced = 0usize;
+        ed.with_page(m.page, |ed| {
+            ed.edit("Replace", |tx| {
+                tx.settings_mut().metadata.insert(key.clone(), new.clone());
+                replaced = 1;
+            });
+        });
+        if replaced > 0 {
+            report.replaced = 1;
+            report.pages = 1;
+        } else {
+            report.skipped += 1;
+        }
+    }
+    Ok(report)
+}
+
 /// Replace every match on every page. Each page commits one undo step.
 pub fn replace_all(
     ed: &mut Editor,
@@ -507,5 +651,27 @@ mod tests {
         assert!(Query::new("", false, false).is_err());
         let e = Query::new("(", true, false).unwrap_err();
         assert!(e.contains("Invalid regular expression"));
+    }
+
+    #[test]
+    fn replace_one_changes_only_the_current_match_and_is_one_undo_step() {
+        let (mut ed, id) = editor();
+        let q = Query::new("beta", false, false).unwrap();
+        let matches = search(&ed, &q);
+        let label = matches
+            .iter()
+            .find(|m| m.node == Some(id) && matches!(m.field, FindField::Label))
+            .cloned()
+            .unwrap();
+        let r = replace_one(&mut ed, &label, "beta", "gamma", false, false).unwrap();
+        assert_eq!(r.replaced, 1);
+        assert_eq!(r.skipped, 0);
+        assert_eq!(ed.doc.get(id).unwrap().label, "Alpha gamma");
+        assert_eq!(ed.doc.get(id).unwrap().tooltip, "beta tooltip");
+        let q = Query::new("beta", false, false).unwrap();
+        assert_eq!(search(&ed, &q).len(), 4);
+        ed.history.undo(&mut ed.doc);
+        assert_eq!(ed.doc.get(id).unwrap().label, "Alpha Beta");
+        assert_eq!(ed.doc.get(id).unwrap().tooltip, "beta tooltip");
     }
 }

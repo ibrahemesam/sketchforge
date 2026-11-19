@@ -406,6 +406,8 @@ upright-labeled shape produced `.artifacts/round50/io/upright.drawio` with
 `label_upright` true. The implementation was committed as 30636ea; this
 documentation closeout completes the round.
 
+**Round 51 (local, commit/push pending).** Closed stale parity rows DIA-02, DIA-06, CUS-16, DIA-01, SHP-17, UIX-04 and UIX-11 as evidence-only doc updates against HEAD behavior and existing tests. DIA-07 was implemented and verified with focused checks: `replace_one`/`Query::replace_one_at` in `src/find.rs` and find-bar Replace-current-match wiring in `src/ui/findbar.rs`, covered by `replace_one_changes_only_the_current_match_and_is_one_undo_step` and `cargo test --lib find`. Parity docs now record VERIFIED 135 and IN_PROGRESS 3. Full `cargo test` and release build were not rerun in this round.
+
 **Scope.**
 
 - A selection context resolver that classifies the current selection as document, single
