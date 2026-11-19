@@ -25,10 +25,10 @@ grid color, e9bf2ed with its docs closeout and c43a525 marking it pushed. Round
 with its docs closeout. Round 44 was pushed as 60186ab with draw.io shape
 library XML import and export, 3fe9208 with its docs closeout and 4510e02
 marking it pushed. Round 45 was pushed as c7941e0 with installed font families
-exposed to MCP and draw.io, and e7cce0a with its docs closeout. Round 46
-implementation is committed locally as 221cf0f with the MCP reverse_connectors
-tool, and this update is its docs closeout. Do not create releases or deploy
-Vercel; plain `git push` sends commits to the fork.
+exposed to MCP and draw.io, e7cce0a with its docs closeout and e6dcb21 marking it
+pushed. Round 46 was pushed as 221cf0f with the MCP reverse_connectors tool and
+904a29e with its docs closeout. Do not create releases or deploy Vercel; plain
+`git push` sends commits to the fork.
 
 The full sidebar spec was implemented and verified in round 6 (see
 `.opencode/MEMORY.md`). Round 7 closed the transparent connector label gap.
@@ -525,8 +525,8 @@ over HTTP rather than clicking the inspector button, bindings came from the
 saved page JSON because `get_node_info` omits connector ends, and the pixel diff
 excluded status-bar text so the undo result was not masked. The code was
 committed after the recording, so the report names `unknown`. Implementation
-committed as 221cf0f; parity docs recorded VERIFIED 123, ANALYZED 5 and
-DISCOVERED 44 at closeout.
+committed as 221cf0f; both commits were pushed and parity docs recorded VERIFIED
+123, ANALYZED 5 and DISCOVERED 44 at closeout.
 
 ## Blockers
 
