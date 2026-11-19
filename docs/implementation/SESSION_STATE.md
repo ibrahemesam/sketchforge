@@ -433,8 +433,8 @@ assertions is in
 `.artifacts/round42/evidence/evidence-20261119-135940-3eab09/report.md`. The
 color was seeded into page JSON and the app restarted between states because the
 native picker is not driven under bare Xvfb. The reimport half is covered by a
-test, not the video. Code commit 727c534 needs a plain `git push`; the parity
-docs record VERIFIED 119 and DISCOVERED 47 at closeout.
+test, not the video. Both commits were pushed; the parity docs recorded
+VERIFIED 119 and DISCOVERED 47 at the end of the round.
 
 ## Blockers
 
