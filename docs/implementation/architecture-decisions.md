@@ -106,8 +106,10 @@ background can carry optional dark values. Colors resolve when
 and exporters see resolved colors without rewriting stored data. Text visibility
 is handled by the renderer against the real text background. It lifts only
 low-contrast glyphs on the dark canvas and leaves text-shadow glyphs alone. The
-Diagram tab edits the mode and dark values through the usual history path. The
-app theme stays display state, not a source of saved style changes.
+lift targets 14:1 contrast, so default ink reads as white on dark instead of a
+middle gray. Exports keep authored colors. The Diagram tab edits the mode and
+dark values through the usual history path. The app theme stays display state,
+not a source of saved style changes.
 
 **Shadows are defaults with explicit overrides (working tree, 2026-11-18).**
 STY-13 and DOC-13 keep a page-wide Shadow flag and an optional per-element flag

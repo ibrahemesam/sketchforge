@@ -1,6 +1,6 @@
 # Sketch agent session state
 
-Last updated: 2026-11-18 (round 35).
+Last updated: 2026-11-19 (round 36).
 
 ## Objective
 
@@ -11,8 +11,11 @@ format sidebar (`drawio_features_opencode_spec.md`, in
 
 ## Current state
 
-Branch `agent/drawio-features` at `5de2f5b` plus extensive uncommitted changes.
-Nothing committed or pushed; do not commit unless asked.
+Branch `agent/drawio-features` tracks `fork/main`, which points at
+`ibrahemesam/sketchforge` on GitHub. Round 36 implementation was pushed as
+7261dfd with the repo presentation and MIT license. Round 36 documentation is
+committed after it in this branch. Do not create releases or deploy Vercel;
+plain `git push` sends commits to the fork.
 
 The full sidebar spec was implemented and verified in round 6 (see
 `.opencode/MEMORY.md`). Round 7 closed the transparent connector label gap.
@@ -326,6 +329,16 @@ a verified 89.87 s video with four passing assertions. Clicking the checkbox
 removed the canvas gradient, undo restored it, PNG export kept it, and a CLI
 draw.io export and reimport carried the flag. Nothing committed or pushed.
 
+Round 36 closed STY-23 and fixed the dark-canvas contrast report. The Style tab
+has a typed property registry with draw.io-like keys, a local filter, real
+edits, validation, undo and connector-specific rows. The renderer now lifts
+low-contrast glyphs on dark pages to 14:1, so GPU arrow pixels rose from 133 to
+235 while light exports kept authored colors. The first panel test and the
+first contrast test failed before their fixes. Focused tests, final checks and
+frames are in `.artifacts/round36/` and `.artifacts/contrast/`. Implementation
+was pushed as 7261dfd; the parity docs now record VERIFIED 113 and DISCOVERED
+53.
+
 ## Blockers
 
 GEN-04 AI generation stays blocked: it needs a hosted model, credentials,
@@ -341,14 +354,16 @@ in `.opencode/MEMORY.md`).
 
 ## Exact next task
 
-Round 36 should close STY-23, the style property editor. Capture a failure
-first. Verify the filter, real property edits, undo and redo, page persistence
-and draw.io behavior. Do not restart CON-09, CON-13, CON-17, UIX-04, STY-13,
-STY-14, STY-21, or STY-22: their commands, editor tests, and runtime evidence
-are already in the working tree. M9 collaboration stays blocked without a
-server, conflict model, and permissions. GEN-04 AI generation and GEN-10 vendor
-stencils also stay blocked. IO-17, IO-18, IO-19, and IO-20 remain blocked or
-deferred, as do the HTML and PDF parts of DOC-15.
+Round 37 should close DOC-08, page background color. Capture a failure first:
+a test should require two pages to keep different background colors across a
+save and load, and require the active page color in PNG, SVG and draw.io
+exports. Add the page field, Diagram tab control, history entry and export
+mapping only after that test fails. Do not restart STY-23, CON-09, CON-13,
+CON-17, UIX-04, STY-13, STY-14, STY-21, or STY-22: their commands, editor tests
+and runtime evidence are already in the working tree. M9 collaboration stays
+blocked without a server, conflict model, and permissions. GEN-04 AI generation
+and GEN-10 vendor stencils also stay blocked. IO-17, IO-18, IO-19, and IO-20
+remain blocked or deferred, as do the HTML and PDF parts of DOC-15.
 
 ## Commands
 

@@ -175,6 +175,20 @@ passes 473 tests. Live Xvfb `:103` evidence has a verified 89.87 s video with
 four passing assertions, pixel samples, PNG exports and a CLI draw.io round
 trip in `.artifacts/round35/`.
 
+**Committed (2026-11-19, round 36).** STY-23 closed on
+`agent/drawio-features`. The Style tab now carries a static typed property
+registry with draw.io-like keys. Its local search filters keys, values edit the
+real style and join undo, invalid values show an error without changing state,
+and connectors show connector keys instead of shape keys. The same round fixed
+the user report that dark-canvas arrows and text read as gray: the renderer
+targets 14:1 contrast on dark pages, lifting GPU arrow pixels from 133 to 235
+while light exports keep authored colors. The first panel test failed with no
+Property / Value section, and the first contrast test failed with authored ink
+at 0.52. Focused tests, final checks and before and after frames are in
+`.artifacts/round36/` and `.artifacts/contrast/`. The implementation was pushed
+to `ibrahemesam/sketchforge` as 7261dfd; this documentation closeout completes
+the round.
+
 **Scope.**
 
 - A selection context resolver that classifies the current selection as document, single
