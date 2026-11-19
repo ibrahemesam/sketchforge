@@ -620,9 +620,8 @@ clippy, diff-check and release build pass. A CLI export of a seeded rotated
 upright-labeled shape produced `.artifacts/round50/io/upright.drawio` with
 `rotation=30` and the sidecar, and reimporting it produced
 `.artifacts/round50/io/imported-node.json` with rotation 30 and `label_upright`
-true. The implementation was committed as 30636ea; docs closeout and push are
-pending. Parity docs record VERIFIED 127, ANALYZED 5 and DISCOVERED 40 at
-closeout.
+true. The implementation and docs commits (`30636ea`, `b7ce024`) were pushed. Parity
+docs record VERIFIED 127, ANALYZED 5 and DISCOVERED 40 at closeout.
 
 ## Blockers
 
