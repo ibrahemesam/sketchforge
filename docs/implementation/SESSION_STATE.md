@@ -603,8 +603,8 @@ can be selected on the canvas. The first recording was discarded because its
 last frame went black. Calls went over HTTP rather than the Data tab, and the
 page target was stored but not opened in a viewer. The report names baseline
 `fce3746` because the implementation was committed as ea87c41 after the
-recording. The docs closeout and pushed marker are pending. Parity docs record
-VERIFIED 126, ANALYZED 5 and DISCOVERED 41 at closeout.
+recording. Code and docs commits (`ea87c41`, `e325a8b`) were pushed. Parity
+docs record VERIFIED 126, ANALYZED 5 and DISCOVERED 41 at closeout.
 
 ## Blockers
 
@@ -622,9 +622,13 @@ in `.opencode/MEMORY.md`).
 ## Exact next task
 
 Round 49 closed DIA-03. The welcome text fix and README rewrite are done and
-need no further work. Pick the next stale DISCOVERED row only after checking it
-against HEAD; CUS-16 library previews is the first candidate. Capture a failing
-test before changing code. Do not assume any ANALYZED or DISCOVERED row is open.
+need no further work. Start round 50 with SHP-19. Native rotation and the
+`label_upright` flag already work, but draw.io export and import drop the flag.
+Add a failing round-trip test first, then carry the flag in a native
+`__sketchLabelUpright` sidecar and consume it on import without leaving it in
+node metadata. Pick any later stale DISCOVERED row only after checking it
+against HEAD. Capture a failing test before changing code. Do not assume any
+ANALYZED or DISCOVERED row is open.
 UIX-12 and UIX-13 are genuine but broad. CUS-11 is documented out of scope.
 Keep DIA-11 animation actions blocked on a sandboxed action interpreter. Use a
 fresh scratch folder and reuse Xvfb `:105`,
