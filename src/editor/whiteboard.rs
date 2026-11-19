@@ -829,6 +829,7 @@ impl Editor {
             .last()
             .is_some_and(|(_, t)| now - t < LASER_DECAY_MS);
         laser
+            || self.page_transition_alpha(now) > 0.0
             || self.doc.nodes.values().any(|n| {
                 n.is_connector() && n.flow.enabled && n.visible && self.doc.layer_of(n.id).visible
             })
@@ -838,6 +839,9 @@ impl Editor {
     pub fn tick(&mut self, now: f64) {
         self.now_ms = now;
         self.laser.retain(|(_, t)| now - t < LASER_DECAY_MS);
+        if self.page_transition_alpha(now) == 0.0 {
+            self.page_transition_start = None;
+        }
     }
 
     // ---------------------------------------------------------------------- sketch style

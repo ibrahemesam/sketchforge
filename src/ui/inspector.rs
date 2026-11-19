@@ -1516,7 +1516,7 @@ fn export_section(ui: &mut Ui, ed: &mut Editor, st: &mut UiState) {
 /// draw.io's Diagram tab: page/view settings, guide and autosave options,
 /// paper size, diagram metadata and the shape defaults.
 fn diagram_tab(ui: &mut Ui, ed: &mut Editor, st: &mut UiState, vis: f32) {
-    use crate::model::settings::{Orientation, PaperSize};
+    use crate::model::settings::{Orientation, PageTransition, PaperSize};
 
     if let Some(_guard) = section_begin(
         ui,
@@ -1531,6 +1531,8 @@ fn diagram_tab(ui: &mut Ui, ed: &mut Editor, st: &mut UiState, vis: f32) {
             "Background Color",
             "Dark background",
             "Adaptive Colors",
+            "Transition",
+            "Fade on page switch",
             "Shadow",
             "Sketch",
         ],
@@ -1578,6 +1580,42 @@ fn diagram_tab(ui: &mut Ui, ed: &mut Editor, st: &mut UiState, vis: f32) {
                     .clicked()
             {
                 ed.edit_settings("Reset grid color", |s| s.grid_color = None);
+            }
+        });
+        row(ui, "Transition", |ui| {
+            let mut fade = ed.doc.settings.page_transition == PageTransition::Fade;
+            if ui
+                .checkbox(&mut fade, "Fade on page switch")
+                .on_hover_text("Fade in the new page when the editor switches pages")
+                .changed()
+            {
+                ed.edit_settings("Change page transition", |s| {
+                    s.page_transition = if fade {
+                        PageTransition::Fade
+                    } else {
+                        PageTransition::None
+                    };
+                });
+            }
+            if fade {
+                let mut ms = ed.doc.settings.page_transition_ms as f64;
+                let r = ui.add_sized(
+                    [58.0, 20.0],
+                    egui::DragValue::new(&mut ms)
+                        .range(100.0..=3000.0)
+                        .speed(10.0)
+                        .suffix(" ms"),
+                );
+                if r.changed() {
+                    ed.edit_settings_coalescing(
+                        "Change page transition",
+                        "page-transition-ms",
+                        |s| {
+                            s.page_transition_ms = ms.round() as u64;
+                        },
+                    );
+                }
+                seal_on_release(ed, &r);
             }
         });
         let mut page_view = ed.doc.settings.page_view;
@@ -5698,6 +5736,13 @@ mod tests {
         assert!(text.contains("Adaptive Colors"), "{text}");
         assert!(text.contains("Dark background"), "{text}");
         assert!(text.contains("Automatic"), "{text}");
+    }
+
+    #[test]
+    fn diagram_tab_exposes_page_transition_controls() {
+        let text = panel_text("Transition", false);
+        assert!(text.contains("Transition"), "{text}");
+        assert!(text.contains("Fade on page switch"), "{text}");
     }
 
     #[test]

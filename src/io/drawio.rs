@@ -9,8 +9,8 @@
 use crate::geom::{Rect, V2, v2};
 use crate::model::{
     AdaptiveColors, Binding, Color, DEFAULT_HEAD_SIZE, Document, FlowAnimation, FlowDirection,
-    FlowTiming, Head, ImageMode, Layer, LayerId, LineJump, Node, NodeId, NodeKind, Paint, Route,
-    TextAlign, VAlign,
+    FlowTiming, Head, ImageMode, Layer, LayerId, LineJump, Node, NodeId, NodeKind, PageTransition,
+    Paint, Route, TextAlign, VAlign,
 };
 use roxmltree::Node as XmlNode;
 use std::collections::{HashMap, HashSet};
@@ -21,6 +21,10 @@ const SKETCH_CONNECTOR_DEFAULT: &str = "__sketchConnectorDefault";
 /// Native-only grid color. draw.io has no page setting for this, so the value
 /// rides in the mxGraphModel sidecar and survives a Sketch round trip.
 const SKETCH_GRID_COLOR: &str = "__sketchGridColor";
+/// Native-only page transition. Draw.io has no page attribute for this, so the
+/// value rides in the mxGraphModel sidecar and survives a Sketch round trip.
+const SKETCH_PAGE_TRANSITION: &str = "__sketchPageTransition";
+const SKETCH_PAGE_TRANSITION_MS: &str = "__sketchPageTransitionMs";
 
 // --------------------------------------------------------------------------------- report
 
@@ -1684,6 +1688,13 @@ fn apply_model_settings(doc: &mut Document, model: XmlNode<'_, '_>) {
     {
         doc.settings.grid_color = Some(c);
     }
+    doc.settings.page_transition = match model.attribute(SKETCH_PAGE_TRANSITION) {
+        Some("fade") => PageTransition::Fade,
+        _ => PageTransition::None,
+    };
+    if let Some(v) = num_attr(model, SKETCH_PAGE_TRANSITION_MS) {
+        doc.settings.page_transition_ms = v.clamp(100.0, 3000.0) as u64;
+    }
     if let Some(v) = model.attribute("shadow") {
         doc.settings.shadow = v == "1";
     }
@@ -1755,6 +1766,15 @@ pub fn export(pages: &[(&str, &Document)]) -> String {
             out.push_str(SKETCH_GRID_COLOR);
             out.push_str("=\"");
             out.push_str(&c.to_hex());
+            out.push('"');
+        }
+        if doc.settings.page_transition == PageTransition::Fade {
+            out.push(' ');
+            out.push_str(SKETCH_PAGE_TRANSITION);
+            out.push_str("=\"fade\" ");
+            out.push_str(SKETCH_PAGE_TRANSITION_MS);
+            out.push_str("=\"");
+            out.push_str(&doc.settings.page_transition_ms.to_string());
             out.push('"');
         }
         if let Some(name) = &doc.settings.scheme {

@@ -62,6 +62,19 @@ pub enum Orientation {
     Landscape,
 }
 
+/// Effect played when the editor switches to a page.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum PageTransition {
+    #[default]
+    None,
+    Fade,
+}
+
+fn default_transition_ms() -> u64 {
+    400
+}
+
 impl Orientation {
     pub fn label(self) -> &'static str {
         match self {
@@ -260,6 +273,9 @@ pub struct DiagramSettings {
     pub autosave: bool,
     pub paper: PaperSize,
     pub orientation: Orientation,
+    pub page_transition: PageTransition,
+    #[serde(default = "default_transition_ms")]
+    pub page_transition_ms: u64,
     pub metadata: BTreeMap<String, String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub shape_default: Option<DefaultStyle>,
@@ -291,6 +307,8 @@ impl Default for DiagramSettings {
             autosave: true,
             paper: PaperSize::Letter,
             orientation: Orientation::Landscape,
+            page_transition: PageTransition::None,
+            page_transition_ms: default_transition_ms(),
             metadata: BTreeMap::new(),
             shape_default: None,
             connector_default: None,
@@ -349,6 +367,7 @@ impl DiagramSettings {
             self.grid_size = 10.0;
         }
         self.grid_size = self.grid_size.clamp(1.0, 1000.0);
+        self.page_transition_ms = self.page_transition_ms.clamp(100, 3000);
         self.manual_guides.retain(|g| g.pos.is_finite());
     }
 }

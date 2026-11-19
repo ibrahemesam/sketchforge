@@ -1127,6 +1127,12 @@ pub fn canvas(
     };
     let mut over = MeshBuilder::default();
     overlay(&mut over, ed, offset, dark);
+    let fade = ed.page_transition_alpha(ed.now_ms);
+    if fade > 0.0 {
+        let mut veil = canvas_bg(dark_content);
+        veil.a = (fade * 255.0) as u8;
+        over.rect(v.canvas_rect(), rgba(veil));
+    }
     CanvasFrame {
         under: under.finish(),
         items,

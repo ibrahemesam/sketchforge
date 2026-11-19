@@ -315,6 +315,8 @@ pub struct Editor {
     pub laser: Vec<(V2, f64)>,
     /// Latest input time (ms), for animations.
     pub now_ms: f64,
+    /// When the current page fade started. None outside a transition.
+    pub page_transition_start: Option<f64>,
     /// Route for new arrows.
     pub arrow_route: crate::model::Route,
     /// Grid spacing in world units, mirrored from the page settings.
@@ -387,6 +389,7 @@ impl Editor {
             bind_hover: None,
             laser: Vec::new(),
             now_ms: 0.0,
+            page_transition_start: None,
             arrow_route: crate::model::Route::Straight,
             grid_step,
             sticky_color: Color::rgb(0xff, 0xdf, 0x6b),
@@ -478,6 +481,17 @@ impl Editor {
         self.doc.settings.validate();
         self.grid_step = self.doc.settings.grid_size;
         self.snapping = self.doc.settings.guides;
+    }
+
+    /// Opacity of the fade veil at `now`, from 1 at the start to 0 at the end.
+    /// A smoothstep keeps the start and finish from snapping.
+    pub fn page_transition_alpha(&self, now: f64) -> f64 {
+        let Some(start) = self.page_transition_start else {
+            return 0.0;
+        };
+        let duration = (self.doc.settings.page_transition_ms as f64).max(1.0);
+        let t = ((now - start) / duration).clamp(0.0, 1.0);
+        1.0 - t * t * (3.0 - 2.0 * t)
     }
 
     /// Refresh `PageContext` on every page so predefined placeholders see the

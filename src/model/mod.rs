@@ -18,5 +18,5 @@ pub use paint::*;
 pub use scheme::{Scheme, SchemeReport, SchemeScope, SchemeSkipReason};
 pub use settings::{
     AdaptiveColors, BackgroundImage, ColorMode, DefaultStyle, DiagramSettings, GuideAxis,
-    ManualGuide, Orientation, PaperSize,
+    ManualGuide, Orientation, PageTransition, PaperSize,
 };
