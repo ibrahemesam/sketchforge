@@ -27,10 +27,9 @@ library XML import and export, 3fe9208 with its docs closeout and 4510e02
 marking it pushed. Round 45 was pushed as c7941e0 with installed font families
 exposed to MCP and draw.io, e7cce0a with its docs closeout and e6dcb21 marking it
 pushed. Round 46 was pushed as 221cf0f with the MCP reverse_connectors tool,
-904a29e with its docs closeout and 083ab91 marking it pushed. Round 47
-implementation is committed locally as 2ec2fbd with MCP tag search, and this
-update is its docs closeout. Do not create releases or deploy Vercel; plain
-`git push` sends commits to the fork.
+904a29e with its docs closeout and 083ab91 marking it pushed. Round 47 was pushed
+as 2ec2fbd with MCP tag search and a610877 with its docs closeout. Do not create
+releases or deploy Vercel; plain `git push` sends commits to the fork.
 
 The full sidebar spec was implemented and verified in round 6 (see
 `.opencode/MEMORY.md`). Round 7 closed the transparent connector label gap.
@@ -547,8 +546,8 @@ tags load through `get_node_info`, `tag: web` finds two shapes and `tag: *API*`
 finds one, and `select_nodes` selects both matches and changes 4897 canvas
 pixels. The calls went over HTTP rather than clicking the editor find bar, and
 the code was committed after the recording so the report names `unknown`.
-Implementation committed as 2ec2fbd; parity docs recorded VERIFIED 124, ANALYZED
-5 and DISCOVERED 43 at closeout.
+Implementation committed as 2ec2fbd; both commits were pushed and parity docs
+recorded VERIFIED 124, ANALYZED 5 and DISCOVERED 43 at closeout.
 
 ## Blockers
 
