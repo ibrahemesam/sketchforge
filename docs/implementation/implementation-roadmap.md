@@ -189,6 +189,17 @@ at 0.52. Focused tests, final checks and before and after frames are in
 to `ibrahemesam/sketchforge` as 7261dfd; this documentation closeout completes
 the round.
 
+**Committed (2026-11-19, round 37).** UIX-14 closed on
+`agent/drawio-features`. A fresh store opens a three-step welcome panel that
+walks through shapes, connectors and export. Dismissal persists in options, and
+the help dialog can reopen the tour. The first tests did not compile because
+there was no onboarding flag or welcome state. Focused tests, final checks and
+a verified live recording are in `.artifacts/round37/`. The first live run is
+marked discarded because it clicked Skip; the corrected run is in
+`.artifacts/round37/live2/`. The implementation was pushed to
+`ibrahemesam/sketchforge` as 858d1a0; this documentation closeout completes
+the round.
+
 **Scope.**
 
 - A selection context resolver that classifies the current selection as document, single

@@ -1,6 +1,6 @@
 # Sketch agent session state
 
-Last updated: 2026-11-19 (round 36).
+Last updated: 2026-11-19 (round 37).
 
 ## Objective
 
@@ -13,7 +13,8 @@ format sidebar (`drawio_features_opencode_spec.md`, in
 
 Branch `agent/drawio-features` tracks `fork/main`, which points at
 `ibrahemesam/sketchforge` on GitHub. Round 36 implementation was pushed as
-7261dfd with the repo presentation and MIT license. Round 36 documentation is
+7261dfd with the repo presentation and MIT license. Round 37 implementation was
+pushed as 858d1a0 with the first-run onboarding tour. Round 37 documentation is
 committed after it in this branch. Do not create releases or deploy Vercel;
 plain `git push` sends commits to the fork.
 
@@ -339,6 +340,14 @@ frames are in `.artifacts/round36/` and `.artifacts/contrast/`. Implementation
 was pushed as 7261dfd; the parity docs now record VERIFIED 113 and DISCOVERED
 53.
 
+Round 37 closed UIX-14, the first-run tour. A fresh store opens a three-step
+welcome panel covering shapes, connectors and export. Dismissal persists in
+options, and Help reopens the panel. The first tests failed because no onboarding
+flag or welcome state existed. The first live recording hit Skip and was
+discarded; the corrected Xvfb :104 run verified step advance and the saved
+onboarding_seen flag in an 82 s video. Implementation was pushed as 858d1a0; the
+parity docs now record VERIFIED 114 and DISCOVERED 52.
+
 ## Blockers
 
 GEN-04 AI generation stays blocked: it needs a hosted model, credentials,
@@ -354,16 +363,16 @@ in `.opencode/MEMORY.md`).
 
 ## Exact next task
 
-Round 37 should close DOC-08, page background color. Capture a failure first:
-a test should require two pages to keep different background colors across a
-save and load, and require the active page color in PNG, SVG and draw.io
-exports. Add the page field, Diagram tab control, history entry and export
-mapping only after that test fails. Do not restart STY-23, CON-09, CON-13,
-CON-17, UIX-04, STY-13, STY-14, STY-21, or STY-22: their commands, editor tests
-and runtime evidence are already in the working tree. M9 collaboration stays
-blocked without a server, conflict model, and permissions. GEN-04 AI generation
-and GEN-10 vendor stencils also stay blocked. IO-17, IO-18, IO-19, and IO-20
-remain blocked or deferred, as do the HTML and PDF parts of DOC-15.
+Round 38 should close TXT-21, lists and indentation. Capture a failure first:
+a test should require a three-item bulleted list to store per-paragraph list
+metadata, render bullet glyphs with increasing indent, and survive a save and
+load. Outdenting the second item must be one undo step. Do not restart UIX-14,
+DOC-08, STY-23, CON-09, CON-13, CON-17, UIX-04, STY-13, STY-14, STY-21, or
+STY-22: their commands, editor tests and runtime evidence are already in the
+working tree. M9 collaboration stays blocked without a server, conflict model,
+and permissions. GEN-04 AI generation and GEN-10 vendor stencils also stay
+blocked. IO-17, IO-18, IO-19, and IO-20 remain blocked or deferred, as do the
+HTML and PDF parts of DOC-15.
 
 ## Commands
 

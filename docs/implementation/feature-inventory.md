@@ -263,17 +263,17 @@ gaps landed on 2026-10-26: a label without a solid background cuts the line behi
 text, and the gap follows label moves, reroutes, and export. Page view is a view
 preference and is not part of the page file.
 
-**Size:** 231 capabilities in 13 domains. 113 are verified against committed tests or directly exercised code, 22 are implemented without a focused check, 88 are absent, and 9 are analysed or partial.
+**Size:** 231 capabilities in 13 domains. 114 are verified against committed tests or directly exercised code, 22 are implemented without a focused check, 87 are absent, and 9 are analysed or partial.
 
 ## Counts
 
 | Status | Count | Meaning |
 |---|---:|---|
-| VERIFIED | 113 | Committed test or directly exercised code path proves the behavior. |
+| VERIFIED | 114 | Committed test or directly exercised code path proves the behavior. |
 | IMPLEMENTED | 22 | Code exists and the path is readable, but no focused test or this-session runtime check covers it. |
 | IN_PROGRESS | 3 | Partial code at HEAD; the acceptance criteria are not met. |
 | ANALYZED | 6 | draw.io behavior is documented and a native design is recorded, but no code exists. |
-| DISCOVERED | 53 | draw.io behavior is documented here; no code or design exists. |
+| DISCOVERED | 52 | draw.io behavior is documented here; no code or design exists. |
 | BLOCKED | 34 | Work cannot proceed without a missing subsystem, external service, licensing decision, or explicit scope decision. |
 | **Total** | **231** | |
 
@@ -291,7 +291,7 @@ preference and is not part of the page file.
 | CUS Libraries, scratchpad, and custom shapes | 16 | 4 | 0 | 0 | 1 | 6 | 5 |
 | DIA Diagram data: metadata, links, tags, and placeholders | 12 | 0 | 0 | 0 | 1 | 7 | 4 |
 | STO Storage, sharing, collaboration, and integrations | 11 | 1 | 0 | 0 | 0 | 0 | 10 |
-| UIX Editor UI, panels, search, and accessibility | 14 | 6 | 1 | 2 | 0 | 4 | 1 |
+| UIX Editor UI, panels, search, and accessibility | 14 | 7 | 1 | 2 | 0 | 3 | 1 |
 
 ## Status rules
 
@@ -638,7 +638,7 @@ The chrome around the canvas and how commands are discovered.
 | UIX-11 | Search omnibox | A single search field finds shapes, diagram text, commands, and pages. | [Search for shapes, in-diagram text, help and more](https://www.drawio.com/docs/manual/editor/panels/search-omnibox/) | None | **DISCOVERED** | Type a shape name, a command, and a label fragment and confirm each result type appears in one list. | Only the separate command palette exists. It does not search shapes or labels. Working tree (2026-11-12): Ctrl+K lists registry shapes and diagram text beside commands, pages, layers, templates, generators, and library items. A shape entry inserts in one undo step, and a text entry switches page, selects the node, and zooms to it. |
 | UIX-12 | Keyboard and screen-reader accessibility | Every command is reachable by keyboard, focus is visible, and controls expose accessible names. | [Keyboard shortcuts](https://www.drawio.com/docs/reference/shortcuts/) | src/ui/inspector.rs | **DISCOVERED** | Tab through the inspector and toolbar, operate them without a pointer, and inspect accessible names. | egui provides basic focus and labels, but there is no audit or screen-reader test. Canvas content has no accessibility tree. |
 | UIX-13 | Interface localization | The editor UI can switch languages and right-to-left chrome. | [Change the draw.io editor language](https://www.drawio.com/docs/manual/editor/editor-language-change/) | None | **BLOCKED** | Switch to a second language, confirm all visible strings change, and reload. | Strings are English literals in source. There is no message catalog or locale negotiation. |
-| UIX-14 | Onboarding and interactive tutorial | A first-run tour or sample diagram explains the tools and shortcuts. | [Draw a basic flow chart in draw.io](https://www.drawio.com/docs/getting-started/basic-flowchart/) | src/demo.rs | **DISCOVERED** | Launch a fresh install, follow the tour, and create a first diagram. | A demo document exists (--demo), but there is no guided tour or contextual help. |
+| UIX-14 | Onboarding and interactive tutorial | A first-run tour or sample diagram explains the tools and shortcuts. | [Draw a basic flow chart in draw.io](https://www.drawio.com/docs/getting-started/basic-flowchart/) | src/app.rs, src/options.rs, src/ui/mod.rs | **VERIFIED** | Launch a fresh store, follow the tour, and create a first diagram. | A three-step welcome panel opens on a fresh store, walks through shapes, connectors and export, and persists dismissal in options. The help dialog reopens it. Tests: `onboarding_seen_defaults_false_and_survives_options_round_trip`, `welcome_steps_advance_and_finish_once`. Round 37 live evidence is in `.artifacts/round37/live2/`. |
 
 ## Maintenance
 
