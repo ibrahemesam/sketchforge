@@ -540,6 +540,16 @@ pub fn definitions() -> Vec<Value> {
             false,
         ),
         tool(
+            "reverse_connectors",
+            "Reverse connectors: swap each connector's source and target, waypoints and fixed \
+             binding points. Arrowheads stay on the line ends, so they appear at the opposite \
+             end; labels keep their relative spot. One undo step. Non-connectors are reported in \
+             notConnectors.",
+            json!({"nodeIds": ids("Connectors to reverse.")}),
+            &["nodeIds"],
+            false,
+        ),
+        tool(
             "select_nodes",
             "Select nodes on the page the user is viewing so they can see what you mean; \
              zoom: true also frames them in the viewport. An empty list clears the selection.",
@@ -624,6 +634,8 @@ polygon (sides), star (sides = points), sticky (text, background color), text (t
 Lines and arrows: create_shape({type: \"arrow\", points: [[x1,y1],[x2,y2]],
 startNodeId, endNodeId, route: \"elbow\", endHead: \"triangle\"}). With start/end nodes the
 points can be omitted: the arrow is routed between the shapes and follows them when they move.
+reverse_connectors({nodeIds}) swaps an arrow's bindings and waypoints in one undo step, matching
+draw.io's Reverse action. Arrowheads stay on their line ends and move to the opposite end.
 
 Hand-drawn style (Excalidraw-like): styles {sketch: true, roughness: 0|1|2,
 fillStyle: hachure|cross-hatch|solid|zigzag|dots, strokeStyle: solid|dashed|dotted, seed}.

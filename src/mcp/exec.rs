@@ -298,6 +298,7 @@ pub fn call(host: &mut dyn Host, name: &str, args: &Value) -> ToolResult {
                 "delete_nodes" => delete_nodes(ed, &a),
                 "duplicate_nodes" => duplicate_nodes(ed, &a),
                 "move_nodes" => move_nodes(ed, &a),
+                "reverse_connectors" => reverse_connectors(ed, &a),
                 "select_nodes" => select_nodes(ed, &a),
                 "undo" | "redo" => undo_redo(ed, &a, name == "undo"),
                 "finish_working_on_nodes" => {
@@ -3168,6 +3169,42 @@ fn move_nodes(ed: &mut Editor, a: &Args) -> ToolResult {
         done += 1;
     }
     text(json!({"moved": done}))
+}
+
+/// Reverse connectors with draw.io's `turnShapes` edge semantics. Bindings and
+/// waypoints swap, while heads and labels stay on the line's own ends. One
+/// undo step per page, even when several connectors are named.
+fn reverse_connectors(ed: &mut Editor, a: &Args) -> ToolResult {
+    let def = page_arg(ed, a)?;
+    let mut by_page: Vec<(usize, Vec<NodeId>)> = Vec::new();
+    let mut reversed = Vec::new();
+    let mut not_connectors = Vec::new();
+    let mut missing = Vec::new();
+    for key in a.strs("nodeIds")? {
+        match resolve(ed, &key, def) {
+            Ok((page, id)) if ed.page_doc(page).get(id).is_some_and(|n| n.is_connector()) => {
+                if let Some((_, ids)) = by_page.iter_mut().find(|(p, _)| *p == page) {
+                    ids.push(id);
+                } else {
+                    by_page.push((page, vec![id]));
+                }
+                reversed.push(node_key(ed, page, id));
+            }
+            Ok(_) => not_connectors.push(key),
+            Err(_) => missing.push(key),
+        }
+    }
+    for (page, ids) in by_page {
+        ed.with_page(page, |ed| ed.reverse_connectors(&ids));
+    }
+    let mut out = json!({"reversed": reversed, "count": reversed.len()});
+    if !not_connectors.is_empty() {
+        out["notConnectors"] = json!(not_connectors);
+    }
+    if !missing.is_empty() {
+        out["notFound"] = json!(missing);
+    }
+    text(out)
 }
 
 fn select_nodes(ed: &mut Editor, a: &Args) -> ToolResult {
