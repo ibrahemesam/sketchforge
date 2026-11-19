@@ -79,6 +79,8 @@ pub enum Action {
     PasteProps,
     Home,
     ExportPdf,
+    /// Open the print dialog (paper, orientation, scale and margins).
+    Print,
     CopyAsPng,
     CopyAsSvg,
 }
@@ -167,6 +169,7 @@ fn bindings() -> Vec<(Key, Chord, Action, &'static str)> {
         (Char('f'), CMD, A::Find, "Find in diagram"),
         (Right, CMD_ALT, A::FindStep(true), "Find next match"),
         (Left, CMD_ALT, A::FindStep(false), "Find previous match"),
+        (Char('p'), CMD, A::Print, "Print"),
         (Char('p'), CMD_ALT, A::ExportPdf, "Export PDF"),
         (Char('c'), CMD_SHIFT, A::CopyAsPng, "Copy as PNG"),
         (Char('c'), CMD_ALT_SHIFT, A::CopyAsSvg, "Copy as SVG"),
@@ -522,6 +525,7 @@ pub fn menus() -> Vec<(&'static str, Vec<MenuEntry>)> {
                 I("Export PNG…", A::ExportPng),
                 I("Export SVG…", A::ExportSvg),
                 I("Export PDF…", A::ExportPdf),
+                I("Print…", A::Print),
             ],
         ),
         (
@@ -689,6 +693,23 @@ pub fn chord_text(a: Action) -> String {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn print_is_bound_and_in_the_file_menu() {
+        assert_eq!(
+            super::chord_of(super::Action::Print),
+            Some((Key::Char('p'), true, false, false))
+        );
+        let file = super::menus()
+            .into_iter()
+            .find(|(name, _)| *name == "File")
+            .expect("File menu");
+        assert!(
+            file.1
+                .iter()
+                .any(|e| matches!(e, super::MenuEntry::Item("Print…", super::Action::Print)))
+        );
+    }
+
     #[test]
     fn every_menu_action_has_a_binding_or_is_menu_only() {
         for (_, items) in super::menus() {

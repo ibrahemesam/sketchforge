@@ -7,7 +7,9 @@
 
 use crate::assets;
 use crate::geom::{Rect, V2};
-use crate::model::{BlendMode, Cap, Color, Document, Join, NodeId, NodeKind, Stop};
+use crate::model::{
+    BlendMode, Cap, Color, Document, Join, NodeId, NodeKind, Orientation, PaperSize, Stop,
+};
 use crate::render::draw::{self, DrawOp, PaintSpec};
 use crate::text;
 use crate::vector::{Seg, VPath};
@@ -20,6 +22,31 @@ pub struct PdfPage<'a> {
     pub roots: Vec<NodeId>,
     pub bounds: Rect,
     pub background: Option<Color>,
+    /// Paper size in points for print output. When set, the MediaBox uses this
+    /// size and the content is scaled and centered inside the margin.
+    pub paper: Option<(f64, f64)>,
+    /// Content scale for print output (1.0 = unscaled).
+    pub scale: f64,
+    /// Margin in points around the content on a print page.
+    pub margin: f64,
+}
+
+/// How print content is scaled onto the paper.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum PrintScale {
+    /// Scale the content to fit inside the printable area.
+    Fit,
+    /// Scale by an explicit percentage (100 = actual size).
+    Percent(f64),
+}
+
+/// Print layout: paper, orientation, scaling and margin.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct PrintOptions {
+    pub paper: PaperSize,
+    pub orientation: Orientation,
+    pub scale: PrintScale,
+    pub margin_pt: f64,
 }
 
 fn num(x: f64) -> String {
@@ -466,13 +493,36 @@ pub fn export(pages: &[PdfPage]) -> Vec<u8> {
     let mut kids = Vec::new();
     for pg in pages {
         let b = pg.bounds;
+        let (box_w, box_h, transform) = if let Some((pw, ph)) = pg.paper {
+            let s = pg.scale.max(0.01);
+            let m = pg.margin.max(0.0);
+            let ox = m + (pw - 2.0 * m - b.w * s) / 2.0;
+            let oy = m + (ph - 2.0 * m - b.h * s) / 2.0;
+            (
+                pw,
+                ph,
+                format!(
+                    "{} 0 0 {} {} {} cm",
+                    num(s),
+                    num(-s),
+                    num(ox - s * b.x),
+                    num(oy + s * (b.y + b.h))
+                ),
+            )
+        } else {
+            (
+                b.w,
+                b.h,
+                format!("1 0 0 -1 {} {} cm", num(-b.x), num(b.y + b.h)),
+            )
+        };
         let mut w = PageWriter {
             objs: &mut objs,
             res: Res::default(),
             out: String::new(),
         };
         // y-down user space with the page's top-left at the area's top-left.
-        let _ = writeln!(w.out, "1 0 0 -1 {} {} cm", num(-b.x), num(b.y + b.h));
+        let _ = writeln!(w.out, "{transform}");
         if let Some(bg) = pg.background {
             let c = bg.to_f32(1.0);
             let _ = writeln!(
@@ -504,8 +554,8 @@ pub fn export(pages: &[PdfPage]) -> Vec<u8> {
         let page = objs.add(
             format!(
                 "<< /Type /Page /Parent {pages_id} 0 R /MediaBox [0 0 {} {}] /Contents {content_id} 0 R /Resources << /ExtGState << {} >> /Shading << {} >> /XObject << {} >> >> >>",
-                num(b.w),
-                num(b.h),
+                num(box_w),
+                num(box_h),
                 dict(&res.gstate_objs),
                 dict(&res.shadings),
                 dict(&images)
@@ -577,6 +627,9 @@ pub fn pages_for<'a>(
                         bounds: crate::io::svg::export_bounds(doc, &[f])?,
                         roots: vec![f],
                         background,
+                        paper: None,
+                        scale: 1.0,
+                        margin: 0.0,
                     })
                 })
                 .collect();
@@ -588,9 +641,44 @@ pub fn pages_for<'a>(
             roots,
             bounds: b,
             background,
+            paper: None,
+            scale: 1.0,
+            margin: 0.0,
         }],
         None => vec![],
     }
+}
+
+/// Render a print-ready PDF: one paper-sized page with the content scaled and
+/// centered inside the printable area. The document's paper settings are not
+/// read here; callers pass the effective print options explicitly.
+pub fn print_pdf(doc: &Document, roots: &[NodeId], opts: &PrintOptions) -> Vec<u8> {
+    let (pw, ph) = match opts.orientation {
+        Orientation::Portrait => opts.paper.portrait_points(),
+        Orientation::Landscape => {
+            let (w, h) = opts.paper.portrait_points();
+            (h, w)
+        }
+    };
+    let bounds =
+        crate::io::svg::export_bounds(doc, roots).unwrap_or_else(|| Rect::new(0.0, 0.0, pw, ph));
+    let scale = match opts.scale {
+        PrintScale::Fit => {
+            let avail_w = (pw - 2.0 * opts.margin_pt).max(1.0);
+            let avail_h = (ph - 2.0 * opts.margin_pt).max(1.0);
+            (avail_w / bounds.w.max(1.0)).min(avail_h / bounds.h.max(1.0))
+        }
+        PrintScale::Percent(p) => (p / 100.0).max(0.01),
+    };
+    export(&[PdfPage {
+        doc,
+        roots: roots.to_vec(),
+        bounds,
+        background: Some(Color::WHITE),
+        paper: Some((pw, ph)),
+        scale,
+        margin: opts.margin_pt,
+    }])
 }
 
 #[cfg(test)]

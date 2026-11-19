@@ -9,6 +9,7 @@ pub mod inspector;
 pub mod library;
 pub mod pages;
 pub mod palette;
+pub mod print;
 pub mod quick_add;
 pub mod templates;
 
@@ -102,6 +103,8 @@ pub struct UiState {
     pub tooltip_hover: Option<(NodeId, f64)>,
     /// Fidelity report shown after a draw.io import.
     pub import_report: Option<import_report::ImportReportUi>,
+    /// Print dialog: paper, orientation, scaling and margins (IO-19).
+    pub print: Option<print::PrintDialog>,
     /// The quick-add search field is focused once when it opens.
     pub quick_add_focus: bool,
     /// Style tab palette page (draw.io-style swatch pager).

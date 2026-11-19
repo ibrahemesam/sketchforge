@@ -732,6 +732,14 @@ impl App {
                     };
                     self.export(spec);
                 }
+                AppRequest::Print => {
+                    let output_dir = self.session.project.as_ref().map(|p| p.dir.clone());
+                    self.st.print = Some(ui::print::PrintDialog {
+                        output_dir,
+                        ..Default::default()
+                    });
+                    self.ctx.request_repaint();
+                }
                 AppRequest::Export(spec) => self.export(spec),
                 AppRequest::OpenLink(url) => {
                     let go = rfd::MessageDialog::new()

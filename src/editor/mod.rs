@@ -118,6 +118,8 @@ pub enum AppRequest {
     Export(crate::io::export::Spec),
     /// Export using the settings in the inspector, in this format.
     ExportFormat(crate::io::export::Format),
+    /// Open the print dialog for the current page or selection.
+    Print,
     /// Render the selection and put the PNG on the clipboard.
     CopyAsPng,
     /// Back to the projects home screen.
@@ -2782,6 +2784,7 @@ impl Editor {
             A::ExportPdf => self
                 .requests
                 .push(AppRequest::ExportFormat(crate::io::export::Format::Pdf)),
+            A::Print => self.requests.push(AppRequest::Print),
             A::CopyAsPng => self.requests.push(AppRequest::CopyAsPng),
             A::CopyAsSvg => self.copy_as_svg(),
             A::ToggleSnapping => {

@@ -300,6 +300,7 @@ pub fn dialogs(ctx: &egui::Context, ed: &mut Editor, st: &mut UiState) {
     metadata_dialog(ctx, ed, st);
     background_dialog(ctx, ed, st);
     layers_dialog(ctx, ed, st);
+    crate::ui::print::dialog(ctx, ed, st);
 }
 
 /// State of the open Layers dialog.

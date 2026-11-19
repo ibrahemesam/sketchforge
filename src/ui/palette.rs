@@ -116,6 +116,7 @@ pub fn entries(ed: &Editor, st: &UiState) -> Vec<Entry> {
     for (label, a) in [
         ("Export PNG…", Action::ExportPng),
         ("Export SVG…", Action::ExportSvg),
+        ("Print…", Action::Print),
         (
             "Union selection",
             Action::Boolean(crate::editor::vector_ops::BoolOp::Union),
