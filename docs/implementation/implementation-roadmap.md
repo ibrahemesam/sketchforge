@@ -299,6 +299,24 @@ cannot drive the native file picker. Compressed or encrypted library entries
 are reported as unsupported. The implementation was committed as 60186ab; this
 documentation closeout completes the round.
 
+**Committed (2026-11-19, round 45).** TXT-06 closed on
+`agent/drawio-features`. The inspector picker already read discovered system
+families, but the rest of the app still claimed Inter was the only face.
+`text::family_info()` now reports real availability and the faces found by the
+background scan, with Inter bundled in four styles. MCP get_font_family_info
+uses it, get_basic_info lists `font_families()` instead of a hard-coded array,
+and `fontFamily` writes `text_style.family` in CSS and maps on shape labels in
+draw.io import as well as export. The first failure showed Adwaita Mono
+unavailable with no styles. Five focused integration tests and one unit test,
+the serial skip suite (528 tests), final checks and a verified 83.03 s live
+recording in
+`.artifacts/round45/evidence/evidence-20261119-150844-eb3842/report.md` are in
+`.artifacts/round45/`. The live run used MCP over HTTP and polled until the
+background font scan landed; it did not click the inspector picker. The code
+was committed after the recording, so the report names the previous commit. The
+implementation was committed as c7941e0; this documentation closeout completes
+the round.
+
 **Scope.**
 
 - A selection context resolver that classifies the current selection as document, single

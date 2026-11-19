@@ -263,17 +263,17 @@ gaps landed on 2026-10-26: a label without a solid background cuts the line behi
 text, and the gap follows label moves, reroutes, and export. Page view is a view
 preference and is not part of the page file.
 
-**Size:** 231 capabilities in 13 domains. 121 are verified against committed tests or directly exercised code, 22 are implemented without a focused check, 80 are absent, and 8 are analysed or partial.
+**Size:** 231 capabilities in 13 domains. 122 are verified against committed tests or directly exercised code, 22 are implemented without a focused check, 79 are absent, and 8 are analysed or partial.
 
 ## Counts
 
 | Status | Count | Meaning |
 |---|---:|---|
-| VERIFIED | 121 | Committed test or directly exercised code path proves the behavior. |
+| VERIFIED | 122 | Committed test or directly exercised code path proves the behavior. |
 | IMPLEMENTED | 22 | Code exists and the path is readable, but no focused test or this-session runtime check covers it. |
 | IN_PROGRESS | 3 | Partial code at HEAD; the acceptance criteria are not met. |
 | ANALYZED | 5 | draw.io behavior is documented and a native design is recorded, but no code exists. |
-| DISCOVERED | 46 | draw.io behavior is documented here; no code or design exists. |
+| DISCOVERED | 45 | draw.io behavior is documented here; no code or design exists. |
 | BLOCKED | 34 | Work cannot proceed without a missing subsystem, external service, licensing decision, or explicit scope decision. |
 | **Total** | **231** | |
 
@@ -283,7 +283,7 @@ preference and is not part of the page file.
 | CAN Canvas, navigation, grid, and guides | 16 | 13 | 1 | 0 | 0 | 2 | 0 |
 | SHP Shapes, frames, transforms, and paths | 26 | 18 | 5 | 0 | 0 | 2 | 1 |
 | CON Connectors and arrows | 21 | 11 | 2 | 0 | 1 | 7 | 0 |
-| TXT Text, labels, and typography | 25 | 15 | 4 | 0 | 0 | 3 | 3 |
+| TXT Text, labels, and typography | 25 | 16 | 4 | 0 | 0 | 2 | 3 |
 | STY Styles, effects, and themes | 23 | 18 | 5 | 0 | 0 | 0 | 0 |
 | ORG Structure: groups, frames, components, layout, and layers | 16 | 11 | 1 | 0 | 1 | 0 | 3 |
 | GEN Generation, templates, and diagram types | 15 | 0 | 0 | 0 | 0 | 13 | 2 |
@@ -436,7 +436,7 @@ Editing and laying out text inside shapes and on the canvas.
 | TXT-03 | Rich text ranges | Bold, italic, size, color, underline, and strikethrough can apply to a character range inside one text layer. | [Change the style of text and labels](https://www.drawio.com/docs/manual/styles/text-styles/) | src/model/paint.rs, src/editor/text_edit.rs | **VERIFIED** | Select half a sentence, make it bold and red, then clear formatting on the same range. | Ranges are stored as spans and follow edits. Test: `rich_text_ranges_and_smart_guides`. |
 | TXT-04 | Font size | Font size changes apply to the whole selection or to the selected characters. | [Change the style of text and labels](https://www.drawio.com/docs/manual/styles/text-styles/) | src/ui/inspector.rs, src/editor/text_edit.rs | **VERIFIED** | Set 24 px on a whole text layer and 12 px on one word; both hold after reload. | Sizes are in world units. Test: `rich_text_ranges_and_smart_guides`. |
 | TXT-05 | Bold, italic, underline, and strikethrough | Character emphasis is available from shortcuts, the Text tab, and range editing. | [Change the style of text and labels](https://www.drawio.com/docs/manual/styles/text-styles/) | src/editor/text_edit.rs, src/editor/shortcuts.rs | **VERIFIED** | Toggle each style on a range and on a whole layer, then undo each toggle. | Underline and strike are drawn as thin rectangles. Test: `rich_text_ranges_and_smart_guides`. |
-| TXT-06 | Font family picker | The Text tab chooses from installed system families and bundled families. | [Change the style of text and labels](https://www.drawio.com/docs/manual/styles/text-styles/) | None | **DISCOVERED** | Pick a family for a text layer, reload, and confirm the same family or a documented fallback. | At HEAD all text uses Inter faces. Uncommitted font registry work is excluded from this baseline. |
+| TXT-06 | Font family picker | The Text tab chooses from installed system families and bundled families. | [Change the style of text and labels](https://www.drawio.com/docs/manual/styles/text-styles/) | src/ui/inspector.rs, src/text.rs, src/mcp/exec.rs, src/mcp/css.rs, src/io/drawio.rs | **VERIFIED** | Pick a family for a text layer, reload, and confirm the same family or a documented fallback. | `font_families()` fills the picker from a background system scan; Inter stays bundled as the default. MCP get_font_family_info reports real availability and styles, get_basic_info lists discovered families, and fontFamily maps through CSS and draw.io. Tests: `mcp_font_info_reports_installed_families`, `mcp_basic_info_lists_installed_families`, `mcp_font_family_is_written_and_reported`, `drawio_round_trips_font_family_on_text_and_labels`, `font_family_survives_project_reload`. |
 | TXT-07 | Line height | Line height changes as a multiple of font size for a whole layer or a range. | [Change the style of text and labels](https://www.drawio.com/docs/manual/styles/text-styles/) | src/model/paint.rs, src/text.rs | **VERIFIED** | Set 1.8 line height on a three-line label and confirm the box grows to fit. | Applies to paragraph layout, not to individual glyphs. Test: `rich_text_ranges_and_smart_guides`. |
 | TXT-08 | Letter spacing | Letter spacing adds advance per character for a whole layer or a range. | [Change the style of text and labels](https://www.drawio.com/docs/manual/styles/text-styles/) | src/model/paint.rs, src/text.rs | **VERIFIED** | Increase spacing on a word and confirm the glyphs spread without changing font size. | Spacing is added after shaping, so Arabic joins keep their glyph forms. Test: `rich_text_ranges_and_smart_guides`. |
 | TXT-09 | Horizontal text alignment | Left, center, right, and justify alignment position text inside its box. | [Change the style of text and labels](https://www.drawio.com/docs/manual/styles/text-styles/) | src/text.rs, src/ui/inspector.rs | **IMPLEMENTED** | Set each alignment on a wrapped paragraph and confirm the lines move inside the same box. | Justify support depends on the layout path; no focused alignment test. |

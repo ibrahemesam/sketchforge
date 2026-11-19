@@ -1,6 +1,6 @@
 # Sketch agent session state
 
-Last updated: 2026-11-19 (round 44).
+Last updated: 2026-11-19 (round 45).
 
 ## Objective
 
@@ -22,8 +22,10 @@ background image. Round 41 was pushed as fc0f065 with curved text and ff63722
 with its docs closeout. Round 42 was pushed as 727c534 with a preserved custom
 grid color, e9bf2ed with its docs closeout and c43a525 marking it pushed. Round
 43 was pushed as 9cae03e and cb8a4fd with the page fade transition and b2f487f
-with its docs closeout. Round 44 implementation is committed locally as 60186ab
-with draw.io shape library XML import and export, and 3fe9208 with its docs
+with its docs closeout. Round 44 was pushed as 60186ab with draw.io shape
+library XML import and export, 3fe9208 with its docs closeout and 4510e02
+marking it pushed. Round 45 implementation is committed locally as c7941e0 with
+installed font families exposed to MCP and draw.io, and this update is its docs
 closeout. Do not create releases or deploy Vercel; plain `git push` sends
 commits to the fork.
 
@@ -480,6 +482,27 @@ pushed; the parity docs recorded VERIFIED 121, ANALYZED 5 and DISCOVERED 46 at
 closeout. Compressed or encrypted library entries stay
 unsupported with a clear error.
 
+Round 45 closed TXT-06, the font family picker. The inspector already listed
+installed families through `text::font_families()`, but MCP still reported only
+Inter and CSS and draw.io import dropped a chosen family. `text::family_info()`
+now reports availability and the discovered faces, with Inter bundled in four
+styles. MCP get_font_family_info uses it, get_basic_info lists discovered
+families, CSS `fontFamily` writes `text_style.family`, and draw.io maps it on
+shape labels as well as text nodes. The first failure showed Adwaita Mono
+unavailable with no styles. Five focused integration tests and one unit test
+pass; the serial skip suite passes 528 tests with the known
+`m2_pages_panel_screenshot` failure skipped, and screenshots were restored.
+fmt, clippy, diff-check and release build pass. A verified 83.03 s Xvfb `:105`
+recording with three passing assertions is in
+`.artifacts/round45/evidence/evidence-20261119-150844-eb3842/report.md`: MCP
+reports Adwaita Mono available with four styles, get_basic_info lists 381
+families against the earlier single Inter entry from round 34, and a
+font-family HTML round trip reports the chosen family while adding 1604 dark
+pixels. The calls went over HTTP rather than the inspector, the flow polled
+until the background font scan landed, and the code was committed after the
+recording so the report names the earlier commit. The parity docs recorded
+VERIFIED 122, ANALYZED 5 and DISCOVERED 45 at closeout.
+
 ## Blockers
 
 GEN-04 AI generation stays blocked: it needs a hosted model, credentials,
@@ -495,26 +518,26 @@ in `.opencode/MEMORY.md`).
 
 ## Exact next task
 
-Round 45 should close a stale DISCOVERED row that is already implemented at
-HEAD, starting with TXT-06, font family picker. `src/ui/inspector.rs:4929` uses
-`text::font_families()`, serializes a chosen family on `text_style.family` and
-treats Inter as the built-in default. Verify the row against HEAD before writing
-a failure test: the goal is a focused test for the picker, native persistence
-and draw.io `fontFamily` mapping, then a VERIFIED row. Other stale candidates
-are CAN-15, CON-18, DIA-03, DIA-04, DIA-05 and CUS-16; their working-tree notes
-say the features exist, but each must be checked at HEAD first. Do not assume
-any ANALYZED or DISCOVERED row is open. UIX-12 and UIX-13 are genuine but
-broad. CUS-11 is documented out of scope. Keep DIA-11 animation actions blocked
-on a sandboxed action interpreter. Use a fresh scratch folder and reuse Xvfb
-`:105`, and start the recorder with `DISPLAY=:105` or it captures the blank `:0`
-screen; drive the app with `env -u WAYLAND_DISPLAY` or it picks the Wayland
-backend and maps no X11 window. No release or tag. Do not restart UIX-14,
-TXT-21, STY-23, IO-19, CAN-06, CON-09, CON-13, CON-17, UIX-04, STY-13, STY-14,
-STY-21, STY-22, DOC-09, TXT-24, DIA-10 or CUS-05: their commands, editor tests
-and runtime evidence are already committed. M9 collaboration stays blocked
-without a server, conflict model, and permissions. GEN-04 AI generation and
-GEN-10 vendor stencils also stay blocked. IO-17, IO-18 and IO-20 remain blocked
-or deferred, as do the HTML and PDF parts of DOC-15.
+Round 46 should close a stale DISCOVERED row that is already implemented at
+HEAD, starting with CON-18, reverse connector. The Arrange tab has a Reverse
+button backed by `Editor::reverse_connectors`, and editor tests cover the swap
+and undo; the inventory row still says no reverse command exists. Verify the row
+against HEAD, find a focused gap worth closing, and capture a failing test
+before changing code. Other stale candidates are DIA-05 tags, DIA-04 tooltips,
+DIA-03 links, CAN-15 connection points and CUS-16 library previews; each must be
+checked at HEAD first. Do not assume any ANALYZED or DISCOVERED row is open.
+UIX-12 and UIX-13 are genuine but broad. CUS-11 is documented out of scope.
+Keep DIA-11 animation actions blocked on a sandboxed action interpreter. Use a
+fresh scratch folder and reuse Xvfb `:105`, and start the recorder with
+`DISPLAY=:105` or it captures the blank `:0` screen; drive the app with
+`env -u WAYLAND_DISPLAY` or it picks the Wayland backend and maps no X11 window.
+No release or tag. Do not restart UIX-14, TXT-21, STY-23, IO-19, CAN-06, CON-09,
+CON-13, CON-17, UIX-04, STY-13, STY-14, STY-21, STY-22, DOC-09, TXT-24, DIA-10,
+CUS-05 or TXT-06: their commands, editor tests and runtime evidence are already
+committed. M9 collaboration stays blocked without a server, conflict model, and
+permissions. GEN-04 AI generation and GEN-10 vendor stencils also stay blocked.
+IO-17, IO-18 and IO-20 remain blocked or deferred, as do the HTML and PDF parts
+of DOC-15.
 
 ## Commands
 
