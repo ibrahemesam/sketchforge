@@ -6,6 +6,7 @@ pub mod excalidraw;
 pub mod export;
 pub mod file;
 pub mod import;
+pub mod library_xml;
 pub mod pdf;
 pub mod png;
 pub mod svg;

@@ -1137,7 +1137,23 @@ fn is_text_style(st: &ParsedStyle) -> bool {
 }
 
 fn shape_name(st: &ParsedStyle) -> Option<&str> {
-    st.get("shape").filter(|s| !s.is_empty())
+    if let Some(s) = st.get("shape").filter(|s| !s.is_empty()) {
+        return Some(s);
+    }
+    // draw.io writes its built-in shapes as a bare leading token, for example
+    // `ellipse;whiteSpace=wrap;html=1;`. The importer must accept both that
+    // shorthand and the explicit `shape=ellipse;` form.
+    const SHORTHAND: &[&str] = &[
+        "ellipse",
+        "doubleellipse",
+        "rhombus",
+        "triangle",
+        "hexagon",
+        "star",
+        "line",
+        "image",
+    ];
+    SHORTHAND.iter().copied().find(|name| st.has(name))
 }
 
 fn leaves(name: &str) -> &str {

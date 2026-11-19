@@ -209,6 +209,38 @@ fn insert_source(
     }
 }
 
+/// Import a draw.io `<mxlibrary>` file into the personal library. Kept separate
+/// from the button so the file operation can be tested without a native dialog.
+pub fn import_xml_file(st: &mut LibraryUi, ed: &mut Editor, path: &std::path::Path) {
+    let result = std::fs::read_to_string(path)
+        .map_err(|e| e.to_string())
+        .and_then(|text| crate::io::library_xml::import_library(&text));
+    match result {
+        Ok(items) => {
+            let n = items.len();
+            st.library.items.extend(items);
+            st.dirty = true;
+            ed.status = format!("Imported {n} shape(s) from {}", path.display());
+        }
+        Err(e) => ed.status = format!("Library import failed: {e}"),
+    }
+}
+
+/// Export the personal library as a draw.io `<mxlibrary>` file.
+pub fn export_xml_file(st: &LibraryUi, ed: &mut Editor, path: &std::path::Path) {
+    let xml = crate::io::library_xml::export_library(&st.library.items);
+    match std::fs::write(path, xml) {
+        Ok(()) => {
+            ed.status = format!(
+                "Exported {} shape(s) to {}",
+                st.library.items.len(),
+                path.display()
+            )
+        }
+        Err(e) => ed.status = format!("Library export failed: {e}"),
+    }
+}
+
 pub fn panel(ui: &mut Ui, ed: &mut Editor, st: &mut UiState) {
     let p = theme::pal(ui);
     let ctx = ui.ctx().clone();
@@ -243,6 +275,29 @@ pub fn panel(ui: &mut Ui, ed: &mut Editor, st: &mut UiState) {
             st.templates.load(st.options.template_folder.clone());
         }
     }
+    ui.horizontal(|ui| {
+        ui.spacing_mut().item_spacing.x = 4.0;
+        if ui
+            .button("Import XML…")
+            .on_hover_text("Import a draw.io custom shape library (.xml)")
+            .clicked()
+            && let Some(path) = rfd::FileDialog::new()
+                .add_filter("Shape library", &["xml"])
+                .pick_file()
+        {
+            import_xml_file(lib, ed, &path);
+        }
+        if ui
+            .button("Export XML…")
+            .on_hover_text("Export the personal library as a draw.io shape library (.xml)")
+            .clicked()
+            && let Some(path) = rfd::FileDialog::new()
+                .add_filter("Shape library", &["xml"])
+                .save_file()
+        {
+            export_xml_file(lib, ed, &path);
+        }
+    });
     ui.add_space(4.0);
 
     egui::ScrollArea::vertical()

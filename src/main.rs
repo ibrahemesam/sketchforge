@@ -33,6 +33,8 @@ USAGE:
                                             (frames/all with PNG/SVG write a folder)
   sketch-rs --import FILE                   create a project from .excalidraw, .svg,
                                             .drawio, .xml or .sketch-rs and print its folder
+  sketch-rs --import-lib FILE.xml           add a draw.io shape library to the personal library
+  sketch-rs --export-lib OUT.xml            export the personal library as a draw.io shape library
   sketch-rs --help
 
 Projects live in ~/Documents/sketch-rs (override with SKETCH_RS_HOME).
@@ -122,6 +124,8 @@ fn run(args: Vec<String>) -> Result<(), String> {
                     | "--format"
                     | "--scope"
                     | "--import"
+                    | "--import-lib"
+                    | "--export-lib"
                     | "--size"
                     | "--scale"
                     | "--page"
@@ -301,6 +305,28 @@ fn run(args: Vec<String>) -> Result<(), String> {
             s => return Err(format!("unknown --scope {s}")),
         };
         return export_with(&out, format, scope);
+    }
+    if let Some(src) = value("--import-lib") {
+        let p = PathBuf::from(&src);
+        let text = std::fs::read_to_string(&p).map_err(|e| format!("{}: {e}", p.display()))?;
+        let items = sketch_rs::io::library_xml::import_library(&text)?;
+        let n = items.len();
+        let root = Store::default_root();
+        let path = sketch_rs::library::Library::path_in(&root);
+        let mut lib = sketch_rs::library::Library::load(&path);
+        lib.items.extend(items);
+        lib.save().map_err(|e| e.to_string())?;
+        println!("Imported {n} shape(s) into the personal library");
+        return Ok(());
+    }
+    if let Some(out) = value("--export-lib") {
+        let root = Store::default_root();
+        let path = sketch_rs::library::Library::path_in(&root);
+        let lib = sketch_rs::library::Library::load(&path);
+        let xml = sketch_rs::io::library_xml::export_library(&lib.items);
+        std::fs::write(&out, xml).map_err(|e| format!("{out}: {e}"))?;
+        println!("Exported {} shape(s) to {out}", lib.items.len());
+        return Ok(());
     }
     if let Some(src) = value("--import") {
         let p = PathBuf::from(&src);
