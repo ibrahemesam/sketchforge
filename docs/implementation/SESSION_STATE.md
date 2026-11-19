@@ -21,9 +21,9 @@ paper-sized PDF output. Round 40 was pushed as a63e090 with the per-page
 background image. Round 41 was pushed as fc0f065 with curved text and ff63722
 with its docs closeout. Round 42 was pushed as 727c534 with a preserved custom
 grid color, e9bf2ed with its docs closeout and c43a525 marking it pushed. Round
-43 implementation is committed locally as 9cae03e and cb8a4fd with a page fade
-transition; its documentation closeout follows in this branch. Do not create
-releases or deploy Vercel; plain `git push` sends commits to the fork.
+43 was pushed as 9cae03e and cb8a4fd with the page fade transition and b2f487f
+with its docs closeout. Do not create releases or deploy Vercel; plain
+`git push` sends commits to the fork.
 
 The full sidebar spec was implemented and verified in round 6 (see
 `.opencode/MEMORY.md`). Round 7 closed the transparent connector label gap.
@@ -453,8 +453,8 @@ skipped. fmt, clippy, diff-check and release build pass. A verified 31.60 s Xvfb
 page baseline, a mid-veil center of (235, 235, 237) against a settled
 (34, 80, 217), the blue page after 3 s, and the draw.io sidecar with 3000 ms.
 The two-page project was seeded in JSON and the Diagram tab checkbox is covered
-by a unit test rather than a live click. Both code commits need a plain
-`git push`; the parity docs record VERIFIED 120 and DISCOVERED 46 at closeout.
+by a unit test rather than a live click. All three commits were pushed; the
+parity docs recorded VERIFIED 120 and DISCOVERED 46 at the end of the round.
 DIA-11 animation actions stay blocked on a sandboxed action interpreter.
 
 ## Blockers
