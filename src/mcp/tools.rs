@@ -19,8 +19,8 @@ switching the user's view. Node ids are opaque strings; never show them to the u
 a row, a card) so the user sees progress. Inline styles only; flexbox (display:flex, gap, \
 padding, align-items, justify-content) is the layout model; no margin, grid or tables.
 - Text uses Inter, or a system family from get_font_family_info. Use px for font sizes.
-- Edit with update_styles, set_text_content, rename_nodes, duplicate_nodes, move_nodes, \
-delete_nodes. Whiteboard shapes, sticky notes and arrows: create_shape. Hand-drawn style: \
+- Edit with update_styles, set_text_content, set_link, rename_nodes, duplicate_nodes, \
+move_nodes, delete_nodes. Whiteboard shapes, sticky notes and arrows: create_shape. Hand-drawn style: \
 update_styles with {\"sketch\": true, \"roughness\": 1, \"fillStyle\": \"hachure\"}.
 - Check your work with get_screenshot. Artboard height is a starting point: when content \
 clips set height: \"fit-content\" with update_styles.
@@ -493,6 +493,21 @@ pub fn definitions() -> Vec<Value> {
             false,
         ),
         tool(
+            "set_link",
+            "Set or clear custom links on nodes (batch). Page targets use page:Name or data:page/id,<id>; \
+             external targets allow http, https and mailto. Unsafe schemes are refused. An empty link clears the field.",
+            json!({"updates": {"type": "array", "items": {
+                "type": "object",
+                "properties": {
+                    "nodeId": {"type": "string"},
+                    "link": {"type": "string", "description": "Page target or safe external URL. Empty clears the link."},
+                },
+                "required": ["nodeId", "link"],
+            }}}),
+            &["updates"],
+            false,
+        ),
+        tool(
             "rename_nodes",
             "Rename layers (batch). Names are truncated to 50 characters.",
             json!({"updates": {"type": "array", "items": {
@@ -592,7 +607,7 @@ pub const GUIDE_INSTRUCTIONS: &str = "\
 3. Create an artboard sized for the device (create_artboard). Artboards are flex columns.
 4. Fill it with write_html, one visual group per call, into the artboard id. Keep the returned
    ids: later calls can target them (insert-children) or replace them.
-5. Iterate with update_styles / set_text_content / duplicate_nodes instead of rewriting.
+5. Iterate with update_styles / set_text_content / set_link / duplicate_nodes instead of rewriting.
 6. Review with get_screenshot (scale 1; 2 for small text). Fix clipping with
    update_styles({height: \"fit-content\"}) on the artboard.
 7. finish_working_on_nodes at the end (also saves the project).

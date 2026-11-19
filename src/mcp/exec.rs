@@ -294,6 +294,7 @@ pub fn call(host: &mut dyn Host, name: &str, args: &Value) -> ToolResult {
                 "insert_shape" => insert_shape(ed, &a),
                 "update_styles" => update_styles(ed, &a),
                 "set_text_content" => set_text_content(ed, &a),
+                "set_link" => set_link(ed, &a),
                 "rename_nodes" => rename_nodes(ed, &a),
                 "delete_nodes" => delete_nodes(ed, &a),
                 "duplicate_nodes" => duplicate_nodes(ed, &a),
@@ -2980,6 +2981,35 @@ fn set_text_content(ed: &mut Editor, a: &Args) -> ToolResult {
         },
     )?;
     text(json!({"updated": n}))
+}
+
+/// Set or clear custom links on shapes (batch). An empty link clears the field.
+/// Targets go through the same scheme allowlist as the editor's link handler,
+/// so a `javascript:` or `file:` URL is refused before it reaches the document.
+fn set_link(ed: &mut Editor, a: &Args) -> ToolResult {
+    let n = batch(
+        ed,
+        a,
+        "updates",
+        "Set link",
+        |u| {
+            let link = u.req_str("link")?.trim().to_string();
+            if link.is_empty() {
+                return Ok(link);
+            }
+            match crate::link::classify(&link) {
+                crate::link::LinkTarget::Page(_) | crate::link::LinkTarget::External(_) => Ok(link),
+                crate::link::LinkTarget::Unsafe(reason) => {
+                    Err(format!("unsafe link \"{link}\": {reason}"))
+                }
+            }
+        },
+        |tx, id, link| {
+            tx.node_mut(id).unwrap().link = link.clone();
+            Ok(())
+        },
+    )?;
+    text(json!({"linked": n}))
 }
 
 fn rename_nodes(ed: &mut Editor, a: &Args) -> ToolResult {
