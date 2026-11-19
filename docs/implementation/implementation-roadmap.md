@@ -200,6 +200,18 @@ marked discarded because it clicked Skip; the corrected run is in
 `ibrahemesam/sketchforge` as 858d1a0; this documentation closeout completes
 the round.
 
+**Committed (2026-11-19, round 38).** TXT-21 closed on
+`agent/drawio-features`. `TextStyle.paragraphs` carries a list kind and indent
+level for each hard-break paragraph. Marker glyphs and numbering render with
+indent, list buttons apply to all paragraphs in one undo step, and Indent and
+Outdent affect the active paragraph. The saved page round-trips the values while
+ordinary text stays unchanged. The first failure had no list metadata or Text
+tab controls. Focused tests, final checks and a verified live recording are in
+`.artifacts/round38/`. The parallel skip run hit an intermittent SIGSEGV in the
+mcp test binary, so the final run used one test thread and passed 486 tests.
+The implementation was committed as 5802ded; this documentation closeout
+completes the round.
+
 **Scope.**
 
 - A selection context resolver that classifies the current selection as document, single
