@@ -15,7 +15,7 @@ pub mod templates;
 
 use crate::editor::shortcuts::{self, Action};
 use crate::editor::{Editor, Tool};
-use crate::model::{Color, ImageMode, NodeId, NodeKind, SchemeScope};
+use crate::model::{Color, Document, ImageMode, Node, NodeId, NodeKind, SchemeScope};
 use crate::theme::{self, Icon};
 use egui::{Align2, Color32, RichText, Ui};
 use std::collections::{HashMap, HashSet};
@@ -1035,6 +1035,22 @@ fn status(ctx: &egui::Context, ed: &Editor, canvas: egui::Rect) {
         });
 }
 
+/// Tooltip text longer than this is clipped with an ellipsis. draw.io wraps
+/// tooltips, but one pasted paragraph should not push the popup off screen.
+const TOOLTIP_MAX_CHARS: usize = 200;
+
+/// Resolve placeholders in a node's tooltip and prepare its display text.
+/// Long text is clipped on a character boundary with a trailing ellipsis so a
+/// pasted paragraph cannot grow the popup off the canvas.
+fn tooltip_display_text(tooltip: &str, node: &Node, doc: &Document) -> String {
+    let resolved = crate::model::placeholders::resolve_text(tooltip, Some(node), doc);
+    let Some((cut, _)) = resolved.char_indices().nth(TOOLTIP_MAX_CHARS) else {
+        return resolved;
+    };
+    let clipped = resolved[..cut].trim_end();
+    format!("{clipped}…")
+}
+
 /// Show a shape's tooltip after the pointer rests on it, resolved through page
 /// placeholders. The delay keeps tooltips from flickering while passing over.
 fn tooltip(ctx: &egui::Context, ed: &Editor, st: &mut UiState, canvas: egui::Rect) {
@@ -1064,10 +1080,11 @@ fn tooltip(ctx: &egui::Context, ed: &Editor, st: &mut UiState, canvas: egui::Rec
     if !canvas.contains(pos) {
         return;
     }
-    let text = crate::model::placeholders::resolve_text(&n.tooltip, Some(n), &ed.doc);
+    let text = tooltip_display_text(&n.tooltip, n, &ed.doc);
     egui::Area::new(egui::Id::new(("shape-tooltip", id.0)))
         .order(egui::Order::Tooltip)
         .fixed_pos(pos + egui::vec2(14.0, 18.0))
+        .constrain_to(canvas)
         .interactable(false)
         .show(ctx, |ui| {
             let p = theme::pal(ui);
@@ -1076,6 +1093,7 @@ fn tooltip(ctx: &egui::Context, ed: &Editor, st: &mut UiState, canvas: egui::Rec
                 .corner_radius(6.0)
                 .inner_margin(egui::Margin::symmetric(8, 5))
                 .show(ui, |ui| {
+                    ui.set_max_width(260.0);
                     ui.label(RichText::new(text).size(12.0));
                 });
         });
@@ -1247,6 +1265,40 @@ mod tests {
             ui.horizontal(|ui| theme_button(ui, options, dirty));
         });
         out.textures_delta.clear();
+    }
+
+    #[test]
+    fn tooltip_display_text_truncates_long_text_cleanly() {
+        let doc = Document::default();
+        let mut n = Node::new(
+            NodeId(1),
+            NodeKind::Rect,
+            crate::geom::Rect::new(0.0, 0.0, 10.0, 10.0),
+        );
+
+        // A short tooltip is shown verbatim.
+        n.tooltip = "Short hint".into();
+        assert_eq!(tooltip_display_text(&n.tooltip, &n, &doc), "Short hint");
+
+        // A pasted paragraph is clipped on a character boundary and marked with
+        // an ellipsis, so the popup cannot grow off the canvas.
+        n.tooltip = "x".repeat(TOOLTIP_MAX_CHARS * 3);
+        let clipped = tooltip_display_text(&n.tooltip, &n, &doc);
+        assert_eq!(clipped.chars().count(), TOOLTIP_MAX_CHARS + 1, "{clipped}");
+        assert!(clipped.ends_with('…'), "{clipped}");
+    }
+
+    #[test]
+    fn tooltip_display_text_resolves_placeholders_before_truncating() {
+        let mut doc = Document::default();
+        doc.settings.metadata.insert("owner".into(), "Ada".into());
+        let n = Node::new(
+            NodeId(1),
+            NodeKind::Rect,
+            crate::geom::Rect::new(0.0, 0.0, 10.0, 10.0),
+        );
+        let text = tooltip_display_text("Owner: %owner%", &n, &doc);
+        assert_eq!(text, "Owner: Ada", "{text}");
     }
 
     #[test]
