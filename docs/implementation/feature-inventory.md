@@ -263,18 +263,18 @@ gaps landed on 2026-10-26: a label without a solid background cuts the line behi
 text, and the gap follows label moves, reroutes, and export. Page view is a view
 preference and is not part of the page file.
 
-**Size:** 231 capabilities in 13 domains. 164 are verified against committed tests or directly exercised code, 21 are implemented without a focused check, 42 are absent, and 4 are analysed or partial.
+**Size:** 231 capabilities in 13 domains. 166 are verified against committed tests or directly exercised code, 21 are implemented without a focused check, 40 are absent, and 4 are analysed or partial.
 
 ## Counts
 
 | Status | Count | Meaning |
 |---|---:|---|
-| VERIFIED | 164 | Committed test or directly exercised code path proves the behavior. |
+| VERIFIED | 166 | Committed test or directly exercised code path proves the behavior. |
 | IMPLEMENTED | 21 | Code exists and the path is readable, but no focused test or this-session runtime check covers it. |
 | IN_PROGRESS | 3 | Partial code at HEAD or in the tracked working state; the acceptance criteria are not met. |
 | ANALYZED | 1 | draw.io behavior is documented and a native design is recorded, but no code exists. |
 | DISCOVERED | 11 | draw.io behavior is documented here; no code or design exists. |
-| BLOCKED | 31 | Work cannot proceed without a missing subsystem, external service, licensing decision, or explicit scope decision. |
+| BLOCKED | 29 | Work cannot proceed without a missing subsystem, external service, licensing decision, or explicit scope decision. |
 | **Total** | **231** | |
 
 | Domain | Rows | VERIFIED | IMPLEMENTED | IN_PROGRESS | ANALYZED | DISCOVERED | BLOCKED |
@@ -288,7 +288,7 @@ preference and is not part of the page file.
 | ORG Structure: groups, frames, components, layout, and layers | 16 | 11 | 1 | 0 | 1 | 0 | 3 |
 | GEN Generation, templates, and diagram types | 15 | 5 | 0 | 0 | 0 | 8 | 2 |
 | IO Import, export, clipboard, and files | 21 | 15 | 3 | 0 | 0 | 0 | 3 |
-| CUS Libraries, scratchpad, and custom shapes | 16 | 10 | 0 | 0 | 0 | 1 | 5 |
+| CUS Libraries, scratchpad, and custom shapes | 16 | 12 | 0 | 0 | 0 | 1 | 3 |
 | DIA Diagram data: metadata, links, tags, and placeholders | 12 | 10 | 0 | 0 | 0 | 0 | 2 |
 | STO Storage, sharing, collaboration, and integrations | 11 | 1 | 0 | 0 | 0 | 0 | 10 |
 | UIX Editor UI, panels, search, and accessibility | 14 | 9 | 1 | 2 | 0 | 1 | 1 |
@@ -577,8 +577,8 @@ Reusable shape collections and shape authoring.
 | CUS-10 | Complex custom shape editor | Shapes can be authored from geometry, constraints, and named connection points and saved to a library. | [Create and edit complex custom shapes](https://www.drawio.com/docs/manual/shapes/shape-complex-create-edit/) | None | **BLOCKED** | Create a custom shape with two movable parts, save it, and insert it with editable parameters. | No parametric shape model, constraint language, or shape editor. NodeKind is a closed enum. |
 | CUS-11 | Shape properties dialog | A dialog edits a shape's non-style properties and data fields. | [Edit shape properties in diagrams](https://www.drawio.com/docs/manual/shapes/shape-properties/) | None | **DISCOVERED** | Open the dialog, change a property, and see it reflected in the inspector and export. | No generic property bag. Typed fields are edited directly in the inspector. |
 | CUS-12 | Template library | A template browser previews and inserts complete diagrams. | [Template diagrams in draw.io](https://www.drawio.com/docs/manual/templates/) | src/template/mod.rs, src/template/packs.rs, src/ui/templates.rs, src/ui/library.rs, src/mcp/exec.rs | **VERIFIED** | Browse templates by category, preview one, and insert it as editable content. | A template browser lists bundled packs and libraries, previews pages and inserts editable templates on the open page or as new pages, with coverage in template, UI/palette and MCP paths. The row was stale. |
-| CUS-13 | Custom template libraries | A user can install and manage private template collections. | [Create and share custom template libraries with draw.io](https://www.drawio.com/docs/manual/templates/custom-template-libraries/) | None | **BLOCKED** | Install a template folder, browse it, and insert a template after restart. | No template format, registry, or installer. It depends on CUS-12. Working tree (2026-11-11): a custom folder saved in options loads every JSON library beside the bundled packs, reloads from the browser, reports unreadable files, and the open page saves back as a template. Runtime check: a hand-written library loaded and inserted from the live dialog. |
-| CUS-14 | Template library format | A documented JSON format describes template pages, thumbnails, and metadata. | [File format for the template library](https://www.drawio.com/docs/reference/format-template-library/) | None | **BLOCKED** | Validate a template file against the format and load it without errors. | No template schema exists. A native schema would be designed before any compatibility format. Working tree (2026-11-11): the native JSON format carries a format name, version, library name, and templates with category, keywords, optional SVG thumbnail, and pages of nodes, settings, and layers. It is not draw.io's format. |
+| CUS-13 | Custom template libraries | A user can install and manage private template collections. | [Create and share custom template libraries with draw.io](https://www.drawio.com/docs/manual/templates/custom-template-libraries/) | src/template/mod.rs, src/ui/templates.rs, src/ui/library.rs, src/options.rs, src/mcp/exec.rs | **VERIFIED** | Install a template folder, browse it, and insert a template after restart. | Custom template folders are configured in options, loaded/reloaded alongside bundled packs, unreadable files are reported, and pages can be saved back as templates. `a_custom_folder_loads_valid_libraries_and_reports_bad_files`, `save_template_writes_a_reloadable_file_with_a_thumbnail`, and template UI tests cover loading, persistence-related flows and browser behavior. The row was stale. |
+| CUS-14 | Template library format | A documented JSON format describes template pages, thumbnails, and metadata. | [File format for the template library](https://www.drawio.com/docs/reference/format-template-library/) | src/template/mod.rs | **VERIFIED** | Validate a template file against the format and load it without errors. | The native JSON template library format is implemented with format/version validation, parsing, saving and metadata/thumbnails for template pages. `bundled_library_round_trips_through_json`, `a_wrong_format_or_newer_version_is_refused`, `validation_rejects_duplicate_ids_and_dangling_roots`, and `save_template_writes_a_reloadable_file_with_a_thumbnail` cover the behavior. The format is Sketch-native, not draw.io-compatible. The row was stale. |
 | CUS-15 | Custom shape library format | A documented XML format describes shape geometry, styles, and connection points. | [File format for custom shape libraries](https://www.drawio.com/docs/reference/format-custom-shape-library/) | None | **BLOCKED** | Validate a custom shape file, render it, and insert it as an editable node. | No shape definition format or renderer for arbitrary mxGraph shapes. The closed NodeKind enum is the blocker. |
 | CUS-16 | Default style in library previews | Library previews use the current default style so inserted shapes match the diagram. | [Change the style of shapes](https://www.drawio.com/docs/manual/styles/shape-styles/) | src/ui/library.rs, src/registry.rs, src/editor/registry_ops.rs | **VERIFIED** | Set a default style, hover a library item, and see the preview adopt it. | The library panel reads the page shape default and applies it to plain registry entries through `def_item`; preview tiles, drag ghosts and inserts use that styled item so previews match insertion. Personal library and scratchpad items keep their stored item style. The row was stale. |
 

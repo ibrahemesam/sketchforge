@@ -418,7 +418,9 @@ documentation closeout completes the round.
 
 **Round 56 (committed 3436e65, pushed).** Closed stale ANALYZED/BLOCKED rows IO-15, IO-16 and IO-21 and refreshed CON-17 evidence as evidence-only doc updates against HEAD behavior and existing tests. No application code changed.
 
-**Round 57 (local, commit/push pending).** Closed stale IMPLEMENTED/DISCOVERED rows CON-13 and GEN-01/02/03/05 as evidence-only doc updates against HEAD behavior and existing tests. No application code changed. Parity docs now record VERIFIED 164, IMPLEMENTED 21, DISCOVERED 11, BLOCKED 31, ANALYZED 1 and IN_PROGRESS 3. Full `cargo test` and release build were not rerun.
+**Round 57 (committed 15863fe, pushed).** Closed stale IMPLEMENTED/DISCOVERED rows CON-13 and GEN-01/02/03/05 as evidence-only doc updates against HEAD behavior and existing tests. No application code changed.
+
+**Round 58 (local, commit/push pending).** Closed stale BLOCKED rows CUS-13 and CUS-14 as evidence-only doc updates against HEAD behavior and existing tests. No application code changed. Parity docs now record VERIFIED 166, IMPLEMENTED 21, DISCOVERED 11, BLOCKED 29, ANALYZED 1 and IN_PROGRESS 3. Full `cargo test` and release build were not rerun.
 
 **Scope.**
 
