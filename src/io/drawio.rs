@@ -1494,18 +1494,22 @@ fn apply_style(n: &mut Node, st: &ParsedStyle, target: StyleTarget) {
     }
 }
 
-fn apply_text_style(n: &mut Node, st: &ParsedStyle) {
-    if let Some(style) = st.num("fontStyle") {
-        let bits = style as i32;
-        n.text_style.bold = bits & 1 != 0;
-        n.text_style.italic = bits & 2 != 0;
-    }
+fn apply_font_family(n: &mut Node, st: &ParsedStyle) {
     if let Some(family) = st.get("fontFamily")
         && !family.is_empty()
         && !family.eq_ignore_ascii_case("helvetica")
     {
         n.text_style.family = Some(family.to_string());
     }
+}
+
+fn apply_text_style(n: &mut Node, st: &ParsedStyle) {
+    if let Some(style) = st.num("fontStyle") {
+        let bits = style as i32;
+        n.text_style.bold = bits & 1 != 0;
+        n.text_style.italic = bits & 2 != 0;
+    }
+    apply_font_family(n, st);
     if let Some(align) = st.get("align") {
         n.text_style.align = Some(align_for(Some(align)));
     }
@@ -1543,6 +1547,7 @@ fn apply_label_style(n: &mut Node, st: &ParsedStyle) {
         n.text_border = Some(pair.0);
         n.text_border_dark = pair.1;
     }
+    apply_font_family(n, st);
     if st.flag("textShadow") || st.flag("fontShadow") {
         n.text_shadow = true;
     }

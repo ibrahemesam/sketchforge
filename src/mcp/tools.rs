@@ -18,7 +18,7 @@ switching the user's view. Node ids are opaque strings; never show them to the u
 - Build UI with create_artboard, then write_html into it, one visual group per call (a header, \
 a row, a card) so the user sees progress. Inline styles only; flexbox (display:flex, gap, \
 padding, align-items, justify-content) is the layout model; no margin, grid or tables.
-- Text uses Inter (regular, bold, italic). Use px for font sizes.
+- Text uses Inter, or a system family from get_font_family_info. Use px for font sizes.
 - Edit with update_styles, set_text_content, rename_nodes, duplicate_nodes, move_nodes, \
 delete_nodes. Whiteboard shapes, sticky notes and arrows: create_shape. Hand-drawn style: \
 update_styles with {\"sketch\": true, \"roughness\": 1, \"fillStyle\": \"hachure\"}.
@@ -260,8 +260,9 @@ pub fn definitions() -> Vec<Value> {
         ),
         tool(
             "get_font_family_info",
-            "Whether font families are available and their weights/styles. Sketch renders text \
-             with Inter (400, 700, normal and italic); other families fall back to Inter.",
+            "Whether font families are available and their weights/styles. Inter is always \
+             available; system families are listed once the background font scan finishes. \
+             Unavailable families render in Inter.",
             json!({"familyNames": {"type": "array", "items": {"type": "string"}}}),
             &["familyNames"],
             true,
@@ -339,7 +340,8 @@ pub fn definitions() -> Vec<Value> {
              grid or tables.\n\
              - Text: font-size, font-weight (≥600 = bold), font-style, color, line-height, \
              letter-spacing, text-align, text-decoration; <b>/<i>/<u>/<s>/<span style> make rich \
-             text. Font family is always Inter.\n\
+             text. font-family picks a bundled or installed family; unknown names render in \
+             Inter.\n\
              - Boxes: background(-color/-image: colors, linear/radial gradients, url()), border, \
              border-radius, opacity, overflow:hidden, mix-blend-mode, width/height (px, %, \
              fit-content).\n\

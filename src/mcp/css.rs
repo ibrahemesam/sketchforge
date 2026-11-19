@@ -843,9 +843,9 @@ pub fn apply(n: &mut Node, styles: &[(String, String)], ctx: &Context) -> Applie
                 _ => false,
             },
             "flexShrink" | "flexBasis" | "boxSizing" | "minWidth" | "minHeight" | "maxWidth"
-            | "maxHeight" | "zIndex" | "cursor" | "whiteSpace" | "fontFamily" | "wordBreak"
-            | "overflowWrap" => {
-                // Accepted without an equivalent; harmless. fontFamily: Inter is the only face.
+            | "maxHeight" | "zIndex" | "cursor" | "whiteSpace" | "wordBreak" | "overflowWrap" => {
+                // Accepted without an equivalent; harmless. `fontFamily` is
+                // inherited by text children, which store it on text_style.
                 !matches!(
                     k.as_str(),
                     "minWidth" | "minHeight" | "maxWidth" | "maxHeight"
@@ -896,6 +896,15 @@ pub fn apply(n: &mut Node, styles: &[(String, String)], ctx: &Context) -> Applie
                 None => false,
             },
             "color" => true, // inherited by text children; meaningless on boxes
+            "fontFamily" if is_text => {
+                let name = v.trim();
+                if name.is_empty() {
+                    false
+                } else {
+                    n.text_style.family = Some(name.to_string());
+                    true
+                }
+            }
             "fontWeight" if is_text => {
                 let w = match lower.as_str() {
                     "bold" | "bolder" => 700.0,
@@ -1290,7 +1299,13 @@ pub fn computed(n: &Node, parent_layout: Option<&AutoLayout>, is_root: bool) -> 
         NodeKind::Text {
             font_size, align, ..
         } => {
-            put("fontFamily", "Inter".into());
+            put(
+                "fontFamily",
+                n.text_style
+                    .family
+                    .clone()
+                    .unwrap_or_else(|| "Inter".into()),
+            );
             put("fontSize", px(*font_size));
             put(
                 "fontWeight",

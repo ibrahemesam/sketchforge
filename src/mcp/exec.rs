@@ -654,7 +654,7 @@ fn basic_info(host: &mut dyn Host, a: &Args) -> ToolResult {
         "nodeCount": doc.nodes.len(),
         "artboards": artboards,
         "otherTopLevelLayers": others,
-        "fontFamilies": ["Inter"],
+        "fontFamilies": crate::text::font_families(),
         "selectionCount": if page == ed.active_page { ed.selection.len() } else { 0 },
         "nodeIdFormat": "\"<page>:<n>\", e.g. \"".to_string() + &node_key(ed, page, NodeId(1)) + "\"",
     }))
@@ -1049,14 +1049,17 @@ fn font_info(a: &Args) -> ToolResult {
         .strs("familyNames")?
         .iter()
         .map(|f| {
-            let inter = f.trim().eq_ignore_ascii_case("inter");
+            let info = crate::text::family_info(f);
+            let styles: Vec<Value> = info
+                .styles
+                .iter()
+                .map(|(weight, style)| json!({"weight": weight, "style": style}))
+                .collect();
             json!({
                 "family": f,
-                "available": inter,
-                "styles": if inter { json!([
-                    {"weight": 400, "style": "normal"}, {"weight": 700, "style": "normal"},
-                    {"weight": 400, "style": "italic"}, {"weight": 700, "style": "italic"}]) } else { json!([]) },
-                "note": if inter { "" } else { "not available; text renders in Inter" },
+                "available": info.available,
+                "styles": styles,
+                "note": if info.available { "" } else { "not available; text renders in Inter" },
             })
         })
         .collect();

@@ -155,6 +155,55 @@ pub fn font_families() -> Vec<String> {
     names
 }
 
+/// Font availability and faces, as reported by MCP's `get_font_family_info`.
+pub struct FamilyInfo {
+    pub available: bool,
+    /// `(weight, style)` pairs in draw.io's order: regular, bold, italic, then
+    /// bold italic. A family with one face reports just that face's style.
+    pub styles: Vec<(u16, &'static str)>,
+}
+
+/// Report whether `name` can render and which of its faces the app found.
+/// Inter is bundled with all four styles. Other families come from the same
+/// background scan that fills the inspector dropdown, so a call before the
+/// scan lands reports them unavailable rather than claiming a false fallback.
+pub fn family_info(name: &str) -> FamilyInfo {
+    fonts::scan_once();
+    let styles = styles_from(fonts::library(), name);
+    FamilyInfo {
+        available: !styles.is_empty(),
+        styles,
+    }
+}
+
+fn styles_from(lib: Option<&fonts::Library>, name: &str) -> Vec<(u16, &'static str)> {
+    if name.trim().eq_ignore_ascii_case("Inter") {
+        return vec![
+            (400, "normal"),
+            (700, "normal"),
+            (400, "italic"),
+            (700, "italic"),
+        ];
+    }
+    let Some(family) = lib.and_then(|l| l.find(name.trim())) else {
+        return Vec::new();
+    };
+    let mut found = [[false; 2]; 2]; // [italic][bold]
+    for face in &family.faces {
+        found[face.italic as usize][face.bold as usize] = true;
+    }
+    [
+        (false, false, 400, "normal"),
+        (true, false, 700, "normal"),
+        (false, true, 400, "italic"),
+        (true, true, 700, "italic"),
+    ]
+    .into_iter()
+    .filter(|(bold, italic, _, _)| found[*italic as usize][*bold as usize])
+    .map(|(_, _, weight, style)| (weight, style))
+    .collect()
+}
+
 pub fn face_id(bold: bool, italic: bool) -> FaceId {
     bold as FaceId | (italic as FaceId) << 1
 }
@@ -1660,6 +1709,27 @@ mod tests {
         assert!(lib.find("Noto Sans Arabic").is_some());
         // Case-insensitive lookup.
         assert_eq!(lib.find("INTER").unwrap().name, "Inter");
+    }
+
+    #[test]
+    fn family_info_reports_discovered_styles() {
+        let dirs = [std::path::PathBuf::from("assets/fonts")];
+        let lib = fonts::scan_dirs(&dirs);
+        assert_eq!(
+            styles_from(Some(&lib), "inter"),
+            vec![
+                (400, "normal"),
+                (700, "normal"),
+                (400, "italic"),
+                (700, "italic")
+            ]
+        );
+        let arabic = styles_from(Some(&lib), "Noto Sans Arabic");
+        assert!(!arabic.is_empty(), "bundled Arabic family should be found");
+        assert!(arabic.contains(&(400, "normal")), "{arabic:?}");
+        assert!(styles_from(Some(&lib), "No Such Family 4E7").is_empty());
+        // Before the system scan lands there is no library to inspect.
+        assert!(styles_from(None, "Noto Sans Arabic").is_empty());
     }
 
     #[test]
