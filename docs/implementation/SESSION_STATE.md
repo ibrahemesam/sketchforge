@@ -1,6 +1,6 @@
 # Sketch agent session state
 
-Last updated: 2026-11-19 (round 43).
+Last updated: 2026-11-19 (round 44).
 
 ## Objective
 
@@ -22,7 +22,9 @@ background image. Round 41 was pushed as fc0f065 with curved text and ff63722
 with its docs closeout. Round 42 was pushed as 727c534 with a preserved custom
 grid color, e9bf2ed with its docs closeout and c43a525 marking it pushed. Round
 43 was pushed as 9cae03e and cb8a4fd with the page fade transition and b2f487f
-with its docs closeout. Do not create releases or deploy Vercel; plain
+with its docs closeout. Round 44 implementation is committed locally as 60186ab
+with draw.io shape library XML import and export; its documentation closeout
+follows in this branch. Do not create releases or deploy Vercel; plain
 `git push` sends commits to the fork.
 
 The full sidebar spec was implemented and verified in round 6 (see
@@ -457,6 +459,27 @@ by a unit test rather than a live click. All three commits were pushed; the
 parity docs recorded VERIFIED 120 and DISCOVERED 46 at the end of the round.
 DIA-11 animation actions stay blocked on a sandboxed action interpreter.
 
+Round 44 closed CUS-05, custom shape library XML. A new adapter reads the JSON
+array inside `<mxlibrary>`, passes each entry's uncompressed mxGraphModel
+through `drawio::import_str` and writes entries through `drawio::export`.
+Imported shapes become personal library items and insert through the existing
+`insert_library_item` path. The Library tab gained Import XML and Export XML
+buttons backed by tested file helpers, and the CLI gained `--import-lib` and
+`--export-lib`. The first focused run found that draw.io shorthand styles such
+as `rhombus;` imported as rectangles; `shape_name` now accepts those tokens.
+Six focused tests pass, and the serial skip suite passes 522 tests with the
+known `m2_pages_panel_screenshot` failure skipped. fmt, clippy, diff-check and
+release build pass. A verified 38.53 s Xvfb `:105` recording with three passing
+assertions is in
+`.artifacts/round44/evidence/evidence-20261119-144811-d04937/report.md`: the
+imported Decision tile renders its #dae8fc fill, clicking it inserts 1602 blue
+pixels on the canvas, and the export writes both shapes with escaped models.
+The import used the CLI before recording because bare Xvfb cannot drive the
+native picker; the panel file operations are test-covered. The code commit
+needs a plain `git push`; the parity docs record VERIFIED 121, ANALYZED 5 and
+DISCOVERED 46 at closeout. Compressed or encrypted library entries stay
+unsupported with a clear error.
+
 ## Blockers
 
 GEN-04 AI generation stays blocked: it needs a hosted model, credentials,
@@ -472,28 +495,26 @@ in `.opencode/MEMORY.md`).
 
 ## Exact next task
 
-Round 44 should close CUS-05, custom shape library XML. The inventory row at
-`feature-inventory.md:572` is still ANALYZED and says the shape registry does not
-exist yet; that blocker is gone, and a search for stencil or XML-library import
-in `src/` and `tests/` finds nothing. Scope this to importing draw.io XML shape
-libraries into a custom library folder, inserting an imported shape through the
-Library tab, and exporting the edited library back to XML. Reuse the registry
-and template-library paths rather than adding a second source of truth. Start
-with a failing adapter test. Do not assume other ANALYZED or DISCOVERED rows are
-open: most carry stale working-tree notes and their features are already at
-HEAD, including DOC-08, DOC-10, DOC-11, DOC-12, DOC-14, CAN-15, CAN-16, SHP-17,
-SHP-19, CON-09, CON-10, CON-11, CON-12, CON-15, CON-16, CON-18, CON-19, TXT-06,
-TXT-19, TXT-20, the GEN packs, the DIA metadata rows and UIX-11. UIX-12 and
-UIX-13 are genuine but broad. CUS-11 is documented out of scope. Keep DIA-11
-animation actions blocked on a sandboxed action interpreter. Use a fresh scratch
-folder and reuse Xvfb `:105`, since a new display mapped no usable app window in
-earlier rounds. No release or tag. Do not restart UIX-14, TXT-21, STY-23, IO-19,
-CAN-06, CON-09, CON-13, CON-17, UIX-04, STY-13, STY-14, STY-21, STY-22, DOC-09,
-TXT-24 or DIA-10: their commands, editor tests and runtime evidence are already
-committed. M9 collaboration stays blocked without a server, conflict model, and
-permissions. GEN-04 AI generation and GEN-10 vendor stencils also stay blocked.
-IO-17, IO-18 and IO-20 remain blocked or deferred, as do the HTML and PDF parts
-of DOC-15.
+Round 45 should close a stale DISCOVERED row that is already implemented at
+HEAD, starting with TXT-06, font family picker. `src/ui/inspector.rs:4929` uses
+`text::font_families()`, serializes a chosen family on `text_style.family` and
+treats Inter as the built-in default. Verify the row against HEAD before writing
+a failure test: the goal is a focused test for the picker, native persistence
+and draw.io `fontFamily` mapping, then a VERIFIED row. Other stale candidates
+are CAN-15, CON-18, DIA-03, DIA-04, DIA-05 and CUS-16; their working-tree notes
+say the features exist, but each must be checked at HEAD first. Do not assume
+any ANALYZED or DISCOVERED row is open. UIX-12 and UIX-13 are genuine but
+broad. CUS-11 is documented out of scope. Keep DIA-11 animation actions blocked
+on a sandboxed action interpreter. Use a fresh scratch folder and reuse Xvfb
+`:105`, and start the recorder with `DISPLAY=:105` or it captures the blank `:0`
+screen; drive the app with `env -u WAYLAND_DISPLAY` or it picks the Wayland
+backend and maps no X11 window. No release or tag. Do not restart UIX-14,
+TXT-21, STY-23, IO-19, CAN-06, CON-09, CON-13, CON-17, UIX-04, STY-13, STY-14,
+STY-21, STY-22, DOC-09, TXT-24, DIA-10 or CUS-05: their commands, editor tests
+and runtime evidence are already committed. M9 collaboration stays blocked
+without a server, conflict model, and permissions. GEN-04 AI generation and
+GEN-10 vendor stencils also stay blocked. IO-17, IO-18 and IO-20 remain blocked
+or deferred, as do the HTML and PDF parts of DOC-15.
 
 ## Commands
 

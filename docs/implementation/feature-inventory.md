@@ -263,16 +263,16 @@ gaps landed on 2026-10-26: a label without a solid background cuts the line behi
 text, and the gap follows label moves, reroutes, and export. Page view is a view
 preference and is not part of the page file.
 
-**Size:** 231 capabilities in 13 domains. 120 are verified against committed tests or directly exercised code, 22 are implemented without a focused check, 80 are absent, and 9 are analysed or partial.
+**Size:** 231 capabilities in 13 domains. 121 are verified against committed tests or directly exercised code, 22 are implemented without a focused check, 80 are absent, and 8 are analysed or partial.
 
 ## Counts
 
 | Status | Count | Meaning |
 |---|---:|---|
-| VERIFIED | 120 | Committed test or directly exercised code path proves the behavior. |
+| VERIFIED | 121 | Committed test or directly exercised code path proves the behavior. |
 | IMPLEMENTED | 22 | Code exists and the path is readable, but no focused test or this-session runtime check covers it. |
 | IN_PROGRESS | 3 | Partial code at HEAD; the acceptance criteria are not met. |
-| ANALYZED | 6 | draw.io behavior is documented and a native design is recorded, but no code exists. |
+| ANALYZED | 5 | draw.io behavior is documented and a native design is recorded, but no code exists. |
 | DISCOVERED | 46 | draw.io behavior is documented here; no code or design exists. |
 | BLOCKED | 34 | Work cannot proceed without a missing subsystem, external service, licensing decision, or explicit scope decision. |
 | **Total** | **231** | |
@@ -288,7 +288,7 @@ preference and is not part of the page file.
 | ORG Structure: groups, frames, components, layout, and layers | 16 | 11 | 1 | 0 | 1 | 0 | 3 |
 | GEN Generation, templates, and diagram types | 15 | 0 | 0 | 0 | 0 | 13 | 2 |
 | IO Import, export, clipboard, and files | 21 | 12 | 3 | 0 | 2 | 0 | 4 |
-| CUS Libraries, scratchpad, and custom shapes | 16 | 4 | 0 | 0 | 1 | 6 | 5 |
+| CUS Libraries, scratchpad, and custom shapes | 16 | 5 | 0 | 0 | 0 | 6 | 5 |
 | DIA Diagram data: metadata, links, tags, and placeholders | 12 | 1 | 0 | 0 | 1 | 6 | 4 |
 | STO Storage, sharing, collaboration, and integrations | 11 | 1 | 0 | 0 | 0 | 0 | 10 |
 | UIX Editor UI, panels, search, and accessibility | 14 | 7 | 1 | 2 | 0 | 3 | 1 |
@@ -569,7 +569,7 @@ Reusable shape collections and shape authoring.
 | CUS-02 | Add selection to the library | A selection can be saved as a reusable library item with a name and vector preview. | [Work with shapes in draw.io](https://www.drawio.com/docs/manual/shapes/) | src/library.rs, src/ui/library.rs | **VERIFIED** | Select two shapes, add them as one item, and confirm the preview and insertion preserve their relative positions. | Instances are flattened to plain copies. Test: `items_from_selection_rebase_to_origin`. |
 | CUS-03 | Library persistence and rename or delete | Library edits save to library.json and survive restart; items can be renamed or removed. | [Work with shapes in draw.io](https://www.drawio.com/docs/manual/shapes/) | src/library.rs, src/ui/library.rs | **VERIFIED** | Add, rename, and delete an item, restart, and confirm the library matches. | The file is rewritten atomically. Test: `save_load_roundtrip_and_starter`. |
 | CUS-04 | Insert library items with fresh IDs | Clicking or dragging a library item inserts a copy whose IDs do not collide with the page. | [Work with shapes in draw.io](https://www.drawio.com/docs/manual/shapes/) | src/editor/mod.rs, src/library.rs | **VERIFIED** | Insert the same item twice and confirm both are independently editable. | Inserted items become plain layers, not linked library references. Test: `library_items_insert_with_fresh_ids`. |
-| CUS-05 | Custom shape library XML | draw.io custom libraries can be imported and exported as XML shape collections. | [Work with custom shape libraries](https://www.drawio.com/docs/manual/advanced/custom-shape-libraries/) | None | **ANALYZED** | Import a .xml library, insert a shape, and export the edited library. | The native library is JSON. ADR-011 treats XML libraries as an adapter over the shape registry, which does not exist yet. |
+| CUS-05 | Custom shape library XML | draw.io custom libraries can be imported and exported as XML shape collections. | [Work with custom shape libraries](https://www.drawio.com/docs/manual/advanced/custom-shape-libraries/) | src/io/library_xml.rs, src/ui/library.rs, src/main.rs | **VERIFIED** | Import a .xml library, insert a shape, and export the edited library. | `imports_mxlibrary_entries_into_library_items`, `imported_items_insert_as_editable_shapes`, `export_library_writes_mxlibrary_json`, `malformed_library_is_reported` and `library_tab_file_operations_round_trip` cover parsing, insertion, XML export and the Library tab file operations. `--import-lib` and `--export-lib` cover the CLI. The adapter reuses `drawio::import_str` and `drawio::export` on each entry's mxGraphModel, and draw.io shorthand shape styles now import. Compressed or encrypted library entries are reported as unsupported. |
 | CUS-06 | Public custom shape libraries | A gallery of public libraries can be browsed and installed. | [Use public custom shape libraries](https://www.drawio.com/docs/manual/shapes/public-custom-libraries/) | None | **BLOCKED** | Open the gallery, install one library, and insert a shape offline afterward. | The gallery is a hosted draw.io service and many packs carry asset licenses. No network or catalog exists. |
 | CUS-07 | Scratchpad | A personal pinned area holds recently used or dragged shapes for quick reuse. | [Use the scratchpad in draw.io](https://www.drawio.com/docs/manual/editor/panels/scratchpad/) | None | **DISCOVERED** | Drag a styled shape to the scratchpad, edit the canvas, and drag a fresh copy back. | The Library tab covers named reusable items but not a lightweight scratchpad with drag-out copies. Working tree (2026-11-05): the Library tab scratchpad pins and caps recents, persists under the store root, and supports click or drag-out copies. |
 | CUS-08 | Shape search | A search field finds shapes across libraries by name and shows visual results. | [Search the shape libraries](https://www.drawio.com/docs/manual/shapes/shape-search/) | None | **DISCOVERED** | Search for a cylinder, see matching shapes, and drag one onto the canvas. | No searchable shape catalog. The command palette searches commands, pages, layers, and library items only. Working tree (2026-11-05): the Library tab search matches registry names and keywords and shows preview tiles; the command palette is unchanged. |

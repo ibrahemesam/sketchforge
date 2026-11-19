@@ -281,6 +281,24 @@ implementation was committed as 9cae03e and cb8a4fd; this documentation closeout
 completes the round. DIA-11 animation actions stay blocked on a sandboxed action
 interpreter.
 
+**Committed (2026-11-19, round 44).** CUS-05 closed on
+`agent/drawio-features`. A new `src/io/library_xml.rs` adapter reads the JSON
+array inside `<mxlibrary>`, passes each entry's uncompressed mxGraphModel
+through the existing draw.io importer and writes models back through the draw.io
+exporter. Imported shapes become personal library items and insert with the
+current Library tab path. The tab gains Import XML and Export XML buttons,
+backed by tested file helpers, and the CLI gains `--import-lib` and
+`--export-lib`. The first failure had no adapter module; the first focused run
+then found that draw.io shorthand styles such as `rhombus;` imported as
+rectangles, which the importer now handles. Six focused tests, the serial skip
+suite (522 tests), final checks and a verified 38.53 s live recording in
+`.artifacts/round44/evidence/evidence-20261119-144811-d04937/report.md` are in
+`.artifacts/round44/`. The live run showed the imported tile, inserted it on the
+canvas and checked the CLI export; the import used the CLI because bare Xvfb
+cannot drive the native file picker. Compressed or encrypted library entries
+are reported as unsupported. The implementation was committed as 60186ab; this
+documentation closeout completes the round.
+
 **Scope.**
 
 - A selection context resolver that classifies the current selection as document, single
