@@ -263,17 +263,17 @@ gaps landed on 2026-10-26: a label without a solid background cuts the line behi
 text, and the gap follows label moves, reroutes, and export. Page view is a view
 preference and is not part of the page file.
 
-**Size:** 231 capabilities in 13 domains. 126 are verified against committed tests or directly exercised code, 22 are implemented without a focused check, 75 are absent, and 8 are analysed or partial.
+**Size:** 231 capabilities in 13 domains. 127 are verified against committed tests or directly exercised code, 22 are implemented without a focused check, 74 are absent, and 8 are analysed or partial.
 
 ## Counts
 
 | Status | Count | Meaning |
 |---|---:|---|
-| VERIFIED | 126 | Committed test or directly exercised code path proves the behavior. |
+| VERIFIED | 127 | Committed test or directly exercised code path proves the behavior. |
 | IMPLEMENTED | 22 | Code exists and the path is readable, but no focused test or this-session runtime check covers it. |
 | IN_PROGRESS | 3 | Partial code at HEAD; the acceptance criteria are not met. |
 | ANALYZED | 5 | draw.io behavior is documented and a native design is recorded, but no code exists. |
-| DISCOVERED | 41 | draw.io behavior is documented here; no code or design exists. |
+| DISCOVERED | 40 | draw.io behavior is documented here; no code or design exists. |
 | BLOCKED | 34 | Work cannot proceed without a missing subsystem, external service, licensing decision, or explicit scope decision. |
 | **Total** | **231** | |
 
@@ -281,7 +281,7 @@ preference and is not part of the page file.
 |---|---:|---:|---:|---:|---:|---:|---:|
 | DOC Document, projects, pages, and diagram settings | 15 | 9 | 0 | 1 | 0 | 4 | 1 |
 | CAN Canvas, navigation, grid, and guides | 16 | 13 | 1 | 0 | 0 | 2 | 0 |
-| SHP Shapes, frames, transforms, and paths | 26 | 18 | 5 | 0 | 0 | 2 | 1 |
+| SHP Shapes, frames, transforms, and paths | 26 | 19 | 5 | 0 | 0 | 1 | 1 |
 | CON Connectors and arrows | 21 | 12 | 2 | 0 | 1 | 6 | 0 |
 | TXT Text, labels, and typography | 25 | 16 | 4 | 0 | 0 | 2 | 3 |
 | STY Styles, effects, and themes | 23 | 18 | 5 | 0 | 0 | 0 | 0 |
@@ -388,7 +388,7 @@ Creating and manipulating geometry, including vector and freehand tools.
 | SHP-16 | Autosize text boxes to content | Text boxes refit width and height as text changes unless wrapping fixes the width. | [Text and labels in draw.io](https://www.drawio.com/docs/manual/text/) | src/text.rs, src/editor/mod.rs | **VERIFIED** | Type two lines into an auto-width text box and confirm the box grows without clipping. | Vertical alignment can keep a taller box. Tests: `text_padding_grows_box_and_offsets_content`, `word_wrap_toggles_fixed_width_and_refits`. |
 | SHP-17 | Autosize groups and containers | Autosize shrinks a group or container to its contents from the inside out. | [Arrange shapes and connectors](https://www.drawio.com/docs/manual/editor/panels/arrange-tab/) | None | **DISCOVERED** | Select a frame with nested contents, choose Autosize, and confirm the frame hugs the innermost content. | Auto layout hug exists, but the draw.io Autosize command for groups and containers does not. Working tree (2026-11-05): the Arrange tab Autosize button and Alt+F hug groups and frames deepest-first while child world positions stay fixed. |
 | SHP-18 | Z-order | Bring to front, send to back, bring forward, and send backward reorder siblings. | [Arrange shapes and connectors](https://www.drawio.com/docs/manual/editor/panels/arrange-tab/) | src/editor/mod.rs, src/editor/structure.rs | **VERIFIED** | Reorder overlapping shapes with every command and undo each step. | Order is per parent, so a child cannot move outside its frame. Test: `nudge_delete_duplicate_copy_paste_and_order`. |
-| SHP-19 | Rotate shapes and labels | A rotation handle and an exact angle field rotate a shape, with a choice to rotate its label. | [Rotate shapes or groups of shapes](https://www.drawio.com/docs/manual/shapes/shape-rotate/) | None | **DISCOVERED** | Rotate a shape 30 degrees, rotate only its label, and keep both through reload and export. | No rotation model, input path, hit test, or render transform at HEAD. Working tree (2026-11-17): a node stores a clockwise angle and a Keep label upright flag. A circular handle at the selection's top-right turns an unlocked shape in 15 degree steps, or 1 degree with Shift, and the Arrange tab adds an exact Angle field and Rotate shape only by 90 degrees. Dragging and the 90 degree button turn the label with the shape or leave it upright; the exact field follows the flag. Hit testing, the canvas overlay, undo and redo, the page file, and PNG, SVG, and draw.io export carry the state. Groups, frames with children, and connectors have no handle, and draw.io export has no upright-label style. The working tree is not counted. |
+| SHP-19 | Rotate shapes and labels | A rotation handle and an exact angle field rotate a shape, with a choice to rotate its label. | [Rotate shapes or groups of shapes](https://www.drawio.com/docs/manual/shapes/shape-rotate/) | src/model/node.rs, src/editor/commands.rs, src/editor/mod.rs, src/render/draw.rs, src/ui/inspector.rs, src/project/format.rs, src/io/drawio.rs | **VERIFIED** | Rotate a shape 30 degrees, rotate only its label, and keep both through reload and export. | `Style.rotation` and the label upright style flag, the rotate handle, exact angle field, Keep label upright control, hit testing, overlay, undo and redo, and native page persistence were already at HEAD. `export_and_reimport_keep_an_upright_label_flag` now proves draw.io export keeps the upright flag in the native `__sketchLabelUpright` sidecar and import restores it without leaving metadata behind. A CLI round trip exported a rotated upright-labeled shape to `.artifacts/round50/io/upright.drawio` and imported it with rotation 30 and label_upright true in `.artifacts/round50/io/imported-node.json`. Groups, frames with children, and connectors still have no rotate handle, and draw.io has no standard upright-label style key. |
 | SHP-20 | Tables | The table tool creates rows and columns with title regions, merged cells, and resizable borders. | [Table shapes in draw.io](https://www.drawio.com/docs/manual/shapes/tables/) | None | **BLOCKED** | Insert a 3 by 3 table, merge two cells, drag a row, and edit a cell label. | No table model, cell selection, or row/column geometry. A table cannot be represented by the current NodeKind set without a new nested model. |
 | SHP-21 | Pen and vector point editing | The pen draws corner or smooth paths; points can be added, moved, broken, and deleted. | [Work with shapes in draw.io](https://www.drawio.com/docs/manual/shapes/) | src/editor/vector_ops.rs, src/vector.rs | **VERIFIED** | Draw a curve, edit a handle, close the path, and delete a point without losing the rest. | Booleans flatten curves. Test: `pen_draws_curves_and_points_can_be_edited`. |
 | SHP-22 | Freehand pencil | The pencil records pressure-sensitive smoothed strokes with a constant screen width at any zoom. | [Draw freehand shapes and annotate diagrams](https://www.drawio.com/docs/manual/shapes/freehand-drawing/) | src/ink.rs, src/editor/mod.rs | **VERIFIED** | Draw at 50% and 200% zoom and confirm the stroke width looks the same on screen. | Pressure falls back to speed when the platform reports none. Tests: `pencil_draws_one_smoothed_stroke_per_gesture`, `stroke_width_is_screen_constant_when_zoomed`. |

@@ -1,6 +1,6 @@
 # Sketch agent session state
 
-Last updated: 2026-11-19 (round 49 DIA-03 MCP link editing).
+Last updated: 2026-11-19 (round 50 SHP-19 draw.io upright-label sidecar).
 
 ## Objective
 
@@ -31,9 +31,10 @@ pushed. Round 46 was pushed as 221cf0f with the MCP reverse_connectors tool,
 as 2ec2fbd with MCP tag search, a610877 with its docs closeout and 45df3b6
 marking it pushed. Round 48 was pushed as cca0145 with tooltip truncation and
 ac17535 with its docs closeout. The welcome text fix was pushed as a85f308 and
-the product-focused README as 87fced5. Round 49 implementation was committed as
-ea87c41 with the `set_link` MCP tool. Do not create releases or deploy Vercel;
-plain `git push` sends commits to the fork.
+the product-focused README as 87fced5. Round 49 implementation was committed as ea87c41 with the `set_link` MCP tool
+and its docs closeout was pushed. Round 50 implementation was committed as
+30636ea with the draw.io `__sketchLabelUpright` sidecar round trip. Do not
+create releases or deploy Vercel; plain `git push` sends commits to the fork.
 
 The full sidebar spec was implemented and verified in round 6 (see
 `.opencode/MEMORY.md`). Round 7 closed the transparent connector label gap.
@@ -606,6 +607,23 @@ page target was stored but not opened in a viewer. The report names baseline
 recording. Code and docs commits (`ea87c41`, `e325a8b`) were pushed. Parity
 docs record VERIFIED 126, ANALYZED 5 and DISCOVERED 41 at closeout.
 
+Round 50 closed SHP-19's draw.io upright-label gap. Native rotation and
+`label_upright` were already at HEAD, but draw.io export dropped the upright
+flag and import never read it back. The first failure in
+`.artifacts/round50/failure.log` came from
+`export_and_reimport_keep_an_upright_label_flag`. draw.io export now writes a
+native `__sketchLabelUpright` value in `sketch-data`, and import consumes it so
+the key does not stay in node metadata. The draw.io test suite passes (11
+tests). The serial skip suite passes 542 tests with the known
+`m2_pages_panel_screenshot` failure skipped, and screenshots were restored. fmt,
+clippy, diff-check and release build pass. A CLI export of a seeded rotated
+upright-labeled shape produced `.artifacts/round50/io/upright.drawio` with
+`rotation=30` and the sidecar, and reimporting it produced
+`.artifacts/round50/io/imported-node.json` with rotation 30 and `label_upright`
+true. The implementation was committed as 30636ea; docs closeout and push are
+pending. Parity docs record VERIFIED 127, ANALYZED 5 and DISCOVERED 40 at
+closeout.
+
 ## Blockers
 
 GEN-04 AI generation stays blocked: it needs a hosted model, credentials,
@@ -621,29 +639,27 @@ in `.opencode/MEMORY.md`).
 
 ## Exact next task
 
-Round 49 closed DIA-03. The welcome text fix and README rewrite are done and
-need no further work. Start round 50 with SHP-19. Native rotation and the
-`label_upright` flag already work, but draw.io export and import drop the flag.
-Add a failing round-trip test first, then carry the flag in a native
-`__sketchLabelUpright` sidecar and consume it on import without leaving it in
-node metadata. Pick any later stale DISCOVERED row only after checking it
-against HEAD. Capture a failing test before changing code. Do not assume any
-ANALYZED or DISCOVERED row is open.
-UIX-12 and UIX-13 are genuine but broad. CUS-11 is documented out of scope.
-Keep DIA-11 animation actions blocked on a sandboxed action interpreter. Use a
-fresh scratch folder and reuse Xvfb `:105`,
-and start the recorder with `DISPLAY=:105` or it captures the blank `:0` screen;
-drive the app with `env -u WAYLAND_DISPLAY` or it picks the Wayland backend and
-maps no X11 window. PIL `ImageGrab.grab(xdisplay=':105')` is much faster than
-spawning ffmpeg for each screenshot when probing hover positions; hover needs
-intermediate pointer moves, a direct jump from outside the canvas can be
-dropped during layout. No release or tag. Do not restart UIX-14, TXT-21, STY-23,
-IO-19, CAN-06, CON-09, CON-13, CON-17, UIX-04, STY-13, STY-14, STY-21, STY-22,
-DOC-09, TXT-24, DIA-10, CUS-05, TXT-06, CON-18, DIA-05, DIA-04 or DIA-03: their
-commands, editor tests and runtime evidence are already committed. M9
-collaboration stays blocked without a server, conflict model, and permissions.
-GEN-04 AI generation and GEN-10 vendor stencils also stay blocked. IO-17, IO-18
-and IO-20 remain blocked or deferred, as do the HTML and PDF parts of DOC-15.
+Round 50 closed SHP-19. Pick the next stale DISCOVERED row only after checking
+it against HEAD. Start with DIA-02, DIA-06, DIA-07, or CUS-16: many rows are
+marked DISCOVERED but already implemented, so confirm the real gap in source
+and tests before changing code. Capture a failing test first. If a row is
+already satisfied, update the inventory and evidence instead of adding code. Do
+not assume any ANALYZED or DISCOVERED row is open. UIX-12 and UIX-13 are genuine
+but broad. CUS-11 is documented out of scope. Keep DIA-11 animation actions
+blocked on a sandboxed action interpreter. Use a fresh scratch folder and reuse
+Xvfb `:105`, and start the recorder with `DISPLAY=:105` or it captures the blank
+`:0` screen; drive the app with `env -u WAYLAND_DISPLAY` or it picks the Wayland
+backend and maps no X11 window. PIL `ImageGrab.grab(xdisplay=':105')` is much
+faster than spawning ffmpeg for each screenshot when probing hover positions;
+hover needs intermediate pointer moves, a direct jump from outside the canvas
+can be dropped during layout. No release or tag. Do not restart UIX-14, TXT-21,
+STY-23, IO-19, CAN-06, CON-09, CON-13, CON-17, UIX-04, STY-13, STY-14, STY-21,
+STY-22, DOC-09, TXT-24, DIA-10, CUS-05, TXT-06, CON-18, DIA-05, DIA-04, DIA-03 or
+SHP-19: their commands, editor tests and runtime evidence are already
+committed. M9 collaboration stays blocked without a server, conflict model, and
+permissions. GEN-04 AI generation and GEN-10 vendor stencils also stay blocked.
+IO-17, IO-18 and IO-20 remain blocked or deferred, as do the HTML and PDF parts
+of DOC-15.
 
 ## Commands
 

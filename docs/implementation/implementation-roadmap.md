@@ -391,6 +391,21 @@ was discarded because its last frame went black. The report names baseline
 implementation was committed as ea87c41; this documentation closeout completes
 the round.
 
+**Committed (2026-11-19, round 50).** SHP-19 closed on
+`agent/drawio-features`. Native rotation and the Keep label upright flag were
+already at HEAD, but draw.io export dropped `label_upright` and import never
+read it back. `export_and_reimport_keep_an_upright_label_flag` failed first
+because the exported mxfile had no sidecar for the flag. draw.io export now
+writes a native `__sketchLabelUpright` value in `sketch-data`, and import
+consumes it without leaving metadata on the node. The draw.io test suite passes
+(11 tests), and the serial skip suite passes 542 tests with the known
+`m2_pages_panel_screenshot` failure skipped. A CLI export of a seeded rotated
+upright-labeled shape produced `.artifacts/round50/io/upright.drawio` with
+`rotation=30` and the sidecar, and reimporting it produced
+`.artifacts/round50/io/imported-node.json` with rotation 30 and
+`label_upright` true. The implementation was committed as 30636ea; this
+documentation closeout completes the round.
+
 **Scope.**
 
 - A selection context resolver that classifies the current selection as document, single
