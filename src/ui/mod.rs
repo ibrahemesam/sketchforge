@@ -132,6 +132,8 @@ pub struct WelcomeUi {
 }
 
 const WELCOME_STEPS: usize = 3;
+/// egui measures line height in points, not as a multiple of the font size.
+const WELCOME_BODY_LINE_HEIGHT: f32 = 18.0;
 
 /// Heading, title, body and footer for one tour step.
 fn welcome_copy(step: usize) -> (&'static str, &'static str, &'static str, &'static str) {
@@ -156,6 +158,13 @@ fn welcome_copy(step: usize) -> (&'static str, &'static str, &'static str, &'sta
         ),
         _ => ("", "", "", ""),
     }
+}
+
+fn welcome_body(step: usize) -> RichText {
+    let (_, _, body, _) = welcome_copy(step);
+    RichText::new(body)
+        .size(13.0)
+        .line_height(Some(WELCOME_BODY_LINE_HEIGHT))
 }
 
 fn finish_welcome(st: &mut UiState) {
@@ -1103,7 +1112,7 @@ fn welcome(ctx: &egui::Context, st: &mut UiState, canvas: egui::Rect) {
     let Some(tour) = st.welcome else {
         return;
     };
-    let (label, title, body, tip) = welcome_copy(tour.step);
+    let (label, title, _, tip) = welcome_copy(tour.step);
     let width = 520.0f32.min(canvas.width() - 32.0).max(280.0);
     egui::Area::new("welcome".into())
         .order(egui::Order::Foreground)
@@ -1139,7 +1148,7 @@ fn welcome(ctx: &egui::Context, st: &mut UiState, canvas: egui::Rect) {
                     );
                     ui.label(RichText::new(title).font(theme::semibold(24.0)));
                     ui.add_space(8.0);
-                    ui.label(RichText::new(body).size(13.0).line_height(Some(1.45)));
+                    ui.label(welcome_body(tour.step));
                     ui.add_space(12.0);
                     ui.label(RichText::new(tip).size(12.0).color(p.secondary));
                     ui.add_space(18.0);
@@ -1337,6 +1346,30 @@ mod tests {
         assert!(st.welcome.is_none());
         assert!(st.options.onboarding_seen);
         assert!(st.options_dirty);
+    }
+
+    #[test]
+    fn welcome_body_lines_do_not_overlap() {
+        let ctx = egui::Context::default();
+        let input = egui::RawInput {
+            screen_rect: Some(egui::Rect::from_min_size(
+                egui::Pos2::ZERO,
+                egui::vec2(800.0, 600.0),
+            )),
+            ..Default::default()
+        };
+        let mut height = 0.0;
+        let mut out = ctx.run_ui(input, |ui| {
+            let galley = egui::WidgetText::from(welcome_body(0)).into_galley(
+                ui,
+                Some(egui::TextWrapMode::Wrap),
+                480.0,
+                egui::FontSelection::default(),
+            );
+            height = galley.rect.height();
+        });
+        out.textures_delta.clear();
+        assert!(height >= 30.0, "body line height collapsed to {height}px");
     }
 
     #[test]
