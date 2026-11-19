@@ -18,6 +18,9 @@ use std::fmt::Write as _;
 
 /// Native-only source connector default, carried in the UserObject sidecar.
 const SKETCH_CONNECTOR_DEFAULT: &str = "__sketchConnectorDefault";
+/// Native-only grid color. draw.io has no page setting for this, so the value
+/// rides in the mxGraphModel sidecar and survives a Sketch round trip.
+const SKETCH_GRID_COLOR: &str = "__sketchGridColor";
 
 // --------------------------------------------------------------------------------- report
 
@@ -1676,6 +1679,11 @@ fn apply_model_settings(doc: &mut Document, model: XmlNode<'_, '_>) {
     if let Some(v) = num_attr(model, "gridSize") {
         doc.settings.grid_size = v.clamp(1.0, 1000.0);
     }
+    if let Some(v) = model.attribute(SKETCH_GRID_COLOR)
+        && let Some(c) = parse_color(v)
+    {
+        doc.settings.grid_color = Some(c);
+    }
     if let Some(v) = model.attribute("shadow") {
         doc.settings.shadow = v == "1";
     }
@@ -1740,6 +1748,13 @@ pub fn export(pages: &[(&str, &Document)]) -> String {
                 doc.settings.background_color,
                 doc.settings.background_color_dark,
             ));
+            out.push('"');
+        }
+        if let Some(c) = doc.settings.grid_color {
+            out.push(' ');
+            out.push_str(SKETCH_GRID_COLOR);
+            out.push_str("=\"");
+            out.push_str(&c.to_hex());
             out.push('"');
         }
         if let Some(name) = &doc.settings.scheme {

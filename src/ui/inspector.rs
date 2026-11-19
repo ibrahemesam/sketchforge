@@ -1565,7 +1565,7 @@ fn diagram_tab(ui: &mut Ui, ed: &mut Editor, st: &mut UiState, vis: f32) {
                 .unwrap_or_else(|| Color::rgb(0xd0, 0xd0, 0xd0)));
             if ui
                 .color_edit_button_srgba(&mut gc)
-                .on_hover_text("Grid color (editor only, not exported)")
+                .on_hover_text("Grid color (kept in draw.io export)")
                 .changed()
             {
                 let c = from32(gc);
