@@ -23,9 +23,9 @@ with its docs closeout. Round 42 was pushed as 727c534 with a preserved custom
 grid color, e9bf2ed with its docs closeout and c43a525 marking it pushed. Round
 43 was pushed as 9cae03e and cb8a4fd with the page fade transition and b2f487f
 with its docs closeout. Round 44 implementation is committed locally as 60186ab
-with draw.io shape library XML import and export; its documentation closeout
-follows in this branch. Do not create releases or deploy Vercel; plain
-`git push` sends commits to the fork.
+with draw.io shape library XML import and export, and 3fe9208 with its docs
+closeout. Do not create releases or deploy Vercel; plain `git push` sends
+commits to the fork.
 
 The full sidebar spec was implemented and verified in round 6 (see
 `.opencode/MEMORY.md`). Round 7 closed the transparent connector label gap.
@@ -475,9 +475,9 @@ assertions is in
 imported Decision tile renders its #dae8fc fill, clicking it inserts 1602 blue
 pixels on the canvas, and the export writes both shapes with escaped models.
 The import used the CLI before recording because bare Xvfb cannot drive the
-native picker; the panel file operations are test-covered. The code commit
-needs a plain `git push`; the parity docs record VERIFIED 121, ANALYZED 5 and
-DISCOVERED 46 at closeout. Compressed or encrypted library entries stay
+native picker; the panel file operations are test-covered. Both commits were
+pushed; the parity docs recorded VERIFIED 121, ANALYZED 5 and DISCOVERED 46 at
+closeout. Compressed or encrypted library entries stay
 unsupported with a clear error.
 
 ## Blockers
