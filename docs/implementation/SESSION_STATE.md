@@ -29,9 +29,9 @@ exposed to MCP and draw.io, e7cce0a with its docs closeout and e6dcb21 marking i
 pushed. Round 46 was pushed as 221cf0f with the MCP reverse_connectors tool,
 904a29e with its docs closeout and 083ab91 marking it pushed. Round 47 was pushed
 as 2ec2fbd with MCP tag search, a610877 with its docs closeout and 45df3b6
-marking it pushed. Round 48 implementation is committed locally as cca0145 with
-tooltip truncation, and this update is its docs closeout. Do not create releases
-or deploy Vercel; plain `git push` sends commits to the fork.
+marking it pushed. Round 48 was pushed as cca0145 with tooltip truncation and
+ac17535 with its docs closeout. Do not create releases or deploy Vercel; plain
+`git push` sends commits to the fork.
 
 The full sidebar spec was implemented and verified in round 6 (see
 `.opencode/MEMORY.md`). Round 7 closed the transparent connector label gap.
@@ -566,8 +566,8 @@ recording with three passing assertions is in
 bounded at 261x84 px inside the canvas and clears when the pointer leaves. The
 ellipsis is checked by the unit test, not OCR. Two earlier recordings were
 stopped and replaced. The code was committed after the recording so the report
-names `unknown`. Implementation committed as cca0145; parity docs recorded
-VERIFIED 125, ANALYZED 5 and DISCOVERED 42 at closeout.
+names `unknown`. Implementation committed as cca0145; both commits were pushed
+and parity docs recorded VERIFIED 125, ANALYZED 5 and DISCOVERED 42 at closeout.
 
 ## Blockers
 
