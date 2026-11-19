@@ -1,6 +1,6 @@
 # Sketch agent session state
 
-Last updated: 2026-11-19 (round 55 stale-row closures, local pending commit/push).
+Last updated: 2026-11-19 (round 56 stale-row closures, local pending commit/push).
 
 ## Objective
 
@@ -633,12 +633,16 @@ closed as evidence-only doc updates.
 Round 54 was committed as `133f255` and pushed: stale placeholder and diagram
 property rows were closed as evidence-only doc updates.
 
-Round 55 (local, pending commit/push) closed stale DISCOVERED rows CAN-15 and
-CAN-16 as evidence-only doc updates against HEAD behavior and existing tests
-(fixed connection points and rulers/manual guides). No application code
-changed. Parity docs record VERIFIED 156, DISCOVERED 15 and IN_PROGRESS 3.
-`git diff --check` and parity doc checks should pass before commit. Full
-`cargo test` and release build were not rerun.
+Round 55 was committed as `5e08e52` and pushed: stale fixed connection point and
+manual guide rows were closed as evidence-only doc updates.
+
+Round 56 (local, pending commit/push) closed stale IO-15, IO-16, IO-21 and
+updated CON-17 as evidence-only doc updates against HEAD behavior and existing
+tests (draw.io import/export/loss reporting and fixed-versus-floating endpoint
+behavior). No application code changed. Parity docs record VERIFIED 159,
+ANALYZED 1, DISCOVERED 15, BLOCKED 31 and IN_PROGRESS 3. `git diff --check` and
+parity doc checks should pass before commit. Full `cargo test` and release
+build were not rerun.
 
 ## Blockers
 
@@ -654,10 +658,10 @@ changed. Parity docs record VERIFIED 156, DISCOVERED 15 and IN_PROGRESS 3.
 
 ## Exact next task
 
-Commit and `git push --quiet` the round 55 evidence-only parity/doc closures on
+Commit and `git push --quiet` the round 56 evidence-only parity/doc closures on
 `agent/drawio-features`, keeping parity checks passing. After pushing, continue
-verifying the next stale rows at HEAD (high-value candidates: TXT-19, CON-13,
-CON-17, IO-15/16/21 status consistency, and GEN/template rows such as
+verifying the next stale rows at HEAD (high-value candidates: CON-13 status and
+evidence, TXT-19, and GEN/template/CUS rows such as
 GEN-01/02/03/05/07/08/09/11/12/13/14/15 and CUS-13/14 where "working tree"
 notes may now be committed). Capture a failing test before fixes when a real
 code gap exists; otherwise close as evidence-only with cited HEAD identifiers
