@@ -986,6 +986,7 @@ fn find_nodes(ed: &mut Editor, a: &Args) -> ToolResult {
         }
     }
     let text_q = a.str("textValue");
+    let tag_q = a.str("tag");
     let filters: Vec<(String, String)> = a
         .get("filters")
         .and_then(Value::as_array)
@@ -999,8 +1000,8 @@ fn find_nodes(ed: &mut Editor, a: &Args) -> ToolResult {
                 .collect()
         })
         .unwrap_or_default();
-    if text_q.is_none() && filters.is_empty() {
-        return Err("pass textValue and/or filters".into());
+    if text_q.is_none() && tag_q.is_none() && filters.is_empty() {
+        return Err("pass tag, textValue and/or filters".into());
     }
     let mut results = Vec::new();
     for (page, ids) in scope {
@@ -1012,6 +1013,12 @@ fn find_nodes(ed: &mut Editor, a: &Args) -> ToolResult {
                 match n.kind.text() {
                     Some(t) if glob(q, t) => matched.push(json!({"textValue": t})),
                     _ => continue,
+                }
+            }
+            if let Some(q) = tag_q {
+                match n.tags.iter().find(|tag| glob(q, tag)) {
+                    Some(tag) => matched.push(json!({"tag": tag})),
+                    None => continue 'node,
                 }
             }
             if !filters.is_empty() {

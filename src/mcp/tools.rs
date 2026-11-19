@@ -244,13 +244,15 @@ pub fn definitions() -> Vec<Value> {
         ),
         tool(
             "find_nodes",
-            "Find nodes by text content and/or computed style. Searches the whole project by \
-             default; pass pageId for one page or nodeId for a subtree. `textValue` matches text \
-             case-insensitively with * wildcards anchored to the whole value. `filters` are \
+            "Find nodes by tag, text content and/or computed style. Searches the whole project \
+             by default; pass pageId for one page or nodeId for a subtree. `tag` matches any node \
+             tag case-insensitively with * wildcards anchored to the whole value, matching the \
+             editor's find bar. `textValue` matches text the same way. `filters` are \
              {styleName, styleValue} pairs (AND), values may use * wildcards; colors match by value.",
             json!({
                 "pageId": page_id(),
                 "nodeId": node_id("Optional subtree root; takes priority over pageId."),
+                "tag": {"type": "string"},
                 "textValue": {"type": "string"},
                 "filters": {"type": "array", "items": {"type": "object", "properties": {
                     "styleName": {"type": "string"}, "styleValue": {"type": "string"}}}},
