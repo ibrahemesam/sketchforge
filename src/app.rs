@@ -81,6 +81,7 @@ impl App {
         theme::set_accent(theme::system_accent());
         ui::setup_style(&ctx);
         let options = crate::options::Options::load(&store.root);
+        let show_welcome = !options.onboarding_seen;
         theme::set_preference(&ctx, options.theme);
         let library = crate::library::Library::load(&crate::library::Library::path_in(&store.root));
         let mut app = App {
@@ -89,6 +90,7 @@ impl App {
             session: Session::new(store),
             st: UiState {
                 options,
+                welcome: show_welcome.then(ui::WelcomeUi::default),
                 ..UiState::default()
             },
             ctx,

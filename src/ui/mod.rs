@@ -27,6 +27,9 @@ pub struct UiState {
     /// would pin the focus, so committing on Enter or a click away could never fire.
     pub renaming_focus: bool,
     pub show_help: bool,
+    /// First-run tour. Once dismissed it never opens again unless reopened
+    /// from the help dialog.
+    pub welcome: Option<WelcomeUi>,
     /// Export settings (inspector Export section).
     pub export: crate::io::export::Spec,
     /// The window has native chrome: a system menu bar (so no egui menu) and traffic lights
@@ -112,6 +115,63 @@ pub struct UiState {
     /// The canvas area on screen (set every frame by the layout pass); library
     /// drag-outs use it to know when the pointer is over the diagram.
     pub canvas_rect: Option<egui::Rect>,
+}
+
+/// State of the first-run tour. Only the step is session state; the fact that
+/// the tour was dismissed is stored in Options.
+#[derive(Debug, Default, Clone, Copy, PartialEq)]
+pub struct WelcomeUi {
+    pub step: usize,
+}
+
+const WELCOME_STEPS: usize = 3;
+
+/// Heading, title, body and footer for one tour step.
+fn welcome_copy(step: usize) -> (&'static str, &'static str, &'static str, &'static str) {
+    match step {
+        0 => (
+            "Sketch",
+            "Start with a shape",
+            "Press R for a rectangle, O for an ellipse or T for text. Drag on the canvas, then press V to select and adjust what you drew.",
+            "Projects live in plain folders on your disk. Nothing needs an account.",
+        ),
+        1 => (
+            "Connect",
+            "Join ideas with arrows",
+            "Press C and drag from one shape to another. Connections stay attached and reroute when you move either end.",
+            "Drag from a small cross to fix where the arrow meets a shape.",
+        ),
+        2 => (
+            "Export",
+            "Take the diagram with you",
+            "Open Export in the right panel to write PNG, SVG, PDF or draw.io XML. Every page stays in the same project folder.",
+            "Press / at any time for the full shortcut list.",
+        ),
+        _ => ("", "", "", ""),
+    }
+}
+
+fn finish_welcome(st: &mut UiState) {
+    st.welcome = None;
+    st.options.onboarding_seen = true;
+    st.options_dirty = true;
+}
+
+fn advance_welcome(st: &mut UiState) {
+    let Some(w) = st.welcome.as_mut() else {
+        return;
+    };
+    if w.step + 1 >= WELCOME_STEPS {
+        finish_welcome(st);
+    } else {
+        w.step += 1;
+    }
+}
+
+fn back_welcome(st: &mut UiState) {
+    if let Some(w) = st.welcome.as_mut() {
+        w.step = w.step.saturating_sub(1);
+    }
 }
 
 /// The right panel's draw.io-style tabs.
@@ -337,6 +397,9 @@ pub fn draw(ui: &mut Ui, ed: &mut Editor, st: &mut UiState) -> egui::Rect {
     palette::draw(ui.ctx(), ed, st, canvas);
     if st.show_help {
         help(ui.ctx(), st, canvas);
+    }
+    if st.welcome.is_some() {
+        welcome(ui.ctx(), st, canvas);
     }
     canvas
 }
@@ -1011,6 +1074,74 @@ fn tooltip(ctx: &egui::Context, ed: &Editor, st: &mut UiState, canvas: egui::Rec
         });
 }
 
+fn welcome(ctx: &egui::Context, st: &mut UiState, canvas: egui::Rect) {
+    let Some(tour) = st.welcome else {
+        return;
+    };
+    let (label, title, body, tip) = welcome_copy(tour.step);
+    let width = 520.0f32.min(canvas.width() - 32.0).max(280.0);
+    egui::Area::new("welcome".into())
+        .order(egui::Order::Foreground)
+        .pivot(Align2::CENTER_CENTER)
+        .fixed_pos(canvas.center())
+        .show(ctx, |ui| {
+            let p = theme::pal(ui);
+            egui::Frame::popup(ui.style())
+                .fill(p.popover)
+                .corner_radius(14.0)
+                .inner_margin(18.0)
+                .show(ui, |ui| {
+                    ui.set_width(width);
+                    ui.horizontal(|ui| {
+                        ui.label(
+                            RichText::new("WELCOME TO SKETCHFORGE")
+                                .font(theme::semibold(11.0))
+                                .color(theme::accent()),
+                        );
+                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                            ui.label(
+                                RichText::new(format!("Step {} of {WELCOME_STEPS}", tour.step + 1))
+                                    .size(11.0)
+                                    .color(p.secondary),
+                            );
+                        });
+                    });
+                    ui.add_space(12.0);
+                    ui.label(
+                        RichText::new(label)
+                            .font(theme::medium(12.0))
+                            .color(p.secondary),
+                    );
+                    ui.label(RichText::new(title).font(theme::semibold(24.0)));
+                    ui.add_space(8.0);
+                    ui.label(RichText::new(body).size(13.0).line_height(Some(1.45)));
+                    ui.add_space(12.0);
+                    ui.label(RichText::new(tip).size(12.0).color(p.secondary));
+                    ui.add_space(18.0);
+                    ui.horizontal(|ui| {
+                        if tour.step > 0 && ui.button("Back").clicked() {
+                            back_welcome(st);
+                        }
+                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                            let last = tour.step + 1 >= WELCOME_STEPS;
+                            if ui
+                                .button(if last { "Start sketching" } else { "Next" })
+                                .clicked()
+                            {
+                                advance_welcome(st);
+                            }
+                            if ui.button("Skip").clicked() {
+                                finish_welcome(st);
+                            }
+                        });
+                    });
+                });
+        });
+    if ctx.input(|i| i.key_pressed(egui::Key::Escape)) {
+        finish_welcome(st);
+    }
+}
+
 fn help(ctx: &egui::Context, st: &mut UiState, canvas: egui::Rect) {
     let width = 820.0f32.min(canvas.width() - 40.0);
     egui::Area::new("help".into())
@@ -1030,6 +1161,10 @@ fn help(ctx: &egui::Context, st: &mut UiState, canvas: egui::Rect) {
                         ui.label(RichText::new("Keyboard shortcuts").font(theme::semibold(15.0)));
                         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                             if ui.button("Done").on_hover_text("Close (Esc)").clicked() {
+                                st.show_help = false;
+                            }
+                            if ui.button("Show welcome").clicked() {
+                                st.welcome = Some(WelcomeUi::default());
                                 st.show_help = false;
                             }
                         });
@@ -1122,6 +1257,27 @@ mod tests {
         // The Style tab is the only one shared by both states, so a selection
         // change never strands the panel on Diagram, Text or Arrange.
         assert!(InspectorTab::Style.valid_for(false) && InspectorTab::Style.valid_for(true));
+    }
+
+    #[test]
+    fn welcome_steps_advance_and_finish_once() {
+        let mut st = UiState {
+            welcome: Some(WelcomeUi::default()),
+            ..UiState::default()
+        };
+        assert_eq!(st.welcome.as_ref().unwrap().step, 0);
+        assert_eq!(welcome_copy(0).0, "Sketch");
+        advance_welcome(&mut st);
+        assert_eq!(st.welcome.as_ref().unwrap().step, 1);
+        assert_eq!(welcome_copy(1).0, "Connect");
+        advance_welcome(&mut st);
+        assert_eq!(st.welcome.as_ref().unwrap().step, 2);
+        assert_eq!(welcome_copy(2).0, "Export");
+        assert!(!st.options.onboarding_seen);
+        advance_welcome(&mut st);
+        assert!(st.welcome.is_none());
+        assert!(st.options.onboarding_seen);
+        assert!(st.options_dirty);
     }
 
     #[test]

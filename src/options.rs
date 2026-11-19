@@ -30,6 +30,9 @@ pub struct Options {
     /// are expanded, so older option files keep their current layout.
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub inspector_sections: BTreeMap<String, bool>,
+    /// The first-run tour has been shown. Old option files default to false,
+    /// so existing users see it once and then keep the dismissal.
+    pub onboarding_seen: bool,
 }
 
 impl Default for Options {
@@ -39,6 +42,7 @@ impl Default for Options {
             grid_size: 10.0,
             template_folder: None,
             inspector_sections: BTreeMap::new(),
+            onboarding_seen: false,
         }
     }
 }
@@ -106,6 +110,7 @@ mod tests {
             grid_size: 20.0,
             template_folder: Some(PathBuf::from("/tmp/templates")),
             inspector_sections: BTreeMap::new(),
+            onboarding_seen: false,
         };
         o.save(&r).unwrap();
         assert_eq!(Options::load(&r), o);
@@ -121,6 +126,19 @@ mod tests {
         assert_eq!(Options::load(&r), Options::default());
         std::fs::write(Options::path_in(&r), b"{\"theme\":\"nope\"}").unwrap();
         assert_eq!(Options::load(&r), Options::default());
+        std::fs::remove_dir_all(r).ok();
+    }
+
+    #[test]
+    fn onboarding_seen_defaults_false_and_survives_options_round_trip() {
+        let r = root("onboarding");
+        assert!(!Options::load(&r).onboarding_seen);
+        let o = Options {
+            onboarding_seen: true,
+            ..Options::default()
+        };
+        o.save(&r).unwrap();
+        assert!(Options::load(&r).onboarding_seen);
         std::fs::remove_dir_all(r).ok();
     }
 
