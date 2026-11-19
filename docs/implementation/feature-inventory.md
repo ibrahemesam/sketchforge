@@ -263,24 +263,24 @@ gaps landed on 2026-10-26: a label without a solid background cuts the line behi
 text, and the gap follows label moves, reroutes, and export. Page view is a view
 preference and is not part of the page file.
 
-**Size:** 231 capabilities in 13 domains. 118 are verified against committed tests or directly exercised code, 22 are implemented without a focused check, 82 are absent, and 9 are analysed or partial.
+**Size:** 231 capabilities in 13 domains. 119 are verified against committed tests or directly exercised code, 22 are implemented without a focused check, 81 are absent, and 9 are analysed or partial.
 
 ## Counts
 
 | Status | Count | Meaning |
 |---|---:|---|
-| VERIFIED | 118 | Committed test or directly exercised code path proves the behavior. |
+| VERIFIED | 119 | Committed test or directly exercised code path proves the behavior. |
 | IMPLEMENTED | 22 | Code exists and the path is readable, but no focused test or this-session runtime check covers it. |
 | IN_PROGRESS | 3 | Partial code at HEAD; the acceptance criteria are not met. |
 | ANALYZED | 6 | draw.io behavior is documented and a native design is recorded, but no code exists. |
-| DISCOVERED | 48 | draw.io behavior is documented here; no code or design exists. |
+| DISCOVERED | 47 | draw.io behavior is documented here; no code or design exists. |
 | BLOCKED | 34 | Work cannot proceed without a missing subsystem, external service, licensing decision, or explicit scope decision. |
 | **Total** | **231** | |
 
 | Domain | Rows | VERIFIED | IMPLEMENTED | IN_PROGRESS | ANALYZED | DISCOVERED | BLOCKED |
 |---|---:|---:|---:|---:|---:|---:|---:|
 | DOC Document, projects, pages, and diagram settings | 15 | 9 | 0 | 1 | 0 | 4 | 1 |
-| CAN Canvas, navigation, grid, and guides | 16 | 12 | 1 | 0 | 0 | 3 | 0 |
+| CAN Canvas, navigation, grid, and guides | 16 | 13 | 1 | 0 | 0 | 2 | 0 |
 | SHP Shapes, frames, transforms, and paths | 26 | 18 | 5 | 0 | 0 | 2 | 1 |
 | CON Connectors and arrows | 21 | 11 | 2 | 0 | 1 | 7 | 0 |
 | TXT Text, labels, and typography | 25 | 15 | 4 | 0 | 0 | 3 | 3 |
@@ -352,7 +352,7 @@ Moving around the canvas and the alignment aids that support placement.
 | CAN-03 | Zoom commands and fit | Zoom in, zoom out, 100%, fit page, and fit selection are available from shortcuts and the palette. | [Change the zoom level](https://www.drawio.com/docs/manual/editor/zoom/) | src/editor/mod.rs, src/editor/shortcuts.rs | **VERIFIED** | Each command lands on the expected camera or frame the expected bounds. | Fit selection falls back to the page when the selection is empty. Test: `zoom_shortcuts`, `m1_infinite_canvas_pan_and_zoom`. |
 | CAN-04 | Adaptive grid display | A square grid is drawn under content and its spacing multiplies at low zoom so lines do not become dense. | [Change the diagram editor grid](https://www.drawio.com/docs/manual/editor/panels/editor-grid-change/) | src/render/scene.rs | **VERIFIED** | At 25%, 100%, and 400% zoom the grid remains legible and does not shimmer. | The inspector label says Dot grid while the renderer draws square lines. There is no grid color control at HEAD. |
 | CAN-05 | Grid size | The grid size combo offers 5, 10, 20, and 50 world units and snaps shapes to that step. | [Change the diagram editor grid](https://www.drawio.com/docs/manual/editor/panels/editor-grid-change/) | src/options.rs, src/editor/mod.rs, src/editor/snap.rs | **VERIFIED** | Change the grid to 20 and move a shape; its edges land on multiples of 20. | App-global, not per page. Test: `grid_size_option_changes_move_fallback`. |
-| CAN-06 | Grid color | The grid color follows the light or dark theme and can be overridden per diagram. | [Change the diagram editor grid](https://www.drawio.com/docs/manual/editor/panels/editor-grid-change/) | src/render/scene.rs | **DISCOVERED** | Pick a custom grid color for one page, reload, and see the same color in light and dark chrome. | Only theme-derived colors exist at HEAD. |
+| CAN-06 | Grid color | The grid color follows the light or dark theme and can be overridden per diagram. | [Change the diagram editor grid](https://www.drawio.com/docs/manual/editor/panels/editor-grid-change/) | src/render/scene.rs | **VERIFIED** | Pick a custom grid color for one page, reload, and see the same color in light and dark chrome. | `custom_grid_color_round_trips_in_native_page`, `custom_grid_color_round_trips_through_drawio` and `grid_mesh_uses_the_custom_color` cover the page setting, its renderer effect and round trips. draw.io has no standard grid-color attribute, so Sketch carries it in a `__sketchGridColor` sidecar that draw.io ignores. |
 | CAN-07 | Snap to grid | Moves, creates, resizes, path points, and connector endpoints fall back to the grid when no shape anchor wins. | [Change the diagram editor grid](https://www.drawio.com/docs/manual/editor/panels/editor-grid-change/) | src/editor/snap.rs, src/editor/mod.rs | **VERIFIED** | Disable shape snapping, create and resize at arbitrary positions, and confirm every coordinate is a grid multiple. | Command or Control suspends snapping. Tests: `move_snaps_to_the_grid`, `creating_uses_grid_when_no_anchor_hit`, `resizing_uses_grid_when_no_anchor_hit`. |
 | CAN-08 | Center and grid snapping | While moving or resizing, centers and grid anchors snap to sibling layout with visible guide lines. | [Arrange shapes and connectors](https://www.drawio.com/docs/manual/editor/panels/arrange-tab/) | src/editor/snap.rs, src/editor/mod.rs | **VERIFIED** | Drag a shape near a sibling center and confirm it lands on a guide, then confirm grid snapping without an anchor. | The magnet works within the same parent or frame. Edge snapping was removed. Tests: `move_snaps_centers_into_rows_and_columns`, `move_snaps_to_the_grid`. |
 | CAN-09 | Smart guides | Ruler guides can be dragged onto the canvas and used while creating, moving, and resizing at the page root. | [Arrange shapes and connectors](https://www.drawio.com/docs/manual/editor/panels/arrange-tab/) | src/editor/snap.rs, src/editor/mod.rs | **VERIFIED** | Drag a guide from the ruler, place a shape against it, and confirm creation inside a frame uses the grid. | Page guides persist; alignment guides are transient. Tests: `dragging_from_a_ruler_adds_a_guide_with_undo`, `creating_inside_frame_snaps_to_the_grid_not_the_sibling`. |

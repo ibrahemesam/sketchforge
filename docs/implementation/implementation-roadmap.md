@@ -250,6 +250,19 @@ ARC button because bare Xvfb does not place that control reliably. draw.io's
 isometric-face mode stays deferred. The implementation was committed as fc0f065;
 this documentation closeout completes the round.
 
+**Committed (2026-11-19, round 42).** CAN-06 closed on
+`agent/drawio-features`. The page setting, renderer and Diagram tab control for
+a custom grid color already existed. Draw.io has no standard page grid-color
+attribute, so export now writes a `__sketchGridColor` sidecar on `mxGraphModel`
+and import restores it; the tooltip no longer claims the value is not exported.
+The first failure showed the sidecar missing from export. Three focused tests,
+the serial skip suite (510 tests), final checks and a verified 42.77 s live
+recording in
+`.artifacts/round42/evidence/evidence-20261119-135940-3eab09/report.md` are in
+`.artifacts/round42/`. The live run seeded page JSON because the native color
+picker is unreliable under bare Xvfb. The implementation was committed as
+727c534; this documentation closeout completes the round.
+
 **Scope.**
 
 - A selection context resolver that classifies the current selection as document, single
