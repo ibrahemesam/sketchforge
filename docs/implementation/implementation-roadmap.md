@@ -374,6 +374,23 @@ earlier recordings were stopped and replaced. The code was committed after the
 recording, so the report names `unknown`. The implementation was committed as
 cca0145; this documentation closeout completes the round.
 
+**Committed (2026-11-19, round 49).** DIA-03 closed on
+`agent/drawio-features`. The row was stale: node links, Cmd/Ctrl click, the Data
+tab Open Link button, page targets, the safe scheme list, draw.io mapping and
+`get_node_info` reporting were already at HEAD. MCP could read links but had no
+way to edit them. The new `set_link` tool takes a batch of node ids and targets,
+clears a link on an empty string, rejects unsafe targets with the editor's
+scheme check, and records each call as one undo step. Four integration tests,
+the serial skip suite (541 tests), final checks and a verified 37.53 s live
+recording in
+`.artifacts/round49/evidence/evidence-20261119-174935-45d106/report.md` are in
+`.artifacts/round49/`. The flow used MCP over HTTP rather than the Data tab. It
+stored a page target but did not open it in a viewer, and the first recording
+was discarded because its last frame went black. The report names baseline
+`fce3746` because the code was committed after the recording. The
+implementation was committed as ea87c41; this documentation closeout completes
+the round.
+
 **Scope.**
 
 - A selection context resolver that classifies the current selection as document, single

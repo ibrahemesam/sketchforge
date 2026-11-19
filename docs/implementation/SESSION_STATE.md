@@ -1,6 +1,6 @@
 # Sketch agent session state
 
-Last updated: 2026-11-19 (welcome dialog and README).
+Last updated: 2026-11-19 (round 49 DIA-03 MCP link editing).
 
 ## Objective
 
@@ -31,7 +31,8 @@ pushed. Round 46 was pushed as 221cf0f with the MCP reverse_connectors tool,
 as 2ec2fbd with MCP tag search, a610877 with its docs closeout and 45df3b6
 marking it pushed. Round 48 was pushed as cca0145 with tooltip truncation and
 ac17535 with its docs closeout. The welcome text fix was pushed as a85f308 and
-the product-focused README as 87fced5. Do not create releases or deploy Vercel;
+the product-focused README as 87fced5. Round 49 implementation was committed as
+ea87c41 with the `set_link` MCP tool. Do not create releases or deploy Vercel;
 plain `git push` sends commits to the fork.
 
 The full sidebar spec was implemented and verified in round 6 (see
@@ -582,6 +583,29 @@ the Rust 1.95 requirement were checked. fmt, clippy, release build, diff-check,
 the parity docs check and 537 serial tests pass with the known screenshot test
 skipped, and screenshots were restored. All commits were pushed.
 
+Round 49 closed DIA-03, custom links. The inventory row was stale. Node links,
+Cmd/Ctrl click, the Data tab Open Link button, page targets, the http, https and
+mailto allowlist with confirmation, draw.io mapping and `get_node_info`
+reporting were already at HEAD. MCP could read links but not edit them. The
+first failure in `.artifacts/round49/failure.log` showed four new tests failing
+with unknown tool set_link. `set_link` now takes a batch of node ids and link
+targets, clears a link on an empty string, rejects unsafe targets through
+`crate::link::classify`, and records each call as one undo step. Four
+integration tests pass. The serial skip suite passes 541 tests with the known
+`m2_pages_panel_screenshot` failure skipped, and screenshots were restored. fmt,
+clippy, diff-check and release build pass. A verified 37.53 s Xvfb `:105`
+recording with five passing assertions is in
+`.artifacts/round49/evidence/evidence-20261119-174935-45d106/report.md`: a
+seeded shape starts unlinked, one call stores an external and a page link,
+`get_node_info` reports both, a javascript target is refused without changing
+the stored link, the page file keeps both links after finish, and both shapes
+can be selected on the canvas. The first recording was discarded because its
+last frame went black. Calls went over HTTP rather than the Data tab, and the
+page target was stored but not opened in a viewer. The report names baseline
+`fce3746` because the implementation was committed as ea87c41 after the
+recording. The docs closeout and pushed marker are pending. Parity docs record
+VERIFIED 126, ANALYZED 5 and DISCOVERED 41 at closeout.
+
 ## Blockers
 
 GEN-04 AI generation stays blocked: it needs a hosted model, credentials,
@@ -597,22 +621,13 @@ in `.opencode/MEMORY.md`).
 
 ## Exact next task
 
-Round 49 should close a stale DISCOVERED row that is already implemented at
-HEAD, starting with DIA-03, custom links. The welcome text fix and README
-rewrite are done and need no further work. Round 49 work is still stashed as
-`stash@{0}` with its first failure in `.artifacts/round49/failure.log`.
-`Node.link` is a field in
-`src/model/node.rs`, `src/editor/mod.rs` follows Cmd/Ctrl click, the Data tab has
-an Open Link button, page targets switch pages, external targets are limited to
-http, https and mailto with confirmation, draw.io maps the link attribute and
-`get_node_info` reports it, but the inventory row still says there is no link
-field or safe-open policy. Verify the row against HEAD, find a focused gap worth
-closing, and capture a failing test before changing code. MCP editing of the
-link field may be the gap. Other stale candidates are CAN-15 connection points
-and CUS-16 library previews; each must be checked at HEAD first. Do not assume
-any ANALYZED or DISCOVERED row is open. UIX-12 and UIX-13 are genuine but broad.
-CUS-11 is documented out of scope. Keep DIA-11 animation actions blocked on a
-sandboxed action interpreter. Use a fresh scratch folder and reuse Xvfb `:105`,
+Round 49 closed DIA-03. The welcome text fix and README rewrite are done and
+need no further work. Pick the next stale DISCOVERED row only after checking it
+against HEAD; CUS-16 library previews is the first candidate. Capture a failing
+test before changing code. Do not assume any ANALYZED or DISCOVERED row is open.
+UIX-12 and UIX-13 are genuine but broad. CUS-11 is documented out of scope.
+Keep DIA-11 animation actions blocked on a sandboxed action interpreter. Use a
+fresh scratch folder and reuse Xvfb `:105`,
 and start the recorder with `DISPLAY=:105` or it captures the blank `:0` screen;
 drive the app with `env -u WAYLAND_DISPLAY` or it picks the Wayland backend and
 maps no X11 window. PIL `ImageGrab.grab(xdisplay=':105')` is much faster than
@@ -620,7 +635,7 @@ spawning ffmpeg for each screenshot when probing hover positions; hover needs
 intermediate pointer moves, a direct jump from outside the canvas can be
 dropped during layout. No release or tag. Do not restart UIX-14, TXT-21, STY-23,
 IO-19, CAN-06, CON-09, CON-13, CON-17, UIX-04, STY-13, STY-14, STY-21, STY-22,
-DOC-09, TXT-24, DIA-10, CUS-05, TXT-06, CON-18, DIA-05 or DIA-04: their
+DOC-09, TXT-24, DIA-10, CUS-05, TXT-06, CON-18, DIA-05, DIA-04 or DIA-03: their
 commands, editor tests and runtime evidence are already committed. M9
 collaboration stays blocked without a server, conflict model, and permissions.
 GEN-04 AI generation and GEN-10 vendor stencils also stay blocked. IO-17, IO-18
