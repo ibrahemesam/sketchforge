@@ -436,7 +436,9 @@ documentation closeout completes the round.
 
 **Round 65 (committed dedcd0a, pushed).** Added integration test two_pages_keep_different_grid_settings_across_switch_save_and_reload in tests/projects.rs proving two pages keep different grid visibility/size/color across page switches, save, and reload. DOC-12 moved from IMPLEMENTED to VERIFIED. No runtime behavior changed. Parity docs recorded VERIFIED 172, IMPLEMENTED 30, IN_PROGRESS 1, ANALYZED 0, DISCOVERED 1 and BLOCKED 27.
 
-**Round 66 (local, pending commit/push).** Closed stale IMPLEMENTED row UIX-01 as an evidence-only doc update against HEAD tabbed-inspector behavior and existing tests (UIX-01 VERIFIED). No application code changed. Parity docs now record VERIFIED 173, IMPLEMENTED 29, IN_PROGRESS 1, ANALYZED 0, DISCOVERED 1 and BLOCKED 27. `git diff --check` and `python3 .artifacts/check_parity_docs.py` should pass before commit; fmt, clippy, `cargo test`, and release build were not rerun.
+**Round 66 (committed cb6a98c, pushed).** Closed stale IMPLEMENTED row UIX-01 as an evidence-only doc update against HEAD tabbed-inspector behavior and existing tests (UIX-01 VERIFIED). No application code changed. Parity docs recorded VERIFIED 173, IMPLEMENTED 29, IN_PROGRESS 1, ANALYZED 0, DISCOVERED 1 and BLOCKED 27.
+
+**Round 67 (local, pending commit/push).** Advanced UIX-02 with selection-aware element tab computation: the Text tab is omitted when no selected element carries editable text or a label, and the active tab is clamped to a valid tab for the current selection context. Added/updated ui tests in src/ui/mod.rs (inspector_tabs_follow_selection_presence, inspector_element_tabs_depend_on_text_capability). UIX-02 remains IN_PROGRESS because connector and standalone text-layer selections still receive the same tab set and empty/irrelevant sections within tabs are not fully eliminated. `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`, targeted lib/ui tests, `git diff --check`, and `python3 .artifacts/check_parity_docs.py` passed before commit. Full `cargo test` and release build were not rerun.
 
 **Scope.**
 

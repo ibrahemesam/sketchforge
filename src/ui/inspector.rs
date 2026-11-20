@@ -818,12 +818,12 @@ pub fn panel(ui: &mut Ui, ed: &mut Editor, st: &mut UiState) {
     let ids = ed.top_selection();
     let has_sel = !ids.is_empty();
     // Keep the active tab when it still applies; otherwise fall back to the
-    // first one for the new context.
-    if !st.inspector_tab.valid_for(has_sel) {
-        st.inspector_tab = InspectorTab::first_for(has_sel);
+    // first one for the current selection context.
+    if !st.inspector_tab.valid_for(has_sel, &ids, &ed.doc) {
+        st.inspector_tab = InspectorTab::first_for(has_sel, &ids, &ed.doc);
     }
     let vis = ui.available_width();
-    tabs(ui, st, has_sel, vis);
+    tabs(ui, st, has_sel, &ids, ed, vis);
     ui.add_space(4.0);
     ui.horizontal(|ui| {
         let clear_w = if st.inspector_filter.is_empty() {
@@ -884,19 +884,15 @@ pub fn panel(ui: &mut Ui, ed: &mut Editor, st: &mut UiState) {
 }
 
 /// The draw.io-style inspector tabs, plus the close button. Global context
-/// shows Diagram | Style; a selection shows Style | Text | Arrange.
-fn tabs(ui: &mut Ui, st: &mut UiState, has_sel: bool, vis: f32) {
-    let list: &[InspectorTab] = if has_sel {
-        &InspectorTab::ELEMENT
-    } else {
-        &InspectorTab::GLOBAL
-    };
+/// shows Diagram and Style; element selections show a context-sensitive subset.
+fn tabs(ui: &mut Ui, st: &mut UiState, has_sel: bool, ids: &[NodeId], ed: &Editor, vis: f32) {
+    let list = InspectorTab::tabs_for(has_sel, ids, &ed.doc);
     ui.horizontal(|ui| {
         ui.spacing_mut().item_spacing.x = 3.0;
         let close_w = 22.0;
         let n = list.len() as f32;
         let w = ((vis - close_w - 3.0 * n) / n).max(40.0);
-        for tab in list {
+        for tab in &list {
             let active = st.inspector_tab == *tab;
             let txt = RichText::new(tab.label()).size(theme::BODY);
             let btn = egui::Button::selectable(active, if active { txt.strong() } else { txt });

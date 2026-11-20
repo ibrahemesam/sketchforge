@@ -204,28 +204,57 @@ pub enum InspectorTab {
 impl InspectorTab {
     /// Tabs shown with nothing selected.
     pub const GLOBAL: [InspectorTab; 2] = [InspectorTab::Diagram, InspectorTab::Style];
-    /// Tabs shown for a selection.
-    pub const ELEMENT: [InspectorTab; 4] = [
-        InspectorTab::Style,
-        InspectorTab::Text,
-        InspectorTab::Arrange,
-        InspectorTab::Data,
-    ];
 
-    pub fn valid_for(self, has_selection: bool) -> bool {
+    /// Tabs shown for the current selection. The Text tab is omitted when no
+    /// selected element carries editable text or a label.
+    pub fn element_tabs(ids: &[NodeId], doc: &crate::model::Document) -> Vec<InspectorTab> {
+        let has_text = ids.iter().any(|id| {
+            doc.get(*id)
+                .is_some_and(|n| n.supports_label() || n.kind.text().is_some())
+        });
+        let mut tabs = vec![InspectorTab::Style];
+        if has_text {
+            tabs.push(InspectorTab::Text);
+        }
+        tabs.push(InspectorTab::Arrange);
+        tabs.push(InspectorTab::Data);
+        tabs
+    }
+
+    pub fn tabs_for(
+        has_selection: bool,
+        ids: &[NodeId],
+        doc: &crate::model::Document,
+    ) -> Vec<InspectorTab> {
         if has_selection {
-            Self::ELEMENT.contains(&self)
+            Self::element_tabs(ids, doc)
         } else {
-            Self::GLOBAL.contains(&self)
+            Self::GLOBAL.to_vec()
         }
     }
 
-    pub fn first_for(has_selection: bool) -> InspectorTab {
-        if has_selection {
-            InspectorTab::Style
-        } else {
-            InspectorTab::Diagram
-        }
+    pub fn valid_for(
+        self,
+        has_selection: bool,
+        ids: &[NodeId],
+        doc: &crate::model::Document,
+    ) -> bool {
+        Self::tabs_for(has_selection, ids, doc).contains(&self)
+    }
+
+    pub fn first_for(
+        has_selection: bool,
+        ids: &[NodeId],
+        doc: &crate::model::Document,
+    ) -> InspectorTab {
+        Self::tabs_for(has_selection, ids, doc)
+            .first()
+            .copied()
+            .unwrap_or(if has_selection {
+                InspectorTab::Style
+            } else {
+                InspectorTab::Diagram
+            })
     }
 }
 
@@ -1312,19 +1341,87 @@ mod tests {
 
     #[test]
     fn inspector_tabs_follow_selection_presence() {
-        assert!(InspectorTab::Diagram.valid_for(false));
-        assert!(!InspectorTab::Diagram.valid_for(true));
-        assert!(InspectorTab::Style.valid_for(false));
-        assert!(InspectorTab::Style.valid_for(true));
-        assert!(!InspectorTab::Text.valid_for(false));
-        assert!(InspectorTab::Text.valid_for(true));
-        assert!(!InspectorTab::Arrange.valid_for(false));
-        assert!(InspectorTab::Arrange.valid_for(true));
-        assert_eq!(InspectorTab::first_for(false), InspectorTab::Diagram);
-        assert_eq!(InspectorTab::first_for(true), InspectorTab::Style);
-        // The Style tab is the only one shared by both states, so a selection
-        // change never strands the panel on Diagram, Text or Arrange.
-        assert!(InspectorTab::Style.valid_for(false) && InspectorTab::Style.valid_for(true));
+        let doc = Document::default();
+        let none: [NodeId; 0] = [];
+        assert!(InspectorTab::Diagram.valid_for(false, &none, &doc));
+        assert!(!InspectorTab::Diagram.valid_for(true, &none, &doc));
+        assert!(InspectorTab::Style.valid_for(false, &none, &doc));
+        assert!(InspectorTab::Style.valid_for(true, &none, &doc));
+        assert!(!InspectorTab::Text.valid_for(false, &none, &doc));
+        assert!(!InspectorTab::Arrange.valid_for(false, &none, &doc));
+        assert_eq!(
+            InspectorTab::first_for(false, &none, &doc),
+            InspectorTab::Diagram
+        );
+        assert_eq!(
+            InspectorTab::first_for(true, &none, &doc),
+            InspectorTab::Style
+        );
+        // The Style tab is shared by global and element contexts.
+        assert!(
+            InspectorTab::Style.valid_for(false, &none, &doc)
+                && InspectorTab::Style.valid_for(true, &none, &doc)
+        );
+    }
+
+    #[test]
+    fn inspector_element_tabs_depend_on_text_capability() {
+        use crate::geom::Rect;
+        let mut doc = Document::default();
+        let text_id = NodeId(1);
+        let group_id = NodeId(2);
+        let connector_id = NodeId(3);
+        let mut text = Node::new(
+            text_id,
+            NodeKind::Text {
+                text: "Hi".into(),
+                font_size: 14.0,
+                auto_width: true,
+                align: crate::model::TextAlign::Left,
+            },
+            Rect::new(0.0, 0.0, 40.0, 20.0),
+        );
+        text.id = text_id;
+        let mut group = Node::new(group_id, NodeKind::Group, Rect::new(0.0, 0.0, 10.0, 10.0));
+        group.id = group_id;
+        let mut conn = Node::new(
+            connector_id,
+            NodeKind::Connector {
+                points: vec![crate::geom::v2(0.0, 0.0), crate::geom::v2(10.0, 10.0)],
+                start: None,
+                end: None,
+                route: crate::model::Route::Straight,
+                start_head: crate::model::Head::None,
+                end_head: crate::model::Head::Arrow,
+                jump: crate::model::LineJump::None,
+                jump_size: 6.0,
+            },
+            Rect::new(0.0, 0.0, 10.0, 10.0),
+        );
+        conn.id = connector_id;
+        doc.nodes.insert(text_id, text);
+        doc.nodes.insert(group_id, group);
+        doc.nodes.insert(connector_id, conn);
+
+        assert_eq!(
+            InspectorTab::element_tabs(&[text_id], &doc),
+            vec![
+                InspectorTab::Style,
+                InspectorTab::Text,
+                InspectorTab::Arrange,
+                InspectorTab::Data
+            ]
+        );
+        assert_eq!(
+            InspectorTab::element_tabs(&[group_id], &doc),
+            vec![
+                InspectorTab::Style,
+                InspectorTab::Arrange,
+                InspectorTab::Data
+            ]
+        );
+        assert!(InspectorTab::element_tabs(&[connector_id], &doc).contains(&InspectorTab::Text));
+        assert!(!InspectorTab::Text.valid_for(true, &[group_id], &doc));
     }
 
     #[test]
