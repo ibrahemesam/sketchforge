@@ -263,14 +263,14 @@ gaps landed on 2026-10-26: a label without a solid background cuts the line behi
 text, and the gap follows label moves, reroutes, and export. Page view is a view
 preference and is not part of the page file.
 
-**Size:** 231 capabilities in 13 domains. 172 are verified against committed tests or directly exercised code, 30 are implemented without a focused check, 28 are absent or blocked, and 1 is in progress.
+**Size:** 231 capabilities in 13 domains. 173 are verified against committed tests or directly exercised code, 29 are implemented without a focused check, 28 are absent or blocked, and 1 is in progress.
 
 ## Counts
 
 | Status | Count | Meaning |
 |---|---:|---|
-| VERIFIED | 172 | Committed test or directly exercised code path proves the behavior. |
-| IMPLEMENTED | 30 | Code exists and the path is readable, but no focused test or this-session runtime check covers it. |
+| VERIFIED | 173 | Committed test or directly exercised code path proves the behavior. |
+| IMPLEMENTED | 29 | Code exists and the path is readable, but no focused test or this-session runtime check covers it. |
 | IN_PROGRESS | 1 | Partial code at HEAD or in the tracked working state; the acceptance criteria are not met. |
 | DISCOVERED | 1 | draw.io behavior is documented here; no code or design exists. |
 | BLOCKED | 27 | Work cannot proceed without a missing subsystem, external service, licensing decision, or explicit scope decision. |
@@ -290,7 +290,7 @@ preference and is not part of the page file.
 | CUS Libraries, scratchpad, and custom shapes | 16 | 12 | 1 | 0 | 0 | 0 | 3 |
 | DIA Diagram data: metadata, links, tags, and placeholders | 12 | 10 | 0 | 0 | 0 | 0 | 2 |
 | STO Storage, sharing, collaboration, and integrations | 11 | 1 | 0 | 0 | 0 | 0 | 10 |
-| UIX Editor UI, panels, search, and accessibility | 14 | 10 | 1 | 1 | 0 | 1 | 1 |
+| UIX Editor UI, panels, search, and accessibility | 14 | 11 | 0 | 1 | 0 | 1 | 1 |
 
 ## Status rules
 
@@ -624,7 +624,7 @@ The chrome around the canvas and how commands are discovered.
 
 | ID | Capability | User-visible behavior | draw.io source | Sketch modules | Status | Acceptance criteria | Limitations and evidence |
 |---|---|---|---|---|---|---|---|
-| UIX-01 | Tabbed inspector | The right panel groups Style, Text, and Arrange controls for the current selection. | [Panels and dialogs in draw.io](https://www.drawio.com/docs/manual/editor/panels/) | src/ui/inspector.rs | **IMPLEMENTED** | Select a shape, a text layer, and a connector and confirm the relevant tabs expose the expected controls. | The panel exists but does not hide whole tabs by selection type. Runtime evidence is recorded in MEMORY, not re-run this session. |
+| UIX-01 | Tabbed inspector | The right panel groups Style, Text, and Arrange controls for the current selection. | [Panels and dialogs in draw.io](https://www.drawio.com/docs/manual/editor/panels/) | src/ui/inspector.rs, src/ui/mod.rs | **VERIFIED** | Select a shape, a text layer, and a connector and confirm the relevant tabs expose the expected controls. | Element selections use tabbed inspector groups (Style, Text, Arrange, Data) and expose relevant controls by selection/context; global selection uses Diagram and Style. Evidence includes `inspector_tabs_follow_selection_presence`, `selected_style_tab_exposes_scheme_scope`, `selected_style_tab_exposes_searchable_property_values`, `text_tab_exposes_list_and_indent_controls`, `text_tab_exposes_curve_toggle`, `arrow_section_exposes_endpoint_modes`, `arrow_section_exposes_head_size_and_offset`, `connector_property_list_uses_connector_keys`, and `head_size_and_offset_edits_join_undo_and_redo`. Whole-tab hiding by selection type remains tracked by UIX-02. |
 | UIX-02 | Context-sensitive format panel | The format panel shows only the tabs and sections that apply to the current selection, including connector-specific and text-specific tabs. | [Panels and dialogs in draw.io](https://www.drawio.com/docs/manual/editor/panels/) | src/ui/inspector.rs, src/ui/mod.rs | **IN_PROGRESS** | Select a connector and a text layer and confirm each gets a different tab set with no empty sections. | Tab sets are context-sensitive between empty selection (Diagram, Style) and element selections (Style, Text, Arrange, Data), and many sections/rows are conditional by selection and filter state. The full draw.io acceptance is not yet met: connector and text-layer selections do not receive distinct tab sets in all cases and empty/irrelevant sections are not fully eliminated. |
 | UIX-03 | Diagram tab for empty selection | With nothing selected, the panel shows page settings such as grid, background, paper, and global style. | [Set global diagram options in the format panel](https://www.drawio.com/docs/manual/editor/panels/diagram-options/) | src/ui/inspector.rs, src/ui/mod.rs, src/model/settings.rs | **VERIFIED** | Deselect everything and confirm a Diagram tab exposes grid and page settings without selecting a shape. | With no selection the inspector uses the global tab set (Diagram, Style) and renders the Diagram tab for page/view, grid, paper, background, and related settings. Tests: `diagram_tab_exposes_adaptive_color_controls`, `diagram_tab_exposes_page_transition_controls`, `the_panel_renders_a_filter_field_and_filters_sections`. The row was stale. |
 | UIX-04 | Collapsible and searchable sections | Format sections collapse, remember their state, and can be filtered by property name. | [Panels and dialogs in draw.io](https://www.drawio.com/docs/manual/editor/panels/) | src/ui/inspector.rs, src/options.rs | **VERIFIED** | Collapse a section, restart, and confirm it stays collapsed; filter for a property and see only matching rows. | Inspector sections collapse through their headers, remember state in options, and a session-only property filter keeps matching sections and rows visible. `filtering_opens_a_collapsed_section_without_changing_saved_state` covers the filter behavior. The row was stale. |

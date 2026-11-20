@@ -1,6 +1,6 @@
 # Sketch agent session state
 
-Last updated: 2026-11-20 (round 65 per-page grid settings verification, local pending commit/push).
+Last updated: 2026-11-20 (round 66 tabbed-inspector row closure, local pending commit/push).
 
 ## Objective
 
@@ -667,16 +667,19 @@ and UIX-03 were closed as evidence-only doc updates against HEAD per-page grid
 settings and Diagram-tab behavior (DOC-12 IMPLEMENTED, UIX-03 VERIFIED) and
 UIX-02 limitations were refreshed while kept IN_PROGRESS.
 
-Round 65 (local, pending commit/push) added integration test
+Round 65 was committed as `dedcd0a` and pushed: added integration test
 two_pages_keep_different_grid_settings_across_switch_save_and_reload in
 tests/projects.rs proving two pages keep different grid visibility, size, and
 color across page switches, save, and reload. DOC-12 moved from IMPLEMENTED to
-VERIFIED. No runtime behavior changed. Parity docs now record VERIFIED 172,
-IMPLEMENTED 30, IN_PROGRESS 1, ANALYZED 0, DISCOVERED 1 and BLOCKED 27. `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`,
-`cargo test --test projects`, `git diff --check`, and
-`python3 .artifacts/check_parity_docs.py` passed before commit. Screenshot
-outputs rewritten by project screenshot tests were restored. Full `cargo test`
-and release build were not rerun.
+VERIFIED.
+
+Round 66 (local, pending commit/push) closed stale IMPLEMENTED row UIX-01 as an
+evidence-only doc update against HEAD tabbed-inspector behavior and existing
+tests (UIX-01 VERIFIED). No application code changed. Parity docs now record
+VERIFIED 173, IMPLEMENTED 29, IN_PROGRESS 1, ANALYZED 0, DISCOVERED 1 and
+BLOCKED 27. `git diff --check` and `python3 .artifacts/check_parity_docs.py`
+should pass before commit; fmt, clippy, `cargo test`, and release build were
+not rerun.
 
 ## Blockers
 
@@ -692,15 +695,15 @@ and release build were not rerun.
 
 ## Exact next task
 
-Commit and `git push --quiet` the round 65 per-page grid settings verification
-(test + parity/doc updates) on `agent/drawio-features`, keeping checks passing.
-After pushing, continue verifying remaining stale/closeable rows at HEAD
-(UIX-02 remains IN_PROGRESS and should be assessed for any concrete, testable
-progress; UIX-12 appears genuinely unaudited/absent as specified). Capture a
-failing test before fixes when a real code gap exists; otherwise close or
-correct rows as evidence-only with cited HEAD identifiers and update
-verification/session docs. Do not restart completed rounds. Keep blocked/
-deferred items blocked. No release, tag, or PR.
+Commit and `git push --quiet` the round 66 tabbed-inspector parity/doc closure
+on `agent/drawio-features`, keeping parity checks passing. After pushing,
+continue verifying remaining stale/closeable rows at HEAD (UIX-02 remains
+IN_PROGRESS and should be assessed for any concrete, testable progress;
+UIX-12 appears genuinely unaudited/absent as specified). Capture a failing
+test before fixes when a real code gap exists; otherwise close or correct rows
+as evidence-only with cited HEAD identifiers and update verification/session
+docs. Do not restart completed rounds. Keep blocked/deferred items blocked. No
+release, tag, or PR.
 
 ## Commands
 
