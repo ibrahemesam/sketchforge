@@ -278,6 +278,84 @@ fn m2_copy_paste_between_pages_and_projects() {
 }
 
 #[test]
+fn two_pages_keep_different_grid_settings_across_switch_save_and_reload() {
+    let store = temp_store("grid-pages");
+    let (mut proj, _) = store.create("Grids").unwrap();
+    let mut ed = Editor::default();
+    let pages = proj.load_pages().unwrap();
+    ed.open_pages(pages, proj.manifest.active_page.as_deref());
+    for i in 0..ed.pages.len() {
+        ed.mark_page_saved(i);
+    }
+
+    ed.edit_settings("page 1 grid", |s| {
+        s.grid = true;
+        s.grid_size = 12.0;
+        s.grid_color = Some(Color::rgb(0x11, 0x22, 0x33));
+    });
+    ed.add_page();
+    ed.edit_settings("page 2 grid", |s| {
+        s.grid = false;
+        s.grid_size = 28.0;
+        s.grid_color = Some(Color::rgb(0xaa, 0xbb, 0xcc));
+    });
+
+    ed.switch_page(0);
+    assert!(ed.doc.settings.grid);
+    assert_eq!(ed.doc.settings.grid_size, 12.0);
+    assert_eq!(
+        ed.doc.settings.grid_color,
+        Some(Color::rgb(0x11, 0x22, 0x33))
+    );
+    ed.switch_page(1);
+    assert!(!ed.doc.settings.grid);
+    assert_eq!(ed.doc.settings.grid_size, 28.0);
+    assert_eq!(
+        ed.doc.settings.grid_color,
+        Some(Color::rgb(0xaa, 0xbb, 0xcc))
+    );
+
+    proj.manifest.pages = ed
+        .pages
+        .iter()
+        .map(|s| sketch_rs::project::PageRef {
+            id: s.id.clone(),
+            name: s.name.clone(),
+        })
+        .collect();
+    proj.manifest.active_page = Some(ed.active_page_id().to_string());
+    proj.write_manifest().unwrap();
+    for i in 0..ed.pages.len() {
+        proj.save_page(&ed.page_data(i)).unwrap();
+        ed.mark_page_saved(i);
+    }
+
+    let proj2 = Project::open(&proj.dir).unwrap();
+    let mut ed2 = Editor::default();
+    ed2.open_pages(
+        proj2.load_pages().unwrap(),
+        proj2.manifest.active_page.as_deref(),
+    );
+    assert_eq!(ed2.pages.len(), 2);
+    ed2.switch_page(0);
+    assert!(ed2.doc.settings.grid);
+    assert_eq!(ed2.doc.settings.grid_size, 12.0);
+    assert_eq!(
+        ed2.doc.settings.grid_color,
+        Some(Color::rgb(0x11, 0x22, 0x33))
+    );
+    ed2.switch_page(1);
+    assert!(!ed2.doc.settings.grid);
+    assert_eq!(ed2.doc.settings.grid_size, 28.0);
+    assert_eq!(
+        ed2.doc.settings.grid_color,
+        Some(Color::rgb(0xaa, 0xbb, 0xcc))
+    );
+
+    std::fs::remove_dir_all(&store.root).ok();
+}
+
+#[test]
 fn m2_pages_panel_screenshot() {
     let Some(g) = gpu() else { return };
     let page = |name: &str, doc: sketch_rs::model::Document| PageData {
