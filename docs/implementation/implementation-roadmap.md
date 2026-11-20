@@ -430,7 +430,9 @@ documentation closeout completes the round.
 
 **Round 62 (committed 7a81b40, pushed).** Closed stale DISCOVERED row CUS-11 as an evidence-only doc update against HEAD shape metadata/property editing and existing tests. No application code changed. Parity docs recorded VERIFIED 167, IMPLEMENTED 30, DISCOVERED 1, BLOCKED 29, ANALYZED 1 and IN_PROGRESS 3.
 
-**Round 63 (local, pending commit/push).** Closed stale ANALYZED/BLOCKED rows ORG-13, ORG-14 and ORG-15 as evidence-only doc updates against HEAD page-layer behavior and existing tests. No application code changed. Parity docs now record VERIFIED 170, IMPLEMENTED 30, IN_PROGRESS 3, ANALYZED 0, DISCOVERED 1 and BLOCKED 27. `cargo test --lib layers` (7 passed) and `cargo test --lib layer` (16 passed), `git diff --check`, and `python3 .artifacts/check_parity_docs.py` passed in this round; fmt, clippy, full `cargo test`, and release build were not rerun.
+**Round 63 (committed d2fe51c, pushed).** Closed stale ANALYZED/BLOCKED rows ORG-13, ORG-14 and ORG-15 as evidence-only doc updates against HEAD page-layer behavior and existing tests. No application code changed. Parity docs recorded VERIFIED 170, IMPLEMENTED 30, IN_PROGRESS 3, ANALYZED 0, DISCOVERED 1 and BLOCKED 27.
+
+**Round 64 (local, pending commit/push).** Closed stale IN_PROGRESS rows DOC-12 and UIX-03 as evidence-only doc updates against HEAD per-page grid settings and Diagram-tab behavior (DOC-12 IMPLEMENTED, UIX-03 VERIFIED) and refreshed UIX-02 limitations while keeping it IN_PROGRESS. No application code changed. Parity docs now record VERIFIED 171, IMPLEMENTED 31, IN_PROGRESS 1, ANALYZED 0, DISCOVERED 1 and BLOCKED 27. `git diff --check` and `python3 .artifacts/check_parity_docs.py` should pass before commit; fmt, clippy, `cargo test`, and release build were not rerun.
 
 **Scope.**
 
