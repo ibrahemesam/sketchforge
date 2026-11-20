@@ -1,6 +1,6 @@
 # Sketch agent session state
 
-Last updated: 2026-11-19 (round 62 shape-properties row closure, local pending commit/push).
+Last updated: 2026-11-20 (round 63 layer row closure, local pending commit/push).
 
 ## Objective
 
@@ -654,12 +654,18 @@ closed as evidence-only doc updates with partial-acceptance limitations.
 Round 61 was committed as `8734350` and pushed: stale blocked-row wording was
 cleaned to reflect committed HEAD state.
 
-Round 62 (local, pending commit/push) closed stale DISCOVERED row CUS-11 as an
-evidence-only doc update against HEAD shape metadata/property editing and
-existing tests. No application code changed. Parity docs record VERIFIED 167,
-IMPLEMENTED 30, DISCOVERED 1, BLOCKED 29, ANALYZED 1 and IN_PROGRESS 3.
-`git diff --check` and parity doc checks should pass before commit. Full
-`cargo test` and release build were not rerun.
+Round 62 was committed as `7a81b40` and pushed: stale DISCOVERED row CUS-11 was
+closed as an evidence-only doc update against HEAD shape metadata/property
+editing and existing tests.
+
+Round 63 (local, pending commit/push) closed stale ANALYZED/BLOCKED rows ORG-13,
+ORG-14 and ORG-15 as evidence-only doc updates against HEAD page-layer behavior
+and existing tests. No application code changed. Parity docs now record
+VERIFIED 170, IMPLEMENTED 30, IN_PROGRESS 3, ANALYZED 0, DISCOVERED 1 and
+BLOCKED 27. `cargo test --lib layers` (7 passed) and `cargo test --lib layer`
+(16 passed), `git diff --check`, and `python3 .artifacts/check_parity_docs.py`
+passed in this round. fmt, clippy, full `cargo test`, and release build were
+not rerun.
 
 ## Blockers
 
@@ -675,14 +681,14 @@ IMPLEMENTED 30, DISCOVERED 1, BLOCKED 29, ANALYZED 1 and IN_PROGRESS 3.
 
 ## Exact next task
 
-Commit and `git push --quiet` the round 62 shape-properties parity/doc closure
-on `agent/drawio-features`, keeping parity checks passing. After pushing,
-continue verifying remaining stale rows at HEAD (remaining DISCOVERED row UIX-12
-appears genuinely unaudited/absent as specified; inspect for any other rows
-whose HEAD evidence now satisfies acceptance or needs corrected evidence).
-Capture a failing test before fixes when a real code gap exists; otherwise close
-as evidence-only with cited HEAD identifiers and update verification/session
-docs. Do not restart completed rounds. Keep blocked/deferred items blocked. No
+Commit and `git push --quiet` the round 63 layer parity/doc closure on
+`agent/drawio-features`, keeping parity checks passing. After pushing, continue
+verifying remaining stale rows at HEAD (remaining DISCOVERED row UIX-12 appears
+genuinely unaudited/absent as specified; inspect for any other rows whose HEAD
+evidence now satisfies acceptance or needs corrected evidence). Capture a
+failing test before fixes when a real code gap exists; otherwise close as
+evidence-only with cited HEAD identifiers and update verification/session docs.
+Do not restart completed rounds. Keep blocked/deferred items blocked. No
 release, tag, or PR.
 
 ## Commands

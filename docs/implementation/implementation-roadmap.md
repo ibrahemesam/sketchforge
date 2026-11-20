@@ -428,7 +428,9 @@ documentation closeout completes the round.
 
 **Round 61 (committed 8734350, pushed).** Cleaned stale "Working tree" wording on blocked rows DOC-15, GEN-04 and GEN-10 to reflect committed HEAD state while keeping statuses/acceptance limitations unchanged. No application code changed.
 
-**Round 62 (local, commit/push pending).** Closed stale DISCOVERED row CUS-11 as an evidence-only doc update against HEAD shape metadata/property editing and existing tests. No application code changed. Parity docs now record VERIFIED 167, IMPLEMENTED 30, DISCOVERED 1, BLOCKED 29, ANALYZED 1 and IN_PROGRESS 3. Full `cargo test` and release build were not rerun.
+**Round 62 (committed 7a81b40, pushed).** Closed stale DISCOVERED row CUS-11 as an evidence-only doc update against HEAD shape metadata/property editing and existing tests. No application code changed. Parity docs recorded VERIFIED 167, IMPLEMENTED 30, DISCOVERED 1, BLOCKED 29, ANALYZED 1 and IN_PROGRESS 3.
+
+**Round 63 (local, pending commit/push).** Closed stale ANALYZED/BLOCKED rows ORG-13, ORG-14 and ORG-15 as evidence-only doc updates against HEAD page-layer behavior and existing tests. No application code changed. Parity docs now record VERIFIED 170, IMPLEMENTED 30, IN_PROGRESS 3, ANALYZED 0, DISCOVERED 1 and BLOCKED 27. `cargo test --lib layers` (7 passed) and `cargo test --lib layer` (16 passed), `git diff --check`, and `python3 .artifacts/check_parity_docs.py` passed in this round; fmt, clippy, full `cargo test`, and release build were not rerun.
 
 **Scope.**
 

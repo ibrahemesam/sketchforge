@@ -263,18 +263,17 @@ gaps landed on 2026-10-26: a label without a solid background cuts the line behi
 text, and the gap follows label moves, reroutes, and export. Page view is a view
 preference and is not part of the page file.
 
-**Size:** 231 capabilities in 13 domains. 167 are verified against committed tests or directly exercised code, 30 are implemented without a focused check, 30 are absent, and 4 are analysed or partial.
+**Size:** 231 capabilities in 13 domains. 170 are verified against committed tests or directly exercised code, 30 are implemented without a focused check, 28 are absent or blocked, and 3 are in progress.
 
 ## Counts
 
 | Status | Count | Meaning |
 |---|---:|---|
-| VERIFIED | 167 | Committed test or directly exercised code path proves the behavior. |
+| VERIFIED | 170 | Committed test or directly exercised code path proves the behavior. |
 | IMPLEMENTED | 30 | Code exists and the path is readable, but no focused test or this-session runtime check covers it. |
 | IN_PROGRESS | 3 | Partial code at HEAD or in the tracked working state; the acceptance criteria are not met. |
-| ANALYZED | 1 | draw.io behavior is documented and a native design is recorded, but no code exists. |
 | DISCOVERED | 1 | draw.io behavior is documented here; no code or design exists. |
-| BLOCKED | 29 | Work cannot proceed without a missing subsystem, external service, licensing decision, or explicit scope decision. |
+| BLOCKED | 27 | Work cannot proceed without a missing subsystem, external service, licensing decision, or explicit scope decision. |
 | **Total** | **231** | |
 
 | Domain | Rows | VERIFIED | IMPLEMENTED | IN_PROGRESS | ANALYZED | DISCOVERED | BLOCKED |
@@ -285,7 +284,7 @@ preference and is not part of the page file.
 | CON Connectors and arrows | 21 | 20 | 1 | 0 | 0 | 0 | 0 |
 | TXT Text, labels, and typography | 25 | 18 | 4 | 0 | 0 | 0 | 3 |
 | STY Styles, effects, and themes | 23 | 18 | 5 | 0 | 0 | 0 | 0 |
-| ORG Structure: groups, frames, components, layout, and layers | 16 | 11 | 1 | 0 | 1 | 0 | 3 |
+| ORG Structure: groups, frames, components, layout, and layers | 16 | 14 | 1 | 0 | 0 | 0 | 1 |
 | GEN Generation, templates, and diagram types | 15 | 5 | 8 | 0 | 0 | 0 | 2 |
 | IO Import, export, clipboard, and files | 21 | 15 | 3 | 0 | 0 | 0 | 3 |
 | CUS Libraries, scratchpad, and custom shapes | 16 | 12 | 1 | 0 | 0 | 0 | 3 |
@@ -301,8 +300,8 @@ preference and is not part of the page file.
 - `IMPLEMENTED` means the code exists at HEAD but this session did not run a focused
   test. A note that runtime evidence exists in `.opencode/MEMORY.md` is not a claim that
   it was re-run.
-- `ANALYZED` means the draw.io behavior is documented and a native design choice is
-  recorded in `architecture-decisions.md`, with no implementation.
+- **ANALYZED** means the draw.io behavior is documented and a native design choice is
+  recorded in `architecture-decisions.md`, with no implementation. There are no **ANALYZED** rows at HEAD in this round.
 - `DISCOVERED` means the capability is documented in draw.io's docs and absent from the
   baseline. `BLOCKED` adds a concrete reason that prevents work now.
 - A row with a limitation does not become `VERIFIED` merely because the happy path
@@ -505,9 +504,9 @@ Ways to organise many shapes beyond a flat z-order.
 | ORG-10 | Auto layout wrapping | A wrap-enabled layout flows children onto new lines when the main axis fills. | [Apply layouts to organise diagrams quickly](https://www.drawio.com/docs/manual/layouts/) | src/layout.rs | **IMPLEMENTED** | Set wrap on a row of fixed-width children, narrow the frame, and confirm a second line appears. | No focused wrap test; layout tests cover the non-wrapped paths. |
 | ORG-11 | Drag to reorder in a layout | Dragging a child inside an auto-layout frame changes its order based on the drop position. | [Apply layouts to organise diagrams quickly](https://www.drawio.com/docs/manual/layouts/) | src/editor/mod.rs, src/layout.rs | **VERIFIED** | Drag the third child to the start of a row and confirm the order and positions update in one step. | Only applies to auto-layout frames. Test: `auto_layout_hugs_reorders_and_fills`. |
 | ORG-12 | Constraints | Children pin to left, right, center, scale, or stretch per axis when a frame resizes. | [Apply layouts to organise diagrams quickly](https://www.drawio.com/docs/manual/layouts/) | src/layout.rs, src/model/paint.rs | **VERIFIED** | Set right and bottom constraints, resize the frame, and confirm the child keeps its right and bottom margins. | Command or Control during resize ignores constraints. Test: `constraints_follow_frame_resize_and_cmd_ignores_them`. |
-| ORG-13 | Layers | A page has named layers with membership, visibility, lock, and ordering independent of groups. | [Using layers in draw.io](https://www.drawio.com/docs/manual/layers/) | None | **ANALYZED** | Create two layers, put shapes on each, hide one, and confirm only its shapes disappear. | No layer model at HEAD. ADR-009 chooses page-scoped layer records with a membership field on nodes, separate from parent/child groups. The working tree implements it (see the working tree progress section and ADR-009). |
-| ORG-14 | Layer visibility and lock | Hiding or locking a layer affects every shape on it without changing each shape. | [Using layers in draw.io](https://www.drawio.com/docs/manual/layers/) | None | **BLOCKED** | Lock a layer, confirm its shapes cannot be selected, unlock, and confirm selection returns. | Blocked by ORG-13. Per-node visibility and lock exist but do not aggregate into a layer. The working tree implements it (see the working tree progress section and ADR-009). |
-| ORG-15 | Layer membership and ordering | Shapes move between layers; layers reorder as a whole; z-order is constrained within a layer. | [Using layers in draw.io](https://www.drawio.com/docs/manual/layers/) | None | **BLOCKED** | Move a selection to another layer, reorder layers, and confirm shapes cannot cross layer stacks. | Blocked by ORG-13 and by the current single root list. Paint order would need to interleave layer buckets. The working tree implements it (see the working tree progress section and ADR-009). |
+| ORG-13 | Layers | A page has named layers with membership, visibility, lock, and ordering independent of groups. | [Using layers in draw.io](https://www.drawio.com/docs/manual/layers/) | src/model/layer.rs, src/model/document.rs, src/model/node.rs, src/editor/layers.rs, src/ui/inspector.rs, src/mcp/exec.rs, src/io/drawio.rs | **VERIFIED** | Create two layers, put shapes on each, hide one, and confirm only its shapes disappear. | Page-scoped named layers exist at HEAD with membership resolved through ancestors, visibility, lock, and layer-bucketed paint/hit/export order independent of groups. Editor, UI, MCP, and draw.io paths cover add, rename, duplicate, delete, reorder, visibility, lock, move-selection, and layer-aware import/export. Tests: `every_page_starts_with_a_background_layer`, `setting_a_layer_moves_the_whole_subtree_and_survives_validation`, `hiding_a_layer_hides_its_shapes_and_hit_testing`, `reordering_layers_only_changes_the_paint_order`, `duplicating_a_layer_copies_its_shapes_with_fresh_ids`, `deleting_a_layer_removes_its_shapes_but_keeps_the_last_layer`, `imports_layers_groups_geometry_labels_and_styles`. The row was stale. |
+| ORG-14 | Layer visibility and lock | Hiding or locking a layer affects every shape on it without changing each shape. | [Using layers in draw.io](https://www.drawio.com/docs/manual/layers/) | src/model/layer.rs, src/model/document.rs, src/editor/layers.rs, src/ui/inspector.rs, src/mcp/exec.rs | **VERIFIED** | Lock a layer, confirm its shapes cannot be selected, unlock, and confirm selection returns. | Layer visibility and lock are stored on layer records and compose with per-node flags in effective visibility/lock and hit testing without mutating shapes. Tests: `hiding_a_layer_hides_its_shapes_and_hit_testing`, `locking_a_layer_blocks_hit_testing_until_unlocked`. The row was stale. |
+| ORG-15 | Layer membership and ordering | Shapes move between layers; layers reorder as a whole; z-order is constrained within a layer. | [Using layers in draw.io](https://www.drawio.com/docs/manual/layers/) | src/model/document.rs, src/model/node.rs, src/editor/layers.rs, src/ui/inspector.rs, src/mcp/exec.rs, src/io/export.rs | **VERIFIED** | Move a selection to another layer, reorder layers, and confirm shapes cannot cross layer stacks. | Moving selection assigns layer membership across whole top-level subtrees (`move_selection_to_layer`), layers reorder as records, and paint/hit/export order buckets roots by layer while preserving root order within each layer so shapes do not interleave across layer stacks. Tests: `setting_a_layer_moves_the_whole_subtree_and_survives_validation`, `reordering_layers_only_changes_the_paint_order`, `connectors_bind_across_layers_and_keep_their_binding`. The row was stale. |
 | ORG-16 | Swimlanes and cross-functional containers | Swimlane containers create lanes and cells with title regions for cross-functional flows. | [Flowcharts with swimlanes](https://www.drawio.com/docs/diagram-types/swimlane-diagrams/) | None | **BLOCKED** | Create a two-lane swimlane, drop shapes into lanes, and resize a lane without losing child positions. | Needs the table and container model from SHP-20 plus lane metadata. |
 
 ## GEN: Generation, templates, and diagram types
