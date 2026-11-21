@@ -2,11 +2,11 @@
 
 mod common;
 
-use sketch_rs::editor::Editor;
-use sketch_rs::geom::v2;
-use sketch_rs::io::{drawio, library_xml};
-use sketch_rs::library::LibItem;
-use sketch_rs::model::{Document, Node, NodeId, NodeKind};
+use drawio_rs::editor::Editor;
+use drawio_rs::geom::v2;
+use drawio_rs::io::{drawio, library_xml};
+use drawio_rs::library::LibItem;
+use drawio_rs::model::{Document, Node, NodeId, NodeKind};
 
 const LIBRARY: &str = include_str!("fixtures/drawio/shape-library.xml");
 
@@ -39,7 +39,7 @@ fn export_library_writes_mxlibrary_json() {
     let node = Node::new(
         NodeId(1),
         NodeKind::Rect,
-        sketch_rs::geom::Rect::new(0.0, 0.0, 80.0, 50.0),
+        drawio_rs::geom::Rect::new(0.0, 0.0, 80.0, 50.0),
     );
     doc.nodes.insert(NodeId(1), node);
     doc.root.push(NodeId(1));
@@ -71,7 +71,7 @@ fn drawio_export_still_writes_a_full_mxfile() {
 
 #[test]
 fn library_tab_file_operations_round_trip() {
-    use sketch_rs::ui::library::{LibraryUi, export_xml_file, import_xml_file};
+    use drawio_rs::ui::library::{LibraryUi, export_xml_file, import_xml_file};
 
     let mut lib = LibraryUi::default();
     let mut ed = Editor::default();

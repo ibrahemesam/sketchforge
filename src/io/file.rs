@@ -1,14 +1,14 @@
-//! The `.sketch-rs` document format: versioned, pretty-printed JSON.
+//! The `.drawio-rs` document format: versioned, pretty-printed JSON.
 
 use crate::geom::Camera;
 use crate::model::{DiagramSettings, Document, Node, NodeId};
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 
-pub const FORMAT: &str = "sketch-rs";
+pub const FORMAT: &str = "drawio-rs";
 pub const VERSION: u32 = 1;
-pub const EXTENSION: &str = "sketch-rs";
-/// Documents saved before the rename from paper-rs. They open like `.sketch-rs` files.
+pub const EXTENSION: &str = "drawio-rs";
+/// Documents saved before the rename from paper-rs. They open like `.drawio-rs` files.
 pub const OLD_EXTENSION: &str = "paper-rs";
 
 /// Whether `path` has a document extension, current or pre-rename.
@@ -91,7 +91,7 @@ pub fn from_str(s: &str) -> Result<(Document, Option<Camera>), FileError> {
 
 /// Write atomically (temp file + rename) so a crash never leaves a truncated document.
 pub fn save(path: &Path, doc: &Document, camera: Option<&Camera>) -> Result<(), FileError> {
-    let tmp = path.with_extension("sketch-rs.tmp");
+    let tmp = path.with_extension("drawio-rs.tmp");
     std::fs::write(&tmp, to_string(doc, camera)).map_err(FileError::Io)?;
     std::fs::rename(&tmp, path).map_err(FileError::Io)
 }
@@ -143,11 +143,11 @@ mod tests {
             Err(FileError::NotSketchRs)
         ));
         assert!(matches!(
-            from_str("{\"format\":\"sketch-rs\",\"version\":99}"),
+            from_str("{\"format\":\"drawio-rs\",\"version\":99}"),
             Err(FileError::UnsupportedVersion(99))
         ));
         let broken =
-            r#"{"format":"sketch-rs","version":1,"name":"x","next_id":1,"root":[5],"nodes":[]}"#;
+            r#"{"format":"drawio-rs","version":1,"name":"x","next_id":1,"root":[5],"nodes":[]}"#;
         assert!(matches!(from_str(broken), Err(FileError::Invalid(_))));
     }
 
@@ -253,9 +253,9 @@ mod tests {
 
     #[test]
     fn save_and_load_file() {
-        let dir = std::env::temp_dir().join(format!("sketch-rs-test-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("drawio-rs-test-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
-        let path = dir.join("doc.sketch-rs");
+        let path = dir.join("doc.drawio-rs");
         let ed = demo::showcase();
         save(&path, &ed.doc, None).unwrap();
         let (doc, cam) = load(&path).unwrap();

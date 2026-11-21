@@ -97,7 +97,7 @@ mod tests {
 
     fn root(tag: &str) -> PathBuf {
         std::env::temp_dir().join(format!(
-            "sketch-rs-options-{tag}-{:016x}",
+            "drawio-rs-options-{tag}-{:016x}",
             fastrand::u64(..)
         ))
     }

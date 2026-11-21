@@ -3,14 +3,14 @@
 mod common;
 
 use common::*;
-use sketch_rs::editor::shortcuts::Action;
-use sketch_rs::editor::{Button, Editor, InputEvent, Key, Modifiers, Tool};
-use sketch_rs::geom::{Rect, V2, v2};
-use sketch_rs::model::rough::{FillStyle, Rough};
-use sketch_rs::model::{Color, Head, Node, NodeId, NodeKind, Route};
-use sketch_rs::render::draw;
-use sketch_rs::render::frame;
-use sketch_rs::ui::UiState;
+use drawio_rs::editor::shortcuts::Action;
+use drawio_rs::editor::{Button, Editor, InputEvent, Key, Modifiers, Tool};
+use drawio_rs::geom::{Rect, V2, v2};
+use drawio_rs::model::rough::{FillStyle, Rough};
+use drawio_rs::model::{Color, Head, Node, NodeId, NodeKind, Route};
+use drawio_rs::render::draw;
+use drawio_rs::render::frame;
+use drawio_rs::ui::UiState;
 
 fn shape(e: &mut Editor, kind: NodeKind, r: Rect, fill: Color) -> NodeId {
     let mut n = Node::new(NodeId(0), kind, r);
@@ -162,7 +162,7 @@ fn arrows_bind_follow_and_unbind() {
     e.undo();
     assert_eq!(conn(&e, arrow).0, pts);
     // Elbow routing: orthogonal segments.
-    sketch_rs::ui::inspector::apply(&mut e, "route", &[arrow], |n| {
+    drawio_rs::ui::inspector::apply(&mut e, "route", &[arrow], |n| {
         if let NodeKind::Connector { route, .. } = &mut n.kind {
             *route = Route::Elbow;
         }
@@ -265,10 +265,10 @@ fn quick_connect_and_sticky_notes() {
     assert_eq!(n.kind.text().unwrap(), "Ship it");
     // Long text shrinks the font to fit.
     let long = "word ".repeat(80);
-    sketch_rs::ui::inspector::apply(&mut e, "text", &[s], |n| {
+    drawio_rs::ui::inspector::apply(&mut e, "text", &[s], |n| {
         *n.kind.text_mut().unwrap() = long.clone()
     });
-    let l = sketch_rs::text::layout_node(e.doc.get(s).unwrap()).unwrap();
+    let l = drawio_rs::text::layout_node(e.doc.get(s).unwrap()).unwrap();
     assert!(l.glyphs[0].size < 24.0, "font shrank: {}", l.glyphs[0].size);
 }
 
@@ -289,7 +289,7 @@ fn laser_trail_fades_and_stops_animating() {
 #[test]
 fn library_items_insert_with_fresh_ids() {
     let mut e = editor(800.0, 600.0);
-    let lib = sketch_rs::library::starter();
+    let lib = drawio_rs::library::starter();
     let db = lib.items.iter().find(|i| i.name == "Database").unwrap();
     let ids = e.insert_library_item(db, v2(300.0, 300.0));
     assert_eq!(ids.len(), 2);
@@ -318,7 +318,7 @@ fn library_items_insert_with_fresh_ids() {
     e.run(Action::Tool(Tool::Arrow));
     ev_drag(&mut e, v2(25.0, 25.0), v2(175.0, 25.0), 0.0, true);
     let arrow = e.selection[0];
-    let item = sketch_rs::library::LibItem::from_selection(&e.doc, &[a, c, arrow], "Pair").unwrap();
+    let item = drawio_rs::library::LibItem::from_selection(&e.doc, &[a, c, arrow], "Pair").unwrap();
     let new = e.insert_library_item(&item, v2(500.0, 400.0));
     let new_arrow = *new
         .iter()
@@ -344,7 +344,7 @@ pub fn whiteboard() -> Editor {
         n.style.stroke_width = 2.0;
         n.style.corner_radius = 8.0;
         let id = e.add_node(n, None);
-        sketch_rs::ui::inspector::apply(e, "rough", &[id], |n| {
+        drawio_rs::ui::inspector::apply(e, "rough", &[id], |n| {
             n.style.rough = Some(Rough {
                 seed: 100 + id.0 as u32,
                 fill_style: fs,
@@ -394,11 +394,11 @@ pub fn whiteboard() -> Editor {
     ] {
         let r = e.doc.world_rect(id).unwrap();
         let tid = e.add_node(
-            sketch_rs::demo::text_node(t, 22.0, v2(0.0, 0.0), Color::INK),
+            drawio_rs::demo::text_node(t, 22.0, v2(0.0, 0.0), Color::INK),
             None,
         );
         let tr = e.doc.get(tid).unwrap().rect;
-        sketch_rs::ui::inspector::apply(&mut e, "x", &[tid], |n| {
+        drawio_rs::ui::inspector::apply(&mut e, "x", &[tid], |n| {
             n.rect.x = (r.center().x - tr.w * 0.5).round();
             n.rect.y = (r.center().y - tr.h * 0.5).round();
         });
@@ -414,7 +414,7 @@ pub fn whiteboard() -> Editor {
         e.run(Action::Tool(Tool::Arrow));
         ev_drag(e, pa, pb, 0.0, true);
         let id = e.selection[0];
-        sketch_rs::ui::inspector::apply(e, "heads", &[id], |n| {
+        drawio_rs::ui::inspector::apply(e, "heads", &[id], |n| {
             if let NodeKind::Connector { end_head, .. } = &mut n.kind {
                 *end_head = head;
             }
@@ -435,7 +435,7 @@ pub fn whiteboard() -> Editor {
     .iter()
     .enumerate()
     {
-        e.sticky_color = sketch_rs::ui::inspector::STICKY_COLORS[*c];
+        e.sticky_color = drawio_rs::ui::inspector::STICKY_COLORS[*c];
         e.run(Action::Tool(Tool::Sticky));
         let p = e
             .camera
@@ -450,7 +450,7 @@ pub fn whiteboard() -> Editor {
         key(&mut e, Key::Escape, Modifiers::NONE);
     }
     // Library item and a hand-drawn freehand arrow.
-    let lib = sketch_rs::library::starter();
+    let lib = drawio_rs::library::starter();
     let db = lib.items.iter().find(|i| i.name == "Database").unwrap();
     e.insert_library_item(db, v2(1000.0, 420.0));
     e.selection.clear();
@@ -468,7 +468,7 @@ fn m4_whiteboard_screenshot() {
         show_library: true,
         ..Default::default()
     };
-    st.library.library = sketch_rs::library::starter();
+    st.library.library = drawio_rs::library::starter();
     let img = frame::capture(g, &mut e, &mut st, [1600.0, 1000.0], 2.0, |ed| {
         let b = ed.doc.content_bounds().unwrap();
         ed.camera.fit(&b, ed.viewport, 60.0, 1.0);

@@ -1,6 +1,6 @@
 //! Local-first projects.
 //!
-//! Every project is a folder under the store root (`~/Documents/sketch-rs/` by default):
+//! Every project is a folder under the store root (`~/Documents/drawio-rs/` by default):
 //!
 //! ```text
 //! <root>/<Project name>/
@@ -88,7 +88,7 @@ pub fn folder_name(name: &str) -> String {
 }
 
 impl Store {
-    /// `$SKETCH_RS_HOME` (or `$PAPER_RS_HOME`), else `~/Documents/sketch-rs`. A
+    /// `$DRAWIO_RS_HOME` (or `$PAPER_RS_HOME`), else `~/Documents/drawio-rs`. A
     /// `~/Documents/paper-rs` folder from before the rename is moved there the first time.
     pub fn default_root() -> PathBuf {
         if let Some(p) = crate::env_var("HOME") {
@@ -97,7 +97,7 @@ impl Store {
         let docs = dirs::document_dir()
             .or_else(dirs::home_dir)
             .unwrap_or_else(|| PathBuf::from("."));
-        adopt_old_root(docs.join("paper-rs"), docs.join("sketch-rs"))
+        adopt_old_root(docs.join("paper-rs"), docs.join("drawio-rs"))
     }
 
     pub fn open(root: impl Into<PathBuf>) -> std::io::Result<Store> {
@@ -415,7 +415,7 @@ mod tests {
     use super::*;
 
     pub fn temp_store() -> Store {
-        let root = std::env::temp_dir().join(format!("sketch-rs-store-{:016x}", fastrand::u64(..)));
+        let root = std::env::temp_dir().join(format!("drawio-rs-store-{:016x}", fastrand::u64(..)));
         Store::open(root).unwrap()
     }
 
@@ -494,8 +494,8 @@ mod tests {
 
     #[test]
     fn projects_folder_from_before_the_rename_moves_once() {
-        let base = std::env::temp_dir().join(format!("sketch-rs-root-{:016x}", fastrand::u64(..)));
-        let (old, new) = (base.join("paper-rs"), base.join("sketch-rs"));
+        let base = std::env::temp_dir().join(format!("drawio-rs-root-{:016x}", fastrand::u64(..)));
+        let (old, new) = (base.join("paper-rs"), base.join("drawio-rs"));
         std::fs::create_dir_all(old.join("Plan")).unwrap();
         assert_eq!(adopt_old_root(old.clone(), new.clone()), new);
         assert!(new.join("Plan").is_dir());

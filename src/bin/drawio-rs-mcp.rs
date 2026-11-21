@@ -1,10 +1,11 @@
-//! `sketch-rs-mcp`: MCP over stdio for clients that can't speak HTTP, relayed to the running
-//! Sketch app (`http://127.0.0.1:29980/mcp`, or `$SKETCH_RS_MCP_PORT`).
+//! `drawio-rs-mcp`: MCP over stdio for clients that can't speak HTTP, relayed to the running
+//! Sketch app (`http://127.0.0.1:29980/mcp`, or `$DRAWIO_RS_MCP_PORT`).
 //!
 //! The tool list is answered locally, so the agent sees every tool even before the app is
 //! started; calls are forwarded to the app and report a clear error while it isn't running.
 //! The connection is opened lazily and re-opened after the app restarts.
 
+use drawio_rs::mcp::{self, server};
 use rmcp::model::{
     CallToolRequestParams, CallToolResponse, CallToolResult, ContentBlock, ListToolsResult,
     PaginatedRequestParams, ResultType, ServerConfig,
@@ -12,19 +13,18 @@ use rmcp::model::{
 use rmcp::service::{RequestContext, RunningService};
 use rmcp::transport::StreamableHttpClientTransport;
 use rmcp::{ErrorData, RoleClient, RoleServer, ServerHandler, ServiceExt};
-use sketch_rs::mcp::{self, server};
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
 const USAGE: &str = "\
-sketch-rs-mcp: stdio MCP bridge to the running Sketch app
+drawio-rs-mcp: stdio MCP bridge to the running Sketch app
 
 USAGE:
-  sketch-rs-mcp           serve MCP on stdin/stdout (what agent harnesses run)
-  sketch-rs-mcp --url     print the HTTP endpoint it relays to
-  sketch-rs-mcp --help
+  drawio-rs-mcp           serve MCP on stdin/stdout (what agent harnesses run)
+  drawio-rs-mcp --url     print the HTTP endpoint it relays to
+  drawio-rs-mcp --help
 
-The app serves MCP itself at http://127.0.0.1:29980/mcp; set SKETCH_RS_MCP_PORT to change
+The app serves MCP itself at http://127.0.0.1:29980/mcp; set DRAWIO_RS_MCP_PORT to change
 the port (in both the app's and the bridge's environment).
 ";
 
@@ -60,7 +60,7 @@ impl Bridge {
             match res {
                 Ok(r) => return Ok(r),
                 Err(e) if attempt == 0 => {
-                    log::info!("sketch-rs-mcp: reconnecting after {e}");
+                    log::info!("drawio-rs-mcp: reconnecting after {e}");
                     *self.client.lock().await = None;
                 }
                 Err(e) => return Err(e.to_string()),
@@ -128,7 +128,7 @@ fn main() -> std::process::ExitCode {
     {
         Ok(rt) => rt,
         Err(e) => {
-            eprintln!("sketch-rs-mcp: {e}");
+            eprintln!("drawio-rs-mcp: {e}");
             return std::process::ExitCode::FAILURE;
         }
     };
@@ -147,7 +147,7 @@ fn main() -> std::process::ExitCode {
     match r {
         Ok(()) => std::process::ExitCode::SUCCESS,
         Err(e) => {
-            eprintln!("sketch-rs-mcp: {e}");
+            eprintln!("drawio-rs-mcp: {e}");
             std::process::ExitCode::FAILURE
         }
     }

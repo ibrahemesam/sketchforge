@@ -1,8 +1,8 @@
 //! Print output: paper-sized PDF pages with fit-to-page scaling and margins.
 
-use sketch_rs::geom::Rect;
-use sketch_rs::io::pdf::{PrintOptions, PrintScale, print_pdf};
-use sketch_rs::model::{Document, Node, NodeId, NodeKind, Orientation, PaperSize};
+use drawio_rs::geom::Rect;
+use drawio_rs::io::pdf::{PrintOptions, PrintScale, print_pdf};
+use drawio_rs::model::{Document, Node, NodeId, NodeKind, Orientation, PaperSize};
 
 fn media_box(pdf: &[u8]) -> (f64, f64) {
     let s = String::from_utf8_lossy(pdf);

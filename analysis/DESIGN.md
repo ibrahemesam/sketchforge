@@ -12,7 +12,7 @@ This is a clean-room, native Rust re-implementation of Paper's canvas *behavior*
 | Vector tessellation | `lyon` | One path pipeline for shapes, ink, text glyphs and overlays. The GPU only draws colored triangles with 4x MSAA. |
 | Glyph outlines | `ttf-parser` | Text is vector-tessellated, so it stays sharp at any zoom and the outlines feed the SVG export. |
 | Math | `glam` (`DVec2` for document space, `f32` on the GPU) | |
-| Serialization | `serde` + `serde_json` | `.sketch-rs` document format. |
+| Serialization | `serde` + `serde_json` | `.drawio-rs` document format. |
 | Images | `image` (PNG encode) | PNG export. |
 | Dialogs | `rfd` | Native open/save dialogs. |
 
@@ -39,7 +39,7 @@ render/
   text.rs       glyph outline layout and tessellation
   gpu.rs        wgpu pipeline, MSAA, offscreen render to RGBA, readback
 io/
-  file.rs       .sketch-rs save/load (versioned JSON)
+  file.rs       .drawio-rs save/load (versioned JSON)
   svg.rs        SVG export
   png.rs        PNG export (offscreen GPU render)
 ui.rs           egui panels: layers, properties, toolbar, zoom HUD
@@ -61,7 +61,7 @@ main.rs         CLI: run app | --screenshot demo scenes
 | Layers | egui tree panel with frames expandable. Click selects (`Shift`-click to add). Eye icon toggles visibility, lock icon toggles locked. Double-click renames. ↑/↓ buttons and `Cmd+]`/`Cmd+[` reorder. |
 | Undo/redo (`edit-command`) | Command pattern via **transactions**. Each edit opens a `Transaction` that lazily snapshots the *before* state of every node and child list it touches. On commit it captures the *after* state and pushes an inverse-capable `Change`. Undo applies *before*, redo applies *after*. A whole drag is one transaction, so there is one undo step per gesture. Redo is cleared on a new commit, and the depth is capped at 500. |
 | Properties (`update_styles`) | Right panel: x/y/w/h, fill, stroke color and width, corner radius, opacity, text content and size, stroke width and smoothing. Each edit is a coalesced transaction. |
-| Cloud file (`fileId`/`pageId`) | Local-first **`.sketch-rs`**: a pretty-printed JSON `{format:"sketch-rs", version:1, name, camera, nodes:[…], root:[ids]}`. Unknown versions are rejected with a clear error. A single page; multi-page is a known gap. |
+| Cloud file (`fileId`/`pageId`) | Local-first **`.drawio-rs`**: a pretty-printed JSON `{format:"drawio-rs", version:1, name, camera, nodes:[…], root:[ids]}`. Unknown versions are rejected with a clear error. A single page; multi-page is a known gap. |
 | PDF/image export (`export-pdf`) | **PNG**: offscreen wgpu render of the selection, or of everything, at 1x/2x/3x with a transparent or white background. **SVG**: hand-written writer (frames → `<g>` + `<clipPath>`, shapes → primitives, strokes → outline `<path>`, text → glyph-outline `<path>` so no font dependency). PDF is a known gap. |
 | Local images (`paper-asset:`) | Known gap for v1. Image nodes are planned as a textured-quad pipeline. |
 | Menu accelerators | `Cmd` on macOS, `Ctrl` elsewhere. See shortcuts. |

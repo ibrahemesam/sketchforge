@@ -139,7 +139,7 @@ const WELCOME_BODY_LINE_HEIGHT: f32 = 18.0;
 fn welcome_copy(step: usize) -> (&'static str, &'static str, &'static str, &'static str) {
     match step {
         0 => (
-            "Sketch",
+            "drawio-rs",
             "Start with a shape",
             "Press R for a rectangle, O for an ellipse or T for text. Drag on the canvas, then press V to select and adjust what you drew.",
             "Projects live in plain folders on your disk. Nothing needs an account.",
@@ -1493,7 +1493,7 @@ mod tests {
             ..UiState::default()
         };
         assert_eq!(st.welcome.as_ref().unwrap().step, 0);
-        assert_eq!(welcome_copy(0).0, "Sketch");
+        assert_eq!(welcome_copy(0).0, "drawio-rs");
         advance_welcome(&mut st);
         assert_eq!(st.welcome.as_ref().unwrap().step, 1);
         assert_eq!(welcome_copy(1).0, "Connect");

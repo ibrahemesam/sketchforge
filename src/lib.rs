@@ -31,8 +31,8 @@ pub mod vector;
 #[cfg(target_os = "linux")]
 pub mod wayland_dnd;
 
-/// `$SKETCH_RS_<name>`, else `$PAPER_RS_<name>`, its name before the rename from paper-rs.
+/// `$DRAWIO_RS_<name>`, else `$PAPER_RS_<name>`, its name before the rename from paper-rs.
 pub fn env_var(name: &str) -> Option<std::ffi::OsString> {
-    std::env::var_os(format!("SKETCH_RS_{name}"))
+    std::env::var_os(format!("DRAWIO_RS_{name}"))
         .or_else(|| std::env::var_os(format!("PAPER_RS_{name}")))
 }

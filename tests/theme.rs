@@ -4,16 +4,16 @@ mod common;
 
 use common::*;
 
-use sketch_rs::geom::{Rect, V2, v2};
-use sketch_rs::model::rough::Rough;
-use sketch_rs::model::{
+use drawio_rs::geom::{Rect, V2, v2};
+use drawio_rs::model::rough::Rough;
+use drawio_rs::model::{
     AdaptiveColors, Color, Head, LineJump, Node, NodeId, NodeKind, Route, TextAlign,
 };
-use sketch_rs::render::draw::{self, contrast_for_dark};
-use sketch_rs::render::gpu::Headless;
-use sketch_rs::render::scene;
+use drawio_rs::render::draw::{self, contrast_for_dark};
+use drawio_rs::render::gpu::Headless;
+use drawio_rs::render::scene;
 
-fn render(g: &Headless, ed: &sketch_rs::editor::Editor, dark: bool) -> image::RgbaImage {
+fn render(g: &Headless, ed: &drawio_rs::editor::Editor, dark: bool) -> image::RgbaImage {
     let frame = scene::canvas(ed, &mut scene::SceneCache::default(), V2::ZERO, false, dark);
     let size = [
         (ed.viewport.x * SCALE) as u32,
@@ -22,7 +22,7 @@ fn render(g: &Headless, ed: &sketch_rs::editor::Editor, dark: bool) -> image::Rg
     g.render_frame(&frame, size, SCALE as f32, [1.0; 4])
 }
 
-fn arrow_editor() -> sketch_rs::editor::Editor {
+fn arrow_editor() -> drawio_rs::editor::Editor {
     let mut e = editor(800.0, 400.0);
     let mut n = Node::new(
         NodeId(0),
@@ -48,7 +48,7 @@ fn brightness(p: [u8; 4]) -> u32 {
     p[0] as u32 + p[1] as u32 + p[2] as u32
 }
 
-fn text_editor() -> sketch_rs::editor::Editor {
+fn text_editor() -> drawio_rs::editor::Editor {
     let mut e = editor(800.0, 400.0);
     let mut n = Node::new(
         NodeId(1),
@@ -70,7 +70,7 @@ fn dark_theme_keeps_arrows_visible() {
     let Some(g) = gpu() else { return };
     let e = arrow_editor();
     let img = render(g, &e, true);
-    if let Ok(path) = std::env::var("SKETCH_RS_THEME_ARTIFACT") {
+    if let Ok(path) = std::env::var("DRAWIO_RS_THEME_ARTIFACT") {
         img.save(path).unwrap();
     }
 

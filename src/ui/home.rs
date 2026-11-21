@@ -115,7 +115,7 @@ pub fn draw(
             }
             ui.add_space(4.0);
             ui.label(
-                RichText::new("Sketch")
+                RichText::new("drawio-rs")
                     .font(theme::semibold(theme::SECONDARY))
                     .color(p.secondary),
             );

@@ -1,12 +1,12 @@
 [package]
-name = "sketch-rs-site-shots"
+name = "drawio-rs-site-shots"
 version = "0.0.0"
 edition = "2024"
 publish = false
-description = "Renders the lander's screenshots through sketch-rs's own UI and renderer"
+description = "Renders the lander's screenshots through drawio-rs's own UI and renderer"
 
 [dependencies]
-sketch-rs = { path = "../../.." }
+drawio-rs = { path = "../../.." }
 egui = "0.36"
 image = { version = "0.25", default-features = false, features = ["png"] }
 serde_json = "1"

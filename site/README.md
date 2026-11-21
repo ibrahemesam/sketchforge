@@ -1,6 +1,6 @@
-# Sketch site
+# drawio-rs site
 
-The download page for [Sketch](https://github.com/michaelshimeles/sketch): one prerendered
+The download page for [drawio-rs](https://github.com/michaelshimeles/sketch): one prerendered
 SvelteKit page, built for Vercel. It self-hosts its font and loads no scripts
 from other sites.
 
@@ -12,9 +12,9 @@ Web Analytics on in the Vercel project's Analytics tab, or the script returns 40
 records nothing.
 
 `/download` is a Vercel function that answers with a 302 to
-`https://github.com/michaelshimeles/sketch/releases/latest/download/Sketch.dmg`, the
+`https://github.com/michaelshimeles/sketch/releases/latest/download/drawio-rs.dmg`, the
 universal app that `scripts/release-macos.sh` builds, so the button works once the newest
-published Sketch release includes `Sketch.dmg`.
+published drawio-rs release includes `drawio-rs.dmg`.
 
 ## Develop
 
@@ -43,15 +43,15 @@ npm run preview   # serves the build, including /download
 Everything in `static/` comes from two scripts:
 
 ```sh
-npm run shots    # renders scripts/screenshots/out/og.png with Sketch itself
+npm run shots    # renders scripts/screenshots/out/og.png with drawio-rs itself
 npm run images   # favicons, the touch icon and og.jpg into static/
 ```
 
-`npm run shots` builds `scripts/screenshots`, a small Rust program that links the Sketch library
-from the root of this repository. It builds the board through Sketch's MCP tools and renders it
+`npm run shots` builds `scripts/screenshots`, a small Rust program that links the drawio-rs library
+from the root of this repository. It builds the board through drawio-rs's MCP tools and renders it
 with the app's own renderer in dark mode, at 2160 × 1350, framed for the part of the window the
 Open Graph card shows. Rerun it when the app's look changes. Its Cargo target directory defaults to
-`~/.cache/sketch-rs-site-shots`; set `CARGO_TARGET_DIR` to change it.
+`~/.cache/drawio-rs-site-shots`; set `CARGO_TARGET_DIR` to change it.
 
 `npm run images` needs Google Chrome to render the Open Graph card from
 `scripts/brand/og.html`; set `CHROME` to use another binary. The app icon is drawn in

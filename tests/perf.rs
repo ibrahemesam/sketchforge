@@ -4,11 +4,11 @@
 mod common;
 
 use common::*;
-use sketch_rs::editor::Editor;
-use sketch_rs::geom::{Rect, V2, v2};
-use sketch_rs::model::{Color, Node, NodeId, NodeKind};
-use sketch_rs::render::gpu::{CanvasRenderer, OFFSCREEN_FORMAT};
-use sketch_rs::render::scene::{self, SceneCache};
+use drawio_rs::editor::Editor;
+use drawio_rs::geom::{Rect, V2, v2};
+use drawio_rs::model::{Color, Node, NodeId, NodeKind};
+use drawio_rs::render::gpu::{CanvasRenderer, OFFSCREEN_FORMAT};
+use drawio_rs::render::scene::{self, SceneCache};
 use std::time::Instant;
 
 pub fn ten_thousand() -> Editor {
@@ -27,7 +27,7 @@ pub fn ten_thousand() -> Editor {
                 text: format!("#{i}"),
                 font_size: 12.0,
                 auto_width: true,
-                align: sketch_rs::model::TextAlign::Left,
+                align: drawio_rs::model::TextAlign::Left,
             },
         };
         let mut n = Node::new(NodeId(0), kind, Rect::new(x, y, 40.0, 40.0));

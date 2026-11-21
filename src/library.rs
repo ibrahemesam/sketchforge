@@ -6,7 +6,7 @@ use crate::model::{Color, Document, Node, NodeId, NodeKind};
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
-pub const FORMAT: &str = "sketch-rs-library";
+pub const FORMAT: &str = "drawio-rs-library";
 /// The tag from before the rename from paper-rs, still read so a saved library survives it.
 pub const OLD_FORMAT: &str = "paper-rs-library";
 pub const VERSION: u32 = 1;
@@ -261,7 +261,7 @@ mod tests {
 
     #[test]
     fn save_load_roundtrip_and_starter() {
-        let dir = std::env::temp_dir().join(format!("sketch-rs-lib-{:016x}", fastrand::u64(..)));
+        let dir = std::env::temp_dir().join(format!("drawio-rs-lib-{:016x}", fastrand::u64(..)));
         let path = dir.join(FILE);
         let lib = Library::load(&path);
         assert!(lib.items.len() >= 5, "starter shapes on first use");
@@ -273,7 +273,7 @@ mod tests {
 
     #[test]
     fn library_from_before_the_rename_loads() {
-        let dir = std::env::temp_dir().join(format!("sketch-rs-lib-{:016x}", fastrand::u64(..)));
+        let dir = std::env::temp_dir().join(format!("drawio-rs-lib-{:016x}", fastrand::u64(..)));
         let path = dir.join(FILE);
         let mut lib = Library::load(&path);
         lib.items.truncate(1);
@@ -315,7 +315,7 @@ mod tests {
 
 // ---------------------------------------------------------------------------------- scratchpad
 
-pub const SCRATCH_FORMAT: &str = "sketch-rs-scratchpad";
+pub const SCRATCH_FORMAT: &str = "drawio-rs-scratchpad";
 pub const SCRATCH_VERSION: u32 = 1;
 pub const SCRATCH_FILE: &str = "scratchpad.json";
 /// Pinned items always stay; recents fall off the back past this.

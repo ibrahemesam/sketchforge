@@ -1,11 +1,11 @@
-# Sketchforge
+# drawio-rs
 
-![Sketchforge hero](docs/assets/hero.webp)
+![drawio-rs hero](docs/assets/hero.webp)
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Platforms](https://img.shields.io/badge/platforms-macOS%20%7C%20Linux-lightgrey.svg)](#get-started)
 
-Sketchforge is a native infinite canvas for diagrams, whiteboards and vector sketches. Your work stays in a folder on your computer. There is no account, no cloud sync and no browser tab to keep open.
+drawio-rs is a native infinite canvas for diagrams, whiteboards and vector sketches. Your work stays in a folder on your computer. There is no account, no cloud sync and no browser tab to keep open.
 
 Use it for system diagrams, brainstorm boards, UI sketches or a quick drawing you want to keep editable. Shapes stay as shapes, arrows follow the nodes they connect and the canvas keeps going in every direction.
 
@@ -29,10 +29,10 @@ You need Rust 1.95 or newer. Install it with [rustup](https://rustup.rs), then b
 
 ```sh
 cargo build --release
-./target/release/sketch-rs                  # projects home screen
-./target/release/sketch-rs --demo           # sample board, not saved
-./target/release/sketch-rs ~/Documents/sketch-rs/Plan   # open a project
-./target/release/sketch-rs board.sketch-rs  # open a Sketch document
+./target/release/drawio-rs                  # projects home screen
+./target/release/drawio-rs --demo           # sample board, not saved
+./target/release/drawio-rs ~/Documents/drawio-rs/Plan   # open a project
+./target/release/drawio-rs board.drawio-rs  # open a drawio-rs document
 ```
 
 On macOS the release build uses Metal. On Linux it uses Vulkan through wgpu. Shortcuts use `Cmd` on macOS and `Ctrl` elsewhere.
@@ -44,15 +44,15 @@ A first-run tour shows the three basic moves: draw a shape, connect two shapes a
 Each project is a folder, and each page is a JSON file.
 
 ```text
-~/Documents/sketch-rs/<project>/
+~/Documents/drawio-rs/<project>/
   project.json
   pages/
     650eff920501e1d1.json
 ```
 
-Sketchforge writes through a temporary file before it replaces a page, so a crash should not leave a half-written document. Set `SKETCH_RS_HOME` if you want projects somewhere else.
+drawio-rs writes through a temporary file before it replaces a page, so a crash should not leave a half-written document. Set `DRAWIO_RS_HOME` if you want projects somewhere else.
 
-Sketchforge moves `~/Documents/paper-rs` to `~/Documents/sketch-rs` on first launch. It still opens `.paper-rs` documents and the old `PAPER_RS_*` environment variables.
+drawio-rs moves `~/Documents/paper-rs` to `~/Documents/drawio-rs` on first launch. It still opens `.paper-rs` documents and the old `PAPER_RS_*` environment variables.
 
 ## Controls
 
@@ -79,14 +79,14 @@ The right panel handles PNG, SVG, PDF and draw.io exports. Frames export at 1x o
 For scripted work, build the optional MCP bridge and point an MCP client at the running app:
 
 ```sh
-cargo build --release --bin sketch-rs-mcp
+cargo build --release --bin drawio-rs-mcp
 ```
 
-Set `SKETCH_RS_MCP_PORT` before starting Sketchforge. The bridge talks over localhost and exposes tools for selection, creation, styling, search, export and page navigation. See `src/mcp/tools.rs` for the current tool list.
+Set `DRAWIO_RS_MCP_PORT` before starting drawio-rs. The bridge talks over localhost and exposes tools for selection, creation, styling, search, export and page navigation. See `src/mcp/tools.rs` for the current tool list.
 
 ## Project background
 
-Sketchforge is a clean-room reimplementation modeled on Paper Desktop. `analysis/PAPER_ARCHITECTURE.md` records what that app does, based on a licensed copy. No Paper code, shaders, icons, fonts or assets are in this repo. Sketchforge is not affiliated with or endorsed by Paper.
+drawio-rs is a clean-room reimplementation modeled on Paper Desktop. `analysis/PAPER_ARCHITECTURE.md` records what that app does, based on a licensed copy. No Paper code, shaders, icons, fonts or assets are in this repo. drawio-rs is not affiliated with or endorsed by Paper.
 
 The old app name was Sketch, and before that paper-rs. The file format and environment variables still accept the old names. Most of the implementation was written by AI agents from prompts, then built, tested and corrected in this repo.
 
@@ -97,7 +97,7 @@ Pull requests and patches are welcome. Keep changes local-first and avoid adding
 ```sh
 cargo fmt --check
 cargo clippy --all-targets -- -D warnings
-SKETCH_RS_REQUIRE_GPU=1 cargo test -- --skip m2_pages_panel_screenshot
+DRAWIO_RS_REQUIRE_GPU=1 cargo test -- --skip m2_pages_panel_screenshot
 cargo build --release
 git diff --check
 ```
@@ -116,6 +116,6 @@ Collaboration, cloud stencils and AI generation are not implemented. Some draw.i
 
 ## License
 
-Sketchforge code is MIT licensed. See [LICENSE](LICENSE).
+drawio-rs code is MIT licensed. See [LICENSE](LICENSE).
 
 Inter Regular, Medium and SemiBold are copyright the Inter Project Authors and licensed under the SIL Open Font License 1.1. See `assets/fonts/OFL.txt`. Agent skills under `.agents/skills/` keep their own licenses, listed in `THIRD_PARTY.md`.

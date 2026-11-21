@@ -1,14 +1,14 @@
 //! Native diagram data carried inside SVG and PNG exports.
 //!
 //! The payload is the same JSON bundle used for a native project: every page, its camera and
-//! its image assets. SVG carries it as base64 text in a `<metadata id="sketch-rs-data">`
+//! its image assets. SVG carries it as base64 text in a `<metadata id="drawio-rs-data">`
 //! element; PNG carries it in a tEXt chunk. Both formats still render normally in other apps,
 //! and Sketch can reopen the exported file to recover the editable pages.
 
 use std::io::Cursor;
 
 /// Marker read by the importer and by tests.
-pub const SVG_MARKER: &str = "sketch-rs-data";
+pub const SVG_MARKER: &str = "drawio-rs-data";
 /// Latin-1 tEXt keyword, kept short enough for the PNG spec.
 pub const PNG_KEYWORD: &str = "Sketch-rs data";
 
@@ -88,7 +88,7 @@ mod tests {
     #[test]
     fn svg_bundle_survives_metadata_roundtrip() {
         let svg = r#"<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><rect width="10" height="10"/></svg>"#;
-        let json = r#"{"format":"sketch-rs-bundle","pages":["one"]}"#;
+        let json = r#"{"format":"drawio-rs-bundle","pages":["one"]}"#;
         let out = svg_with_data(svg, json);
         assert!(out.contains(SVG_MARKER));
         assert!(out.contains("<rect"));
@@ -101,7 +101,7 @@ mod tests {
         let img = image::RgbaImage::from_fn(3, 2, |x, y| {
             image::Rgba([(x * 80) as u8, (y * 100) as u8, 40, 255])
         });
-        let json = r#"{"format":"sketch-rs-bundle","pages":["one","two"]}"#;
+        let json = r#"{"format":"drawio-rs-bundle","pages":["one","two"]}"#;
         let bytes = png_with_data(&img, json).unwrap();
         let decoded = image::load_from_memory(&bytes).unwrap().to_rgba8();
         assert_eq!(decoded.as_raw(), img.as_raw());

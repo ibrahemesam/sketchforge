@@ -164,7 +164,7 @@ impl App {
         self.ed.status = msg.clone();
         rfd::MessageDialog::new()
             .set_level(rfd::MessageLevel::Error)
-            .set_title("Sketch")
+            .set_title("drawio-rs")
             .set_description(msg)
             .show();
     }
@@ -175,7 +175,7 @@ impl App {
             return self.save_project(true);
         }
         let Some(p) = rfd::FileDialog::new()
-            .add_filter("Sketch document", &[file::EXTENSION])
+            .add_filter("drawio-rs document", &[file::EXTENSION])
             .set_file_name(format!("{}.{}", self.ed.doc.name, file::EXTENSION))
             .save_file()
         else {
@@ -883,16 +883,16 @@ impl App {
         g.queue.present(frame);
 
         let title = if self.st.home.is_some() {
-            "Sketch".to_string()
+            "drawio-rs".to_string()
         } else if self.session.project.is_some() {
             format!(
-                "{} — {} — Sketch",
+                "{} — {} — drawio-rs",
                 self.st.project_name,
                 self.ed.page_name()
             )
         } else {
             format!(
-                "{}{} — Sketch",
+                "{}{} — drawio-rs",
                 self.ed.doc.name,
                 if self.ed.is_dirty() { " •" } else { "" }
             )
@@ -1056,7 +1056,7 @@ impl ApplicationHandler<UserEvent> for App {
             .map(|s| (s.width, s.height))
             .unwrap_or((1440.0, 900.0));
         let attrs = Window::default_attributes()
-            .with_title("Sketch")
+            .with_title("drawio-rs")
             .with_inner_size(winit::dpi::LogicalSize::new(
                 1440.0_f64.min(mw),
                 900.0_f64.min(mh),
@@ -1068,9 +1068,9 @@ impl ApplicationHandler<UserEvent> for App {
         #[cfg(target_os = "linux")]
         let attrs = {
             use winit::platform::wayland::WindowAttributesExtWayland;
-            attrs.with_name("sketch-rs", "sketch-rs")
+            attrs.with_name("drawio-rs", "drawio-rs")
         };
-        // SKETCH_RS_OPAQUE=1 turns off vibrancy (and window transparency) on macOS.
+        // DRAWIO_RS_OPAQUE=1 turns off vibrancy (and window transparency) on macOS.
         #[cfg(target_os = "macos")]
         let translucent = crate::env_var("OPAQUE").is_none();
         #[cfg(target_os = "macos")]
@@ -1106,7 +1106,7 @@ impl ApplicationHandler<UserEvent> for App {
         let adapter_info = adapter.get_info();
         log::info!("adapter: {adapter_info:?}");
         let (device, queue) = pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor {
-            label: Some("sketch-rs"),
+            label: Some("drawio-rs"),
             required_limits: wgpu::Limits::downlevel_defaults().using_resolution(adapter.limits()),
             ..Default::default()
         }))
@@ -1643,7 +1643,7 @@ impl crate::mcp::exec::Host for App {
     }
 }
 
-/// Start the MCP server unless `SKETCH_RS_MCP=0`. Calls wake the event loop through `proxy`.
+/// Start the MCP server unless `DRAWIO_RS_MCP=0`. Calls wake the event loop through `proxy`.
 fn start_mcp(
     proxy: winit::event_loop::EventLoopProxy<UserEvent>,
 ) -> Option<(

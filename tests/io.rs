@@ -4,17 +4,17 @@
 mod common;
 
 use common::*;
-use sketch_rs::editor::shortcuts::Action;
-use sketch_rs::editor::{Editor, Key, Modifiers};
-use sketch_rs::geom::{Rect, V2, v2};
-use sketch_rs::io::clipboard::{Memory, Provider};
-use sketch_rs::io::export::{self, Format, Scope, Spec};
-use sketch_rs::model::{Color, ImageMode, Node, NodeId, NodeKind, Paint};
+use drawio_rs::editor::shortcuts::Action;
+use drawio_rs::editor::{Editor, Key, Modifiers};
+use drawio_rs::geom::{Rect, V2, v2};
+use drawio_rs::io::clipboard::{Memory, Provider};
+use drawio_rs::io::export::{self, Format, Scope, Spec};
+use drawio_rs::model::{Color, ImageMode, Node, NodeId, NodeKind, Paint};
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
 fn tmp(tag: &str) -> PathBuf {
-    let d = std::env::temp_dir().join(format!("sketch-rs-io-{tag}-{:016x}", fastrand::u64(..)));
+    let d = std::env::temp_dir().join(format!("drawio-rs-io-{tag}-{:016x}", fastrand::u64(..)));
     std::fs::create_dir_all(&d).unwrap();
     d
 }
@@ -43,7 +43,7 @@ fn rasterize_pdf(pdf: &PathBuf, out_stem: &PathBuf, page: usize) -> Option<image
 }
 
 fn board() -> Editor {
-    let mut e = sketch_rs::demo::showcase();
+    let mut e = drawio_rs::demo::showcase();
     // A gradient, an image fill and a multiply blend, so the PDF exercises every paint.
     let mut g = Node::new(
         NodeId(0),
@@ -58,7 +58,7 @@ fn board() -> Editor {
     let img = image::RgbaImage::from_fn(40, 30, |x, y| {
         image::Rgba([(x * 6) as u8, (y * 8) as u8, 180, 255])
     });
-    let asset = sketch_rs::assets::register_rgba(&img);
+    let asset = drawio_rs::assets::register_rgba(&img);
     let mut r = Node::new(
         NodeId(0),
         NodeKind::Rect,
@@ -132,7 +132,7 @@ fn m6_png_and_svg_export_of_frames_and_all_pages() {
     );
     e.switch_page(0);
     let names: Vec<String> = e.pages.iter().map(|p| p.name.clone()).collect();
-    let pages: Vec<(&str, &sketch_rs::model::Document)> = names
+    let pages: Vec<(&str, &drawio_rs::model::Document)> = names
         .iter()
         .enumerate()
         .map(|(i, n)| (n.as_str(), e.page_doc(i)))
@@ -182,7 +182,7 @@ fn m6_png_and_svg_export_of_frames_and_all_pages() {
 fn m6_import_excalidraw_and_svg_screenshots() {
     let Some(g) = gpu() else { return };
     let json = include_str!("fixtures/excalidraw/basic.excalidraw");
-    let doc = sketch_rs::io::excalidraw::import_scene(json).unwrap();
+    let doc = drawio_rs::io::excalidraw::import_scene(json).unwrap();
     let mut e = editor(1200.0, 800.0);
     e.load(doc, None, None);
     e.viewport = v2(1200.0, 800.0);
@@ -197,7 +197,7 @@ fn m6_import_excalidraw_and_svg_screenshots() {
       <circle cx="80" cy="100" r="70" fill="url(#r)"/>
       <path d="M170 30 L280 30 L225 170 Z" fill="#4dabf7" stroke="#1c3d5a" stroke-width="6" stroke-linejoin="round"/>
       <text x="40" y="195" font-size="18" fill="#222">SVG import</text></svg>"##;
-    let doc = sketch_rs::io::svg_import::import_page(svg, "logo").unwrap();
+    let doc = drawio_rs::io::svg_import::import_page(svg, "logo").unwrap();
     let mut e = editor(800.0, 560.0);
     e.load(doc, None, None);
     e.viewport = v2(800.0, 560.0);
@@ -318,7 +318,7 @@ fn m6_clipboard_between_apps_and_from_other_tools() {
 #[test]
 fn m6_cli_exports_pdf_and_imports_excalidraw() {
     let dir = tmp("cli");
-    let exe = env!("CARGO_BIN_EXE_sketch-rs");
+    let exe = env!("CARGO_BIN_EXE_drawio-rs");
     let pdf = dir.join("demo.pdf");
     let st = std::process::Command::new(exe)
         .args(["--export-pdf"])
@@ -329,7 +329,7 @@ fn m6_cli_exports_pdf_and_imports_excalidraw() {
     assert!(st.success());
     assert!(std::fs::read(&pdf).unwrap().starts_with(b"%PDF-1.7"));
     let out = std::process::Command::new(exe)
-        .env("SKETCH_RS_HOME", dir.join("home"))
+        .env("DRAWIO_RS_HOME", dir.join("home"))
         .arg("--import")
         .arg(concat!(
             env!("CARGO_MANIFEST_DIR"),
@@ -344,7 +344,7 @@ fn m6_cli_exports_pdf_and_imports_excalidraw() {
     );
     let proj = PathBuf::from(String::from_utf8_lossy(&out.stdout).trim().to_string());
     assert!(proj.join("project.json").is_file());
-    let p = sketch_rs::project::Project::open(&proj).unwrap();
+    let p = drawio_rs::project::Project::open(&proj).unwrap();
     let pages = p.load_pages().unwrap();
     assert!(pages[0].doc.nodes.len() >= 8);
     // The fixture's image came along as a project asset.
@@ -360,8 +360,8 @@ fn m6_cli_exports_pdf_and_imports_excalidraw() {
 #[test]
 fn cli_reads_paper_rs_home_from_before_the_rename() {
     let dir = tmp("old-home");
-    let out = std::process::Command::new(env!("CARGO_BIN_EXE_sketch-rs"))
-        .env_remove("SKETCH_RS_HOME")
+    let out = std::process::Command::new(env!("CARGO_BIN_EXE_drawio-rs"))
+        .env_remove("DRAWIO_RS_HOME")
         .env("PAPER_RS_HOME", dir.join("home"))
         .arg("--import")
         .arg(concat!(
@@ -383,7 +383,7 @@ fn cli_reads_paper_rs_home_from_before_the_rename() {
 #[test]
 fn cli_embeds_svg_data_for_reopen() {
     let dir = tmp("embed-svg");
-    let exe = env!("CARGO_BIN_EXE_sketch-rs");
+    let exe = env!("CARGO_BIN_EXE_drawio-rs");
     let svg = dir.join("demo.svg");
     let out = std::process::Command::new(exe)
         .arg("--export-svg")
@@ -397,10 +397,10 @@ fn cli_embeds_svg_data_for_reopen() {
         String::from_utf8_lossy(&out.stderr)
     );
     let text = std::fs::read_to_string(&svg).unwrap();
-    assert!(text.contains("sketch-rs-data"), "no embedded pages in SVG");
+    assert!(text.contains("drawio-rs-data"), "no embedded pages in SVG");
 
     let out = std::process::Command::new(exe)
-        .env("SKETCH_RS_HOME", dir.join("home"))
+        .env("DRAWIO_RS_HOME", dir.join("home"))
         .arg("--import")
         .arg(&svg)
         .output()
@@ -411,7 +411,7 @@ fn cli_embeds_svg_data_for_reopen() {
         String::from_utf8_lossy(&out.stderr)
     );
     let proj = PathBuf::from(String::from_utf8_lossy(&out.stdout).trim().to_string());
-    let pages = sketch_rs::project::Project::open(&proj)
+    let pages = drawio_rs::project::Project::open(&proj)
         .unwrap()
         .load_pages()
         .unwrap();
@@ -419,7 +419,7 @@ fn cli_embeds_svg_data_for_reopen() {
     assert_eq!(pages[0].name, "Launch plan");
     assert_eq!(
         pages[0].doc.nodes.len(),
-        sketch_rs::demo::showcase().doc.nodes.len()
+        drawio_rs::demo::showcase().doc.nodes.len()
     );
     std::fs::remove_dir_all(dir).ok();
 }
@@ -430,7 +430,7 @@ fn cli_embeds_png_data_for_reopen() {
         return;
     }
     let dir = tmp("embed-png");
-    let exe = env!("CARGO_BIN_EXE_sketch-rs");
+    let exe = env!("CARGO_BIN_EXE_drawio-rs");
     let png = dir.join("demo.png");
     let out = std::process::Command::new(exe)
         .arg("--export-png")
@@ -444,7 +444,7 @@ fn cli_embeds_png_data_for_reopen() {
         String::from_utf8_lossy(&out.stderr)
     );
     let out = std::process::Command::new(exe)
-        .env("SKETCH_RS_HOME", dir.join("home"))
+        .env("DRAWIO_RS_HOME", dir.join("home"))
         .arg("--import")
         .arg(&png)
         .output()
@@ -455,7 +455,7 @@ fn cli_embeds_png_data_for_reopen() {
         String::from_utf8_lossy(&out.stderr)
     );
     let proj = PathBuf::from(String::from_utf8_lossy(&out.stdout).trim().to_string());
-    let pages = sketch_rs::project::Project::open(&proj)
+    let pages = drawio_rs::project::Project::open(&proj)
         .unwrap()
         .load_pages()
         .unwrap();
@@ -463,7 +463,7 @@ fn cli_embeds_png_data_for_reopen() {
     assert_eq!(pages[0].name, "Launch plan");
     assert_eq!(
         pages[0].doc.nodes.len(),
-        sketch_rs::demo::showcase().doc.nodes.len()
+        drawio_rs::demo::showcase().doc.nodes.len()
     );
     std::fs::remove_dir_all(dir).ok();
 }
@@ -526,10 +526,10 @@ fn embedded_svg_and_png_reopen_all_pages() {
         None,
     );
     e.switch_page(0);
-    let all: Vec<sketch_rs::project::PageData> =
+    let all: Vec<drawio_rs::project::PageData> =
         (0..e.pages.len()).map(|i| e.page_data(i)).collect();
     let bundle =
-        sketch_rs::project::format::pages_to_json("Embedded board", &all, Some(e.active_page_id()));
+        drawio_rs::project::format::pages_to_json("Embedded board", &all, Some(e.active_page_id()));
     let dir = tmp("embedded-pages");
 
     for format in [Format::Svg, Format::Png] {
@@ -551,7 +551,7 @@ fn embedded_svg_and_png_reopen_all_pages() {
                 "transparent export should include transparent pixels"
             );
         }
-        let imported = sketch_rs::io::import::import_detailed(&path).unwrap();
+        let imported = drawio_rs::io::import::import_detailed(&path).unwrap();
         assert_eq!(imported.name, "Embedded board", "{format:?}");
         assert_eq!(imported.pages.len(), 2, "{format:?}");
         assert_eq!(imported.pages[0].name, all[0].name, "{format:?}");

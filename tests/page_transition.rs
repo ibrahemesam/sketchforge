@@ -2,9 +2,9 @@
 
 mod common;
 
-use sketch_rs::editor::Editor;
-use sketch_rs::io::drawio;
-use sketch_rs::model::{DiagramSettings, Document, PageTransition};
+use drawio_rs::editor::Editor;
+use drawio_rs::io::drawio;
+use drawio_rs::model::{DiagramSettings, Document, PageTransition};
 
 fn fade_doc() -> Document {
     Document {

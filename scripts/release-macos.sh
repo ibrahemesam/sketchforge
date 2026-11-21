@@ -9,7 +9,7 @@
 # script prints the command). Bump the version in Cargo.toml and packaging/macos/Info.plist first,
 # since installed copies only offer a version higher than their own.
 #
-# The app holds sketch-rs-mcp, the MCP stdio bridge, next to sketch-rs. Its icon is rendered from
+# The app holds drawio-rs-mcp, the MCP stdio bridge, next to drawio-rs. Its icon is rendered from
 # site/scripts/brand/icon.svg.
 #
 # Ported from glide (scripts/release-macos.sh), which is based on terminal-rs's; both are
@@ -107,7 +107,7 @@ notarize() {
 }
 
 for target in aarch64-apple-darwin x86_64-apple-darwin; do
-  cargo build --release --locked --target "$target" --bin sketch-rs --bin sketch-rs-mcp
+  cargo build --release --locked --target "$target" --bin drawio-rs --bin drawio-rs-mcp
 done
 # Everything is built in $work, beside $out on the same volume, and replaces $out by renaming once
 # the last step has passed, so a failed run leaves the previous build's files in place.
@@ -125,7 +125,7 @@ finish() {
 app=$work/Sketch.app
 mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources" "$app/Contents/Frameworks"
 cp "$plist" "$app/Contents/Info.plist"
-for bin in sketch-rs sketch-rs-mcp; do
+for bin in drawio-rs drawio-rs-mcp; do
   lipo -create -output "$app/Contents/MacOS/$bin" \
     "$target_dir/aarch64-apple-darwin/release/$bin" "$target_dir/x86_64-apple-darwin/release/$bin"
 done
@@ -152,7 +152,7 @@ echo "signing as $identity"
 for code in "$framework/Versions/B/Autoupdate" "$framework/Versions/B/Updater.app" "$framework"; do
   codesign --force --options runtime --timestamp --sign "$identity" "$code"
 done
-codesign --force --options runtime --timestamp --identifier com.heyfabrika.sketch.mcp --sign "$identity" "$app/Contents/MacOS/sketch-rs-mcp"
+codesign --force --options runtime --timestamp --identifier com.heyfabrika.sketch.mcp --sign "$identity" "$app/Contents/MacOS/drawio-rs-mcp"
 codesign --force --options runtime --timestamp --sign "$identity" "$app"
 codesign --verify --deep --strict --verbose=2 "$app"
 if [ "$notarize" = 1 ]; then

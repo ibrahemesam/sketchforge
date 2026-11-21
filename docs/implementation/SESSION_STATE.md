@@ -4,7 +4,7 @@ Last updated: 2026-11-21 (round 79 IO-13 image import verified, committed and pu
 
 ## Objective
 
-Evolve sketch-rs into a draw.io-parity diagram editor. Current spec: the draw.io
+Evolve drawio-rs into a draw.io-parity diagram editor. Current spec: the draw.io
 format sidebar (`drawio_features_opencode_spec.md`, in
 `/home/ibrahem/mnt/Files/Downloads/`), then the milestone roadmap in
 `docs/implementation/implementation-roadmap.md`.
@@ -192,7 +192,7 @@ Round 26 closed the PNG and SVG part of DOC-15, embedded recoverable diagram dat
 An opt-in Export tab checkbox and a CLI flag add a versioned native bundle to those
 files. The bundle carries the project name, active page id, every page and camera,
 and the bytes of image assets the pages use. SVG stores base64 text in a metadata
-element with id sketch-rs-data; PNG stores it in a tEXt chunk. Import checks that
+element with id drawio-rs-data; PNG stores it in a tEXt chunk. Import checks that
 carrier first and rebuilds native pages instead of tracing the rendered artwork.
 Files exported without the option keep their existing paths. PDF, HTML, and
 draw.io-native metadata remain absent.
@@ -731,8 +731,8 @@ DISCOVERED 1 and BLOCKED 27.
   model, and permissions. GEN-04 AI generation and GEN-10 vendor stencils remain
   blocked. IO-17, IO-18 and IO-20 remain blocked or deferred, as do the HTML
   and PDF parts of DOC-15.
-- Stale installed MCP binary at `~/.cargo/bin/sketch-rs-mcp` lacks the most
-  recent tools in this tree. Run `cargo install --path . --bin sketch-rs-mcp`
+- Stale installed MCP binary at `~/.cargo/bin/drawio-rs-mcp` lacks the most
+  recent tools in this tree. Run `cargo install --path . --bin drawio-rs-mcp`
   to expose them outside `cargo run --bin`. Token-guarded HTTP/MCP endpoints on
   port 3333 are the reliable path for runtime verification (see
   `.opencode/MEMORY.md`).
@@ -758,11 +758,11 @@ rounds. Keep blocked/deferred items blocked. No release, tag, or PR.
   backticked identifiers in `feature-inventory.md` against HEAD, so working-tree
   field names must not be backticked there.
 - Runtime: `Xvfb :99 -screen 0 1366x768x24 -nolisten tcp -ac`, then
-  `env -u WAYLAND_DISPLAY -u WAYLAND_SOCKET SKETCH_RS_MCP_PORT=29981
-  DISPLAY=:99 ./target/release/sketch-rs <project>`; confirm `using X11
+  `env -u WAYLAND_DISPLAY -u WAYLAND_SOCKET DRAWIO_RS_MCP_PORT=29981
+  DISPLAY=:99 ./target/release/drawio-rs <project>`; confirm `using X11
   backend` in the log. MCP helper `/tmp/opencode/mcp.py` (streamable HTTP at
   `/mcp`, session id header, keep-alive SSE frames must be skipped). Kill test
-  apps by exact PID (`pgrep -x sketch-rs`), never `pkill -f`. Launch
+  apps by exact PID (`pgrep -x drawio-rs`), never `pkill -f`. Launch
   long-lived processes with the harness background flag, not `&`.
 - xdotool on `:99` drives real input; clicks need 0.7 s+ spacing or they pair
   into double-clicks (real double-clicks need

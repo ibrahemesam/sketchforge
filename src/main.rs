@@ -1,43 +1,43 @@
-use sketch_rs::app::Start;
-use sketch_rs::editor::Editor;
-use sketch_rs::io::export::Appearance;
-use sketch_rs::io::{embed, export, file, import, png, svg};
-use sketch_rs::model::{Color, ColorMode, Document};
-use sketch_rs::project::{MANIFEST, Store};
-use sketch_rs::render::{frame, gpu::Headless};
-use sketch_rs::session::Session;
-use sketch_rs::ui::UiState;
-use sketch_rs::ui::home::HomeView;
+use drawio_rs::app::Start;
+use drawio_rs::editor::Editor;
+use drawio_rs::io::export::Appearance;
+use drawio_rs::io::{embed, export, file, import, png, svg};
+use drawio_rs::model::{Color, ColorMode, Document};
+use drawio_rs::project::{MANIFEST, Store};
+use drawio_rs::render::{frame, gpu::Headless};
+use drawio_rs::session::Session;
+use drawio_rs::ui::UiState;
+use drawio_rs::ui::home::HomeView;
 use std::borrow::Cow;
 use std::path::PathBuf;
 use std::process::ExitCode;
 
 const USAGE: &str = "\
-Sketch: infinite canvas for planning, working and sketching
+drawio-rs: infinite canvas for planning, working and sketching
 
 USAGE:
-  sketch-rs                                 open the projects home screen
-  sketch-rs PROJECT_DIR                     open a project folder
-  sketch-rs FILE.sketch-rs                  open a Sketch 0.1 document (not autosaved)
-  sketch-rs --demo                          open the app with a sample board
-  sketch-rs --screenshot OUT.png [--home | PROJECT|FILE|--demo] [--size WxH] [--scale S]
+  drawio-rs                                 open the projects home screen
+  drawio-rs PROJECT_DIR                     open a project folder
+  drawio-rs FILE.drawio-rs                  open a Sketch 0.1 document (not autosaved)
+  drawio-rs --demo                          open the app with a sample board
+  drawio-rs --screenshot OUT.png [--home | PROJECT|FILE|--demo] [--size WxH] [--scale S]
                                             render the full UI headlessly to a PNG
-  sketch-rs --export-png OUT.png PROJECT|FILE [--page N] [--scale S] [--transparent] [--embed-data] [--appearance light|dark]
-  sketch-rs --export-svg OUT.svg PROJECT|FILE [--page N] [--embed-data] [--appearance light|dark]
-  sketch-rs --export-pdf OUT.pdf PROJECT|FILE [--page N] [--frames | --all-pages] [--appearance light|dark]
-  sketch-rs --export-drawio OUT.drawio PROJECT|FILE
+  drawio-rs --export-png OUT.png PROJECT|FILE [--page N] [--scale S] [--transparent] [--embed-data] [--appearance light|dark]
+  drawio-rs --export-svg OUT.svg PROJECT|FILE [--page N] [--embed-data] [--appearance light|dark]
+  drawio-rs --export-pdf OUT.pdf PROJECT|FILE [--page N] [--frames | --all-pages] [--appearance light|dark]
+  drawio-rs --export-drawio OUT.drawio PROJECT|FILE
                                             every page in one draw.io file
-  sketch-rs --export OUT PROJECT|FILE --format png|svg|pdf|drawio [--scope page|frames|all]
+  drawio-rs --export OUT PROJECT|FILE --format png|svg|pdf|drawio [--scope page|frames|all]
                                             [--page N] [--scale S] [--transparent] [--embed-data]
                                             [--appearance light|dark]
                                             (frames/all with PNG/SVG write a folder)
-  sketch-rs --import FILE                   create a project from .excalidraw, .svg,
-                                            .drawio, .xml or .sketch-rs and print its folder
-  sketch-rs --import-lib FILE.xml           add a draw.io shape library to the personal library
-  sketch-rs --export-lib OUT.xml            export the personal library as a draw.io shape library
-  sketch-rs --help
+  drawio-rs --import FILE                   create a project from .excalidraw, .svg,
+                                            .drawio, .xml or .drawio-rs and print its folder
+  drawio-rs --import-lib FILE.xml           add a draw.io shape library to the personal library
+  drawio-rs --export-lib OUT.xml            export the personal library as a draw.io shape library
+  drawio-rs --help
 
-Projects live in ~/Documents/sketch-rs (override with SKETCH_RS_HOME).
+Projects live in ~/Documents/drawio-rs (override with DRAWIO_RS_HOME).
 ";
 
 fn is_project(p: &std::path::Path) -> bool {
@@ -46,7 +46,7 @@ fn is_project(p: &std::path::Path) -> bool {
 
 fn load_editor(path: Option<&str>, demo: bool) -> Result<Editor, String> {
     if demo {
-        return Ok(sketch_rs::demo::showcase());
+        return Ok(drawio_rs::demo::showcase());
     }
     let Some(p) = path else {
         return Ok(Editor::default());
@@ -158,19 +158,19 @@ fn run(args: Vec<String>) -> Result<(), String> {
         .map(|s| s.parse().map_err(|_| "bad --page"))
         .transpose()?
         .unwrap_or(0);
-    let load_pages = |input: Option<&str>| -> Result<Vec<sketch_rs::project::PageData>, String> {
+    let load_pages = |input: Option<&str>| -> Result<Vec<drawio_rs::project::PageData>, String> {
         if flag("--demo") {
-            Ok(vec![sketch_rs::project::PageData {
+            Ok(vec![drawio_rs::project::PageData {
                 id: "demo".into(),
                 name: "Launch plan".into(),
-                doc: sketch_rs::demo::showcase().doc,
+                doc: drawio_rs::demo::showcase().doc,
                 camera: None,
             }])
         } else {
             import::load_any(input.ok_or("missing input file")?.as_ref())
         }
     };
-    let embed_json = |pages: &[sketch_rs::project::PageData], page: usize| {
+    let embed_json = |pages: &[drawio_rs::project::PageData], page: usize| {
         flag("--embed-data").then(|| {
             let name = if flag("--demo") {
                 "Launch plan".to_string()
@@ -181,9 +181,9 @@ fn run(args: Vec<String>) -> Result<(), String> {
                             .file_stem()
                             .map(|s| s.to_string_lossy().to_string())
                     })
-                    .unwrap_or_else(|| "Sketch".into())
+                    .unwrap_or_else(|| "drawio-rs".into())
             };
-            sketch_rs::project::format::pages_to_json(
+            drawio_rs::project::format::pages_to_json(
                 &name,
                 pages,
                 pages.get(page).map(|p| p.id.as_str()),
@@ -195,7 +195,7 @@ fn run(args: Vec<String>) -> Result<(), String> {
         let mut st = UiState::default();
         if flag("--home") {
             let store = Store::open(Store::default_root()).map_err(|e| e.to_string())?;
-            st.home = Some(HomeView::load(&store, sketch_rs::project::now_ms()));
+            st.home = Some(HomeView::load(&store, drawio_rs::project::now_ms()));
         }
         let (w, h) = match value("--size") {
             Some(s) => {
@@ -255,7 +255,7 @@ fn run(args: Vec<String>) -> Result<(), String> {
             if page >= pages.len() {
                 return Err(format!("no page {page}"));
             }
-            let refs: Vec<(&str, &sketch_rs::model::Document)> =
+            let refs: Vec<(&str, &drawio_rs::model::Document)> =
                 pages.iter().map(|p| (p.name.as_str(), &p.doc)).collect();
             let spec = export::Spec {
                 format,
@@ -309,11 +309,11 @@ fn run(args: Vec<String>) -> Result<(), String> {
     if let Some(src) = value("--import-lib") {
         let p = PathBuf::from(&src);
         let text = std::fs::read_to_string(&p).map_err(|e| format!("{}: {e}", p.display()))?;
-        let items = sketch_rs::io::library_xml::import_library(&text)?;
+        let items = drawio_rs::io::library_xml::import_library(&text)?;
         let n = items.len();
         let root = Store::default_root();
-        let path = sketch_rs::library::Library::path_in(&root);
-        let mut lib = sketch_rs::library::Library::load(&path);
+        let path = drawio_rs::library::Library::path_in(&root);
+        let mut lib = drawio_rs::library::Library::load(&path);
         lib.items.extend(items);
         lib.save().map_err(|e| e.to_string())?;
         println!("Imported {n} shape(s) into the personal library");
@@ -321,9 +321,9 @@ fn run(args: Vec<String>) -> Result<(), String> {
     }
     if let Some(out) = value("--export-lib") {
         let root = Store::default_root();
-        let path = sketch_rs::library::Library::path_in(&root);
-        let lib = sketch_rs::library::Library::load(&path);
-        let xml = sketch_rs::io::library_xml::export_library(&lib.items);
+        let path = drawio_rs::library::Library::path_in(&root);
+        let lib = drawio_rs::library::Library::load(&path);
+        let xml = drawio_rs::io::library_xml::export_library(&lib.items);
         std::fs::write(&out, xml).map_err(|e| format!("{out}: {e}"))?;
         println!("Exported {} shape(s) to {out}", lib.items.len());
         return Ok(());
@@ -350,9 +350,9 @@ fn run(args: Vec<String>) -> Result<(), String> {
                 .create_with_pages(&bundle_name, pages)
                 .map_err(|e| e.to_string())?;
             for pg in proj.load_pages().map_err(|e| e.to_string())? {
-                sketch_rs::assets::save_to_dir(
-                    &proj.dir.join(sketch_rs::project::ASSETS_DIR),
-                    sketch_rs::assets::used_by(&pg.doc),
+                drawio_rs::assets::save_to_dir(
+                    &proj.dir.join(drawio_rs::project::ASSETS_DIR),
+                    drawio_rs::assets::used_by(&pg.doc),
                 )
                 .map_err(|e| e.to_string())?;
             }
@@ -362,25 +362,25 @@ fn run(args: Vec<String>) -> Result<(), String> {
         let pages = match ext.as_str() {
             "drawio" | "xml" => {
                 let t = std::fs::read_to_string(&p).map_err(|e| e.to_string())?;
-                let (pages, r) = sketch_rs::io::drawio::import_str(&t)?;
+                let (pages, r) = drawio_rs::io::drawio::import_str(&t)?;
                 report = Some(r);
                 pages
             }
             "excalidraw" | "json" => {
                 let t = std::fs::read_to_string(&p).map_err(|e| e.to_string())?;
-                vec![sketch_rs::project::PageData {
-                    id: sketch_rs::project::new_id(),
+                vec![drawio_rs::project::PageData {
+                    id: drawio_rs::project::new_id(),
                     name: "Page 1".into(),
-                    doc: sketch_rs::io::excalidraw::import_scene(&t)?,
+                    doc: drawio_rs::io::excalidraw::import_scene(&t)?,
                     camera: None,
                 }]
             }
             "svg" => {
                 let t = std::fs::read_to_string(&p).map_err(|e| e.to_string())?;
-                vec![sketch_rs::project::PageData {
-                    id: sketch_rs::project::new_id(),
+                vec![drawio_rs::project::PageData {
+                    id: drawio_rs::project::new_id(),
                     name: "Page 1".into(),
-                    doc: sketch_rs::io::svg_import::import_page(&t, &name)?,
+                    doc: drawio_rs::io::svg_import::import_page(&t, &name)?,
                     camera: None,
                 }]
             }
@@ -390,9 +390,9 @@ fn run(args: Vec<String>) -> Result<(), String> {
             .create_with_pages(&name, pages)
             .map_err(|e| e.to_string())?;
         for pg in proj.load_pages().map_err(|e| e.to_string())? {
-            sketch_rs::assets::save_to_dir(
-                &proj.dir.join(sketch_rs::project::ASSETS_DIR),
-                sketch_rs::assets::used_by(&pg.doc),
+            drawio_rs::assets::save_to_dir(
+                &proj.dir.join(drawio_rs::project::ASSETS_DIR),
+                drawio_rs::assets::used_by(&pg.doc),
             )
             .map_err(|e| e.to_string())?;
         }
@@ -414,5 +414,5 @@ fn run(args: Vec<String>) -> Result<(), String> {
         Some(p) if is_project(p.as_ref()) => Start::Project(PathBuf::from(p)),
         Some(p) => Start::Scratch(Box::new(load_editor(Some(p), false)?)),
     };
-    sketch_rs::app::run(start)
+    drawio_rs::app::run(start)
 }

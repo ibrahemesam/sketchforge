@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Installs the Sketch desktop entry and app icon into the user's home, so the launcher and the
-# task manager show the app with its icon. The window's app id is "sketch-rs", which is what ties
+# task manager show the app with its icon. The window's app id is "drawio-rs", which is what ties
 # it to the entry, so the icon shows for any build of the app.
 #
-# Usage: scripts/install-linux-desktop.sh [path-to-sketch-rs]
+# Usage: scripts/install-linux-desktop.sh [path-to-drawio-rs]
 #
 # Without an argument the script takes the binary from the PATH, then from the cargo target
 # directory.
@@ -13,7 +13,7 @@ cd "$(dirname "$0")/.."
 
 bin=${1:-}
 if [ -z "$bin" ]; then
-    for candidate in "$(command -v sketch-rs || true)" target/release/sketch-rs target/debug/sketch-rs; do
+    for candidate in "$(command -v drawio-rs || true)" target/release/drawio-rs target/debug/drawio-rs; do
         if [ -n "$candidate" ] && [ -x "$candidate" ]; then
             bin=$candidate
             break
@@ -22,7 +22,7 @@ if [ -z "$bin" ]; then
 fi
 
 if [ -z "$bin" ]; then
-    echo "no sketch-rs binary found, pass its path as the first argument" >&2
+    echo "no drawio-rs binary found, pass its path as the first argument" >&2
     exit 1
 fi
 if [ ! -f "$bin" ]; then
@@ -35,9 +35,9 @@ data=${XDG_DATA_HOME:-$HOME/.local/share}
 apps=$data/applications
 icons=$data/icons/hicolor
 
-install -Dm644 packaging/linux/sketch-rs.desktop "$apps/sketch-rs.desktop"
+install -Dm644 packaging/linux/drawio-rs.desktop "$apps/drawio-rs.desktop"
 # Point the entry at this build.
-sed -i "s|^Exec=.*|Exec=$bin %f|" "$apps/sketch-rs.desktop"
+sed -i "s|^Exec=.*|Exec=$bin %f|" "$apps/drawio-rs.desktop"
 
 for dir in packaging/linux/icons/hicolor/*/apps; do
     size=$(basename "$(dirname "$dir")")
@@ -55,6 +55,6 @@ if command -v kbuildsycoca6 >/dev/null; then
     kbuildsycoca6 --noincremental
 fi
 
-echo "installed $apps/sketch-rs.desktop"
+echo "installed $apps/drawio-rs.desktop"
 echo "installed the icons under $icons"
 echo "the launcher entry runs $bin"

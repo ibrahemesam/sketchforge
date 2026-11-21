@@ -3,18 +3,18 @@
 mod common;
 
 use common::*;
-use sketch_rs::demo;
-use sketch_rs::editor::Editor;
-use sketch_rs::geom::{Rect, v2};
-use sketch_rs::model::{Color, Node, NodeId, NodeKind};
-use sketch_rs::project::{PageData, Project, Store};
-use sketch_rs::render::frame;
-use sketch_rs::session::{self, Session};
-use sketch_rs::ui::UiState;
-use sketch_rs::ui::home::{HomeAction, HomeView};
+use drawio_rs::demo;
+use drawio_rs::editor::Editor;
+use drawio_rs::geom::{Rect, v2};
+use drawio_rs::model::{Color, Node, NodeId, NodeKind};
+use drawio_rs::project::{PageData, Project, Store};
+use drawio_rs::render::frame;
+use drawio_rs::session::{self, Session};
+use drawio_rs::ui::UiState;
+use drawio_rs::ui::home::{HomeAction, HomeView};
 
 fn temp_store(tag: &str) -> Store {
-    let root = std::env::temp_dir().join(format!("sketch-rs-{tag}-{:016x}", fastrand::u64(..)));
+    let root = std::env::temp_dir().join(format!("drawio-rs-{tag}-{:016x}", fastrand::u64(..)));
     Store::open(root).unwrap()
 }
 
@@ -22,18 +22,18 @@ fn temp_store(tag: &str) -> Store {
 fn populate(store: &Store) -> Vec<std::path::PathBuf> {
     let mut dirs = Vec::new();
     let showcase = demo::showcase();
-    let boards: Vec<(&str, sketch_rs::model::Document)> = vec![
+    let boards: Vec<(&str, drawio_rs::model::Document)> = vec![
         ("Launch plan", showcase.doc.clone()),
         ("Brand moodboard", demo::moodboard().doc),
         ("Onboarding flow", demo::flow().doc),
-        ("Empty ideas", sketch_rs::model::Document::default()),
+        ("Empty ideas", drawio_rs::model::Document::default()),
     ];
     for (i, (name, doc)) in boards.into_iter().enumerate() {
         let p = store
             .create_with_pages(
                 name,
                 vec![PageData {
-                    id: sketch_rs::project::new_id(),
+                    id: drawio_rs::project::new_id(),
                     name: "Page 1".into(),
                     doc,
                     camera: None,
@@ -136,7 +136,7 @@ fn m1_autosave_survives_reopen_and_crash_temp_files() {
 fn m1_home_actions_rename_duplicate_trash() {
     let store = temp_store("actions");
     let dirs = populate(&store);
-    let mut hv = HomeView::load(&store, sketch_rs::project::now_ms());
+    let mut hv = HomeView::load(&store, drawio_rs::project::now_ms());
     hv.actions = vec![
         HomeAction::Rename(dirs[0].clone(), "Q4 launch".into()),
         HomeAction::Duplicate(dirs[1].clone()),
@@ -156,7 +156,7 @@ fn m1_home_actions_rename_duplicate_trash() {
             _ => unreachable!(),
         }
     }
-    hv.refresh(&store, sketch_rs::project::now_ms());
+    hv.refresh(&store, drawio_rs::project::now_ms());
     let mut names: Vec<String> = hv.entries.iter().map(|e| e.manifest.name.clone()).collect();
     names.sort();
     assert_eq!(
@@ -245,14 +245,14 @@ fn m2_copy_paste_between_pages_and_projects() {
     ed.selection = vec![id];
     key(
         &mut ed,
-        sketch_rs::editor::Key::Char('c'),
-        sketch_rs::editor::Modifiers::cmd(),
+        drawio_rs::editor::Key::Char('c'),
+        drawio_rs::editor::Modifiers::cmd(),
     );
     ed.add_page();
     key(
         &mut ed,
-        sketch_rs::editor::Key::Char('v'),
-        sketch_rs::editor::Modifiers::cmd(),
+        drawio_rs::editor::Key::Char('v'),
+        drawio_rs::editor::Modifiers::cmd(),
     );
     assert_eq!(ed.doc.nodes.len(), 1);
     let pasted = ed.doc.get(ed.selection[0]).unwrap();
@@ -270,8 +270,8 @@ fn m2_copy_paste_between_pages_and_projects() {
     assert!(ed.doc.nodes.is_empty());
     key(
         &mut ed,
-        sketch_rs::editor::Key::Char('v'),
-        sketch_rs::editor::Modifiers::cmd(),
+        drawio_rs::editor::Key::Char('v'),
+        drawio_rs::editor::Modifiers::cmd(),
     );
     assert_eq!(ed.doc.nodes.len(), 1);
     std::fs::remove_dir_all(&store.root).ok();
@@ -318,7 +318,7 @@ fn two_pages_keep_different_grid_settings_across_switch_save_and_reload() {
     proj.manifest.pages = ed
         .pages
         .iter()
-        .map(|s| sketch_rs::project::PageRef {
+        .map(|s| drawio_rs::project::PageRef {
             id: s.id.clone(),
             name: s.name.clone(),
         })
@@ -358,8 +358,8 @@ fn two_pages_keep_different_grid_settings_across_switch_save_and_reload() {
 #[test]
 fn m2_pages_panel_screenshot() {
     let Some(g) = gpu() else { return };
-    let page = |name: &str, doc: sketch_rs::model::Document| PageData {
-        id: sketch_rs::project::new_id(),
+    let page = |name: &str, doc: drawio_rs::model::Document| PageData {
+        id: drawio_rs::project::new_id(),
         name: name.into(),
         doc,
         camera: None,
@@ -370,7 +370,7 @@ fn m2_pages_panel_screenshot() {
             page("Launch plan", demo::showcase().doc),
             page("Moodboard", demo::moodboard().doc),
             page("Flows", demo::flow().doc),
-            page("Archive", sketch_rs::model::Document::default()),
+            page("Archive", drawio_rs::model::Document::default()),
         ],
         None,
     );
@@ -396,12 +396,12 @@ fn m2_pages_panel_screenshot() {
 
 #[test]
 fn io13_image_import_roundtrips_through_project_reload() {
-    use sketch_rs::model::Paint;
+    use drawio_rs::model::Paint;
     let store = temp_store("io13");
     let (proj, page) = store.create("Image project").unwrap();
     let mut ed = Editor::new(page.doc.clone());
     let img = image::RgbaImage::from_fn(64, 32, |x, y| image::Rgba([x as u8, y as u8, 120, 255]));
-    let asset = sketch_rs::assets::register_rgba(&img);
+    let asset = drawio_rs::assets::register_rgba(&img);
     let id = ed
         .insert_image(&asset, v2(200.0, 150.0))
         .expect("image inserted");
@@ -425,9 +425,9 @@ fn io13_image_import_roundtrips_through_project_reload() {
     for pg in &pages {
         p.save_page(pg).unwrap();
     }
-    sketch_rs::assets::save_to_dir(
-        &proj.dir.join(sketch_rs::project::ASSETS_DIR),
-        sketch_rs::assets::used_by(&ed.doc),
+    drawio_rs::assets::save_to_dir(
+        &proj.dir.join(drawio_rs::project::ASSETS_DIR),
+        drawio_rs::assets::used_by(&ed.doc),
     )
     .unwrap();
 
@@ -443,7 +443,7 @@ fn io13_image_import_roundtrips_through_project_reload() {
         matches!(image_node.style.fills.first(), Some(Paint::Image { asset: a, .. }) if a == &asset),
         "image fill still editable after reload"
     );
-    let assets_dir = proj.dir.join(sketch_rs::project::ASSETS_DIR);
+    let assets_dir = proj.dir.join(drawio_rs::project::ASSETS_DIR);
     assert!(assets_dir.exists(), "project assets dir should exist");
     assert!(
         std::fs::read_dir(&assets_dir).unwrap().next().is_some(),

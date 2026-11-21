@@ -216,7 +216,7 @@ statuses below still describe `5de2f5b`. The working tree now has:
 
 - Embedded pages in SVG and PNG (2026-11-18): PNG and SVG export can carry a native
   bundle of every page, camera, project name, active page id, and image asset. SVG uses
-  a metadata element with id sketch-rs-data; PNG uses a tEXt keyword. The Export tab
+  a metadata element with id drawio-rs-data; PNG uses a tEXt keyword. The Export tab
   has an opt-in Embed pages for reopening checkbox, and the CLI accepts --embed-data.
   Import reads that bundle before the vector importers, so an embedded file reopens as
   editable pages instead of traced artwork. Files exported without the option keep
@@ -536,7 +536,7 @@ Moving diagram data in and out of Sketch.
 
 | ID | Capability | User-visible behavior | draw.io source | Sketch modules | Status | Acceptance criteria | Limitations and evidence |
 |---|---|---|---|---|---|---|---|
-| IO-01 | Save and open native projects | A project folder and a single .sketch-rs document both load and save without losing unknown page content. | [Choose where to store your diagram files](https://www.drawio.com/docs/getting-started/save-diagram-files/) | src/project/mod.rs, src/io/file.rs | **VERIFIED** | Save, quit, reopen, and confirm every page, camera, asset, and component link is intact. | Old .paper-rs tags and extensions still load. Test: `m6_save_load_and_export`. |
+| IO-01 | Save and open native projects | A project folder and a single .drawio-rs document both load and save without losing unknown page content. | [Choose where to store your diagram files](https://www.drawio.com/docs/getting-started/save-diagram-files/) | src/project/mod.rs, src/io/file.rs | **VERIFIED** | Save, quit, reopen, and confirm every page, camera, asset, and component link is intact. | Old .paper-rs tags and extensions still load. Test: `m6_save_load_and_export`. |
 | IO-02 | PNG export | PNG export renders the selection, frames, page, or all pages at a chosen scale with optional transparency. | [Supported export formats](https://www.drawio.com/docs/manual/export/export-diagram/) | src/io/png.rs, src/io/export.rs | **VERIFIED** | Export one shape, one frame, and all pages, then check dimensions and alpha. | Uses the offscreen wgpu renderer, so output matches the canvas. Test: `m6_png_and_svg_export_of_frames_and_all_pages`. |
 | IO-03 | SVG export | SVG export writes vector shapes, text outlines, gradients, images, and blend modes. | [Supported export formats](https://www.drawio.com/docs/manual/export/export-diagram/) | src/io/svg.rs | **VERIFIED** | Export a page with a gradient, image, text, and multiply blend; rasterize it and compare with the GPU render. | Text is outlined for fidelity. Test: `m6_svg_export_matches_gpu_render`. |
 | IO-04 | PDF export | PDF export writes one page per frame or one page for the whole document, with vector shapes and images. | [Export a diagram to a PDF file](https://www.drawio.com/docs/manual/export/export-to-pdf/) | src/io/pdf.rs, src/io/export.rs | **VERIFIED** | Export a frame and a page, then inspect the PDF structure and rasterize it when pdftoppm is present. | Text is outlined, not selectable. Test: `m6_pdf_export_pages_frames_and_selection`. |

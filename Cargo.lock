@@ -710,6 +710,50 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d8b14ccef22fc6f5a8f4d7d768562a182c04ce9a3b3157b91390b52ddfdf1a76"
 
 [[package]]
+name = "drawio-rs"
+version = "0.1.0"
+dependencies = [
+ "arboard",
+ "axum",
+ "bytemuck",
+ "dirs",
+ "egui",
+ "egui-wgpu",
+ "egui-winit",
+ "env_logger",
+ "fastrand",
+ "i_overlay",
+ "image",
+ "log",
+ "lyon",
+ "miniz_oxide 0.9.1",
+ "muda",
+ "objc2 0.6.5",
+ "objc2-app-kit 0.3.2",
+ "objc2-foundation 0.3.2",
+ "png",
+ "pollster",
+ "raw-window-handle",
+ "regex",
+ "reqwest",
+ "resvg",
+ "rfd",
+ "rmcp",
+ "roxmltree 0.21.1",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tokio-util",
+ "ttf-parser",
+ "unicode-bidi",
+ "usvg",
+ "wayland-backend",
+ "wayland-client",
+ "wgpu",
+ "winit",
+]
+
+[[package]]
 name = "dyn-clone"
 version = "1.0.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3266,50 +3310,6 @@ name = "siphasher"
 version = "1.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "33f4fe9184a62d842c9ef383018f3306d8ba224fd9d836f56d7288308847c256"
-
-[[package]]
-name = "sketch-rs"
-version = "0.1.0"
-dependencies = [
- "arboard",
- "axum",
- "bytemuck",
- "dirs",
- "egui",
- "egui-wgpu",
- "egui-winit",
- "env_logger",
- "fastrand",
- "i_overlay",
- "image",
- "log",
- "lyon",
- "miniz_oxide 0.9.1",
- "muda",
- "objc2 0.6.5",
- "objc2-app-kit 0.3.2",
- "objc2-foundation 0.3.2",
- "png",
- "pollster",
- "raw-window-handle",
- "regex",
- "reqwest",
- "resvg",
- "rfd",
- "rmcp",
- "roxmltree 0.21.1",
- "serde",
- "serde_json",
- "tokio",
- "tokio-util",
- "ttf-parser",
- "unicode-bidi",
- "usvg",
- "wayland-backend",
- "wayland-client",
- "wgpu",
- "winit",
-]
 
 [[package]]
 name = "skrifa"

@@ -1,10 +1,10 @@
 //! DIA-05: find tagged nodes through MCP and select every match.
 
+use drawio_rs::geom::Rect;
+use drawio_rs::mcp::{Out, exec};
+use drawio_rs::model::{Node, NodeId, NodeKind, TextAlign};
+use drawio_rs::project::Store;
 use serde_json::{Value, json};
-use sketch_rs::geom::Rect;
-use sketch_rs::mcp::{Out, exec};
-use sketch_rs::model::{Node, NodeId, NodeKind, TextAlign};
-use sketch_rs::project::Store;
 
 fn host() -> exec::SessionHost {
     let store = Store::open(

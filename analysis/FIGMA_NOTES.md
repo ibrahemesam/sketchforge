@@ -375,7 +375,7 @@ Sources: https://help.figma.com/hc/en-us/articles/360039958594 (Pages), API `Pag
 * "Move to page" in the context menu moves layers to another page, keeping coordinates.
 * Undo history is per file (spans pages), and an undo switches to the affected page.
 
-**Sketch note:** `Document { pages: Vec<Page> }`, `Page { id, name, roots: Vec<NodeId>, bg, camera }`. The node arena can stay global. Persist `camera` per page in the `.sketch-rs` file.
+**Sketch note:** `Document { pages: Vec<Page> }`, `Page { id, name, roots: Vec<NodeId>, bg, camera }`. The node arena can stay global. Persist `camera` per page in the `.drawio-rs` file.
 
 ---
 

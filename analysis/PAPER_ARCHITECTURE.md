@@ -76,7 +76,7 @@ Selection (`get_selection`), artboards/frames, HTML elements (text, boxes, image
 
 ## 7. What this means for Sketch
 
-Paper's editor is a browser DOM application, so a "port" means re-implementing the **behavior** on a native GPU stack. Nothing Paper-specific (code, shaders, icons, fonts) is available or reused. Sketch is local-first (single-file `.sketch-rs` documents) where Paper is cloud-first.
+Paper's editor is a browser DOM application, so a "port" means re-implementing the **behavior** on a native GPU stack. Nothing Paper-specific (code, shaders, icons, fonts) is available or reused. Sketch is local-first (single-file `.drawio-rs` documents) where Paper is cloud-first.
 
 ## 8. Keyboard shortcuts with direct evidence
 

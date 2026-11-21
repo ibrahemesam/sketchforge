@@ -20,7 +20,7 @@ Agent memory and running notes live in `.opencode/MEMORY.md`. Read it at the
 start of a session and update it when the environment, decisions, or
 verification state changes.
 
-This repo is Sketch, a native Rust infinite canvas built on wgpu, winit and
+This repo is drawio-rs, a native Rust infinite canvas built on wgpu, winit and
 egui, plus its download page in `site/`, a single prerendered SvelteKit page
 built for Vercel. The README covers building, running and testing the app, and
 `site/README.md` covers the page and its image pipeline. The app used to be
@@ -36,7 +36,7 @@ checkout folders keep the old name.
   ignores it.
 - Don't deploy to Vercel, create Vercel projects, publish GitHub releases or
   push tags. Micky decides when to ship.
-- Sketch is a clean-room reimplementation modeled on Paper (paper.design).
+- drawio-rs is a clean-room reimplementation modeled on draw.io/Paper design patterns where applicable.
   Never add Paper's code, shaders, icons, fonts or assets; `analysis/` records
   behavior only. On the download page, keep Paper's name out of the headline,
   logo and assets, don't imply affiliation, and keep Figma's name out of the

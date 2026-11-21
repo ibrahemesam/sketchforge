@@ -1,10 +1,10 @@
 //! DIA-03: edit custom links through MCP with safe targets and one-step undo.
 
+use drawio_rs::geom::Rect;
+use drawio_rs::mcp::{Out, ToolResult, exec};
+use drawio_rs::model::{Node, NodeId, NodeKind};
+use drawio_rs::project::Store;
 use serde_json::{Value, json};
-use sketch_rs::geom::Rect;
-use sketch_rs::mcp::{Out, ToolResult, exec};
-use sketch_rs::model::{Node, NodeId, NodeKind};
-use sketch_rs::project::Store;
 
 fn host() -> exec::SessionHost {
     let store = Store::open(

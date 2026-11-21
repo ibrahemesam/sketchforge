@@ -4,13 +4,13 @@
 mod common;
 
 use common::*;
-use sketch_rs::assets;
-use sketch_rs::editor::Editor;
-use sketch_rs::geom::{Rect, v2};
-use sketch_rs::io::export::{self, Format, Scope, Spec};
-use sketch_rs::model::{BackgroundImage, Color, ImageMode, Node, NodeId, NodeKind, Paint};
-use sketch_rs::project::Store;
-use sketch_rs::session::Session;
+use drawio_rs::assets;
+use drawio_rs::editor::Editor;
+use drawio_rs::geom::{Rect, v2};
+use drawio_rs::io::export::{self, Format, Scope, Spec};
+use drawio_rs::model::{BackgroundImage, Color, ImageMode, Node, NodeId, NodeKind, Paint};
+use drawio_rs::project::Store;
+use drawio_rs::session::Session;
 
 const BG: Color = Color::rgb(220, 20, 180);
 

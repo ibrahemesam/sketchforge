@@ -23,7 +23,7 @@ use std::path::{Path, PathBuf};
 
 pub mod packs;
 
-pub const TEMPLATE_FORMAT: &str = "sketch-rs-template-library";
+pub const TEMPLATE_FORMAT: &str = "drawio-rs-template-library";
 pub const TEMPLATE_VERSION: u32 = 1;
 /// Files written by the app end with this suffix.
 pub const TEMPLATE_SUFFIX: &str = ".sketch-templates.json";

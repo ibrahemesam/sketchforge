@@ -1,11 +1,11 @@
 //! TXT-06: font family picker across the MCP surface, draw.io and native files.
 
+use drawio_rs::geom::Rect;
+use drawio_rs::io::drawio;
+use drawio_rs::mcp::{Out, exec};
+use drawio_rs::model::{Document, Node, NodeId, NodeKind, TextAlign};
+use drawio_rs::project::Store;
 use serde_json::{Value, json};
-use sketch_rs::geom::Rect;
-use sketch_rs::io::drawio;
-use sketch_rs::mcp::{Out, exec};
-use sketch_rs::model::{Document, Node, NodeId, NodeKind, TextAlign};
-use sketch_rs::project::Store;
 use std::time::{Duration, Instant};
 
 fn host() -> exec::SessionHost {
@@ -33,8 +33,8 @@ fn call(h: &mut exec::SessionHost, name: &str, args: Value) -> Value {
 fn families_after_scan() -> Vec<String> {
     let deadline = Instant::now() + Duration::from_secs(30);
     loop {
-        let families = sketch_rs::text::font_families();
-        if sketch_rs::text::library_epoch() > 0 || Instant::now() >= deadline {
+        let families = drawio_rs::text::font_families();
+        if drawio_rs::text::library_epoch() > 0 || Instant::now() >= deadline {
             return families;
         }
         std::thread::sleep(Duration::from_millis(50));

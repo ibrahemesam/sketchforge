@@ -200,7 +200,7 @@ mod tests {
 
     fn store() -> Store {
         Store::open(
-            std::env::temp_dir().join(format!("sketch-rs-session-{:016x}", fastrand::u64(..))),
+            std::env::temp_dir().join(format!("drawio-rs-session-{:016x}", fastrand::u64(..))),
         )
         .unwrap()
     }

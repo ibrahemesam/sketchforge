@@ -187,9 +187,9 @@
 <main id="top">
 	<header class="hero">
 		<div class="logo"><Logo size={112} /></div>
-		<h1>Sketch it, then design it.</h1>
+		<h1>Draw it, then design it.</h1>
 		<p class="lede">
-			A fast, native canvas for the Mac, written in Rust. Sketch the flow by hand, then design the real
+			A fast, native canvas for the Mac, written in Rust. Draw the flow by hand, then design the real
 			screen right next to it.
 		</p>
 		<div class="cta">

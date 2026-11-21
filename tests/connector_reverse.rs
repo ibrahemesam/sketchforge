@@ -1,10 +1,10 @@
 //! CON-18: reverse a connector from the editor and through MCP.
 
+use drawio_rs::geom::{Rect, v2};
+use drawio_rs::mcp::{Out, exec};
+use drawio_rs::model::{Binding, Head, LineJump, Node, NodeId, NodeKind, Route};
+use drawio_rs::project::Store;
 use serde_json::{Value, json};
-use sketch_rs::geom::{Rect, v2};
-use sketch_rs::mcp::{Out, exec};
-use sketch_rs::model::{Binding, Head, LineJump, Node, NodeId, NodeKind, Route};
-use sketch_rs::project::Store;
 
 fn host() -> exec::SessionHost {
     let store = Store::open(std::env::temp_dir().join(format!(

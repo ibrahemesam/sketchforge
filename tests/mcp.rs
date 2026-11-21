@@ -1,16 +1,16 @@
 //! MCP server: tool behaviour on a headless session, then the real thing end to end — an rmcp
-//! client over streamable HTTP, and through the `sketch-rs-mcp` stdio bridge.
+//! client over streamable HTTP, and through the `drawio-rs-mcp` stdio bridge.
 
+use drawio_rs::geom::Rect;
+use drawio_rs::mcp::{self, Out, exec};
+use drawio_rs::model::{Color, LayerId, NodeKind, Paint, Sizing};
+use drawio_rs::project::Store;
 use rmcp::ServiceExt;
 use rmcp::model::{CallToolRequestParams, CallToolResult, ContentBlock};
 use serde_json::{Value, json};
-use sketch_rs::geom::Rect;
-use sketch_rs::mcp::{self, Out, exec};
-use sketch_rs::model::{Color, LayerId, NodeKind, Paint, Sizing};
-use sketch_rs::project::Store;
 
 fn store() -> Store {
-    Store::open(std::env::temp_dir().join(format!("sketch-rs-mcp-{:016x}", fastrand::u64(..))))
+    Store::open(std::env::temp_dir().join(format!("drawio-rs-mcp-{:016x}", fastrand::u64(..))))
         .unwrap()
 }
 
@@ -33,8 +33,8 @@ fn call(h: &mut exec::SessionHost, name: &str, args: Value) -> Value {
     }
 }
 
-fn num(id: &Value) -> sketch_rs::model::NodeId {
-    sketch_rs::model::NodeId(
+fn num(id: &Value) -> drawio_rs::model::NodeId {
+    drawio_rs::model::NodeId(
         id.as_str()
             .unwrap()
             .rsplit(':')
@@ -395,7 +395,7 @@ fn errors_are_reported_not_panics() {
 
 #[test]
 fn screenshot_returns_png() {
-    if sketch_rs::render::gpu::Headless::new().is_err() {
+    if drawio_rs::render::gpu::Headless::new().is_err() {
         eprintln!("no GPU adapter; skipping");
         return;
     }
@@ -427,7 +427,7 @@ fn screenshot_returns_png() {
 /// The worker hands back the final document and undo depth when the server stops.
 fn spawn_app() -> (
     mcp::server::Running,
-    std::thread::JoinHandle<(sketch_rs::model::Document, usize)>,
+    std::thread::JoinHandle<(drawio_rs::model::Document, usize)>,
 ) {
     let (tx, rx) = std::sync::mpsc::channel::<mcp::Call>();
     let worker = std::thread::spawn(move || {
@@ -508,7 +508,7 @@ async fn http_client_draws_a_frame_with_text() {
     let transport = rmcp::transport::StreamableHttpClientTransport::from_uri(running.url());
     let client = ().serve(transport).await.unwrap();
     let info = client.peer_info().unwrap();
-    assert_eq!(info.server_info.as_ref().unwrap().name, "sketch-rs");
+    assert_eq!(info.server_info.as_ref().unwrap().name, "drawio-rs");
     assert!(
         info.instructions
             .as_deref()
@@ -564,8 +564,8 @@ async fn http_rejects_browsers_and_unknown_routes() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn stdio_bridge_relays_to_the_app() {
     let (running, _worker) = spawn_app();
-    let mut cmd = tokio::process::Command::new(env!("CARGO_BIN_EXE_sketch-rs-mcp"));
-    cmd.env("SKETCH_RS_MCP_PORT", running.port.to_string());
+    let mut cmd = tokio::process::Command::new(env!("CARGO_BIN_EXE_drawio-rs-mcp"));
+    cmd.env("DRAWIO_RS_MCP_PORT", running.port.to_string());
     let child = rmcp::transport::TokioChildProcess::new(cmd).unwrap();
     let client = ().serve(child).await.unwrap();
     draw_frame_with_text(&client).await;
@@ -580,8 +580,8 @@ async fn stdio_bridge_relays_to_the_app() {
 fn stdio_bridge_results_carry_result_type_for_2026_clients() {
     use std::io::{BufRead, Write};
     let (running, _worker) = spawn_app();
-    let mut child = std::process::Command::new(env!("CARGO_BIN_EXE_sketch-rs-mcp"))
-        .env("SKETCH_RS_MCP_PORT", running.port.to_string())
+    let mut child = std::process::Command::new(env!("CARGO_BIN_EXE_drawio-rs-mcp"))
+        .env("DRAWIO_RS_MCP_PORT", running.port.to_string())
         .stdin(std::process::Stdio::piped())
         .stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::null())
@@ -622,8 +622,8 @@ async fn stdio_bridge_lists_tools_without_the_app() {
         .local_addr()
         .unwrap()
         .port();
-    let mut cmd = tokio::process::Command::new(env!("CARGO_BIN_EXE_sketch-rs-mcp"));
-    cmd.env("SKETCH_RS_MCP_PORT", port.to_string());
+    let mut cmd = tokio::process::Command::new(env!("CARGO_BIN_EXE_drawio-rs-mcp"));
+    cmd.env("DRAWIO_RS_MCP_PORT", port.to_string());
     let client = ().serve(rmcp::transport::TokioChildProcess::new(cmd).unwrap()).await.unwrap();
     assert!(client.list_all_tools().await.unwrap().len() >= 30);
     let r = client
@@ -641,7 +641,7 @@ async fn stdio_bridge_lists_tools_without_the_app() {
 /// A design written the way an agent would, rendered for the docs (`milestone7_mcp.png`).
 #[test]
 fn agent_design_screenshot() {
-    if sketch_rs::render::gpu::Headless::new().is_err() {
+    if drawio_rs::render::gpu::Headless::new().is_err() {
         eprintln!("no GPU adapter; skipping");
         return;
     }
@@ -894,11 +894,11 @@ fn generated_diagrams_insert_as_content_or_pages_and_report_errors() {
 
 #[test]
 fn node_info_reports_links_tooltips_tags_and_metadata() {
-    use sketch_rs::model::Node;
+    use drawio_rs::model::Node;
     let mut h = host();
     let id = h.ed.add_node(
         Node::new(
-            sketch_rs::model::NodeId(0),
+            drawio_rs::model::NodeId(0),
             NodeKind::Rect,
             Rect::new(0.0, 0.0, 100.0, 60.0),
         ),

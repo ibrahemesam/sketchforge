@@ -1,6 +1,6 @@
 //! System clipboard interop.
 //!
-//! Copying writes a `sketch-rs/clipboard` JSON payload (layers, their world rects and the
+//! Copying writes a `drawio-rs/clipboard` JSON payload (layers, their world rects and the
 //! images they use) as text, so layers paste between windows, projects and app restarts.
 //! Pasting accepts that payload, Excalidraw clipboard/scene JSON, SVG markup, images and
 //! plain text (which becomes a text layer).
@@ -10,7 +10,7 @@ use crate::model::{Node, NodeId, Paint};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-pub const TYPE: &str = "sketch-rs/clipboard";
+pub const TYPE: &str = "drawio-rs/clipboard";
 /// Copied by builds from before the rename from paper-rs; still pastes.
 pub const OLD_TYPE: &str = "paper-rs/clipboard";
 

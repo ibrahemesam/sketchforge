@@ -1,8 +1,8 @@
 //! TXT-24: text follows a curve while the text box stays upright.
 
-use sketch_rs::geom::Rect;
-use sketch_rs::io::drawio;
-use sketch_rs::model::{Document, Node, NodeId, NodeKind, TextAlign};
+use drawio_rs::geom::Rect;
+use drawio_rs::io::drawio;
+use drawio_rs::model::{Document, Node, NodeId, NodeKind, TextAlign};
 
 fn curved(text: &str) -> Node {
     let mut n = Node::new(
@@ -22,7 +22,7 @@ fn curved(text: &str) -> Node {
 #[test]
 fn text_on_curve_positions_glyphs_along_an_arc() {
     let n = curved("CURVE");
-    let l = sketch_rs::text::layout_node(&n).expect("text layout");
+    let l = drawio_rs::text::layout_node(&n).expect("text layout");
     assert_eq!(l.glyphs.len(), 5, "one glyph per character");
     let ys: Vec<f64> = l.glyphs.iter().map(|g| g.baseline).collect();
     assert!(

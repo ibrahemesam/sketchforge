@@ -12,7 +12,7 @@ edit the project open in the running app; every change is one undo step and show
 
 - Start with get_basic_info (pages, artboards, sizes) and get_selection (what the user is \
 looking at). Use list_resources / open_file / create_file to pick a project.
-- For details read get_guide({ topic: \"sketch-rs-mcp-instructions\" }) once per session.
+- For details read get_guide({ topic: \"drawio-rs-mcp-instructions\" }) once per session.
 - pageId defaults to the page the user is viewing; pass it to work on another page without \
 switching the user's view. Node ids are opaque strings; never show them to the user.
 - Build UI with create_artboard, then write_html into it, one visual group per call (a header, \
@@ -271,7 +271,7 @@ pub fn definitions() -> Vec<Value> {
         ),
         tool(
             "get_guide",
-            "Read a guide. Topics: \"sketch-rs-mcp-instructions\" (read first), \"html\" (what \
+            "Read a guide. Topics: \"drawio-rs-mcp-instructions\" (read first), \"html\" (what \
              write_html supports), \"whiteboard\" (shapes, arrows, stickies, hand-drawn style).",
             json!({"topic": {"type": "string"}}),
             &["topic"],

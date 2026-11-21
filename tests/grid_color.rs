@@ -2,8 +2,8 @@
 
 mod common;
 
-use sketch_rs::io::drawio;
-use sketch_rs::model::{Color, DiagramSettings, Document};
+use drawio_rs::io::drawio;
+use drawio_rs::model::{Color, DiagramSettings, Document};
 
 fn doc_with_grid(color: Color) -> Document {
     Document {
@@ -47,9 +47,9 @@ fn grid_mesh_uses_the_custom_color() {
     let Some(gpu) = common::gpu() else {
         return;
     };
-    let mut red = sketch_rs::editor::Editor::default();
+    let mut red = drawio_rs::editor::Editor::default();
     red.doc.settings.grid_color = Some(Color::rgb(0xff, 0x00, 0x00));
-    let mut blue = sketch_rs::editor::Editor::default();
+    let mut blue = drawio_rs::editor::Editor::default();
     blue.doc.settings.grid_color = Some(Color::rgb(0x00, 0x00, 0xff));
     let a = common::render_canvas(gpu, &red);
     let b = common::render_canvas(gpu, &blue);

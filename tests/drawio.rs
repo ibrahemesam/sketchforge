@@ -2,17 +2,17 @@
 
 mod common;
 
+use drawio_rs::editor::Editor;
+use drawio_rs::geom::Rect;
+use drawio_rs::io::drawio;
+use drawio_rs::io::export::{self, Format, Scope, Spec};
+use drawio_rs::io::import;
+use drawio_rs::model::{Color, DefaultStyle, Document, Node, NodeId, NodeKind, Style, TextStyle};
 use serde_json::json;
-use sketch_rs::editor::Editor;
-use sketch_rs::geom::Rect;
-use sketch_rs::io::drawio;
-use sketch_rs::io::export::{self, Format, Scope, Spec};
-use sketch_rs::io::import;
-use sketch_rs::model::{Color, DefaultStyle, Document, Node, NodeId, NodeKind, Style, TextStyle};
 use std::path::{Path, PathBuf};
 
 fn tmp(tag: &str) -> PathBuf {
-    let d = std::env::temp_dir().join(format!("sketch-rs-drawio-{tag}-{:016x}", fastrand::u64(..)));
+    let d = std::env::temp_dir().join(format!("drawio-rs-drawio-{tag}-{:016x}", fastrand::u64(..)));
     std::fs::create_dir_all(&d).unwrap();
     d
 }
@@ -306,7 +306,7 @@ fn append_pages_keeps_layers_and_switches_to_the_first_new_page() {
 fn encrypted_files_are_refused_with_a_clear_message() {
     let dir = tmp("encrypted");
     let p = dir.join("locked.drawio");
-    let body = sketch_rs::assets::base64(b"Salted__not-a-real-drawio-stream");
+    let body = drawio_rs::assets::base64(b"Salted__not-a-real-drawio-stream");
     std::fs::write(
         &p,
         format!(r#"<mxfile><diagram id="d" name="Locked">{body}</diagram></mxfile>"#),
@@ -337,7 +337,7 @@ fn compressed_payloads_from_real_drawio_files_import() {
     let compressed = miniz_oxide::deflate::compress_to_vec(encoded.as_bytes(), 6);
     let xml = format!(
         r#"<mxfile><diagram id="d" name="Packed">{}</diagram></mxfile>"#,
-        sketch_rs::assets::base64(&compressed)
+        drawio_rs::assets::base64(&compressed)
     );
     let (pages, _) = drawio::import_str(&xml).unwrap();
     assert_eq!(pages[0].name, "Packed");
@@ -350,7 +350,7 @@ fn adaptive_colors_round_trip_through_drawio() {
     let id = NodeId(1);
     let mut n = Node::new(id, NodeKind::Rect, Rect::new(0.0, 0.0, 120.0, 80.0));
     n.label = "Adaptive".into();
-    n.style.fills = vec![sketch_rs::model::paint::Paint::solid(Color::rgb(
+    n.style.fills = vec![drawio_rs::model::paint::Paint::solid(Color::rgb(
         0xda, 0xe8, 0xfc,
     ))];
     n.style.stroke = Some(Color::rgb(0x6c, 0x8e, 0xbf));
@@ -408,11 +408,11 @@ fn scheme_name_round_trips_through_drawio() {
         Node::new(NodeId(1), NodeKind::Rect, Rect::new(0.0, 0.0, 120.0, 80.0)),
         None,
     );
-    let scheme = sketch_rs::model::scheme::SCHEMES
+    let scheme = drawio_rs::model::scheme::SCHEMES
         .iter()
         .find(|s| s.name == "Teal")
         .unwrap();
-    let report = ed.apply_scheme_scoped(scheme, sketch_rs::model::SchemeScope::Page);
+    let report = ed.apply_scheme_scoped(scheme, drawio_rs::model::SchemeScope::Page);
     assert_eq!(report.changed, 1);
     assert_eq!(ed.doc.settings.scheme.as_deref(), Some("Teal"));
     assert!(ed.doc.get(id).unwrap().style.stroke == Some(scheme.line));

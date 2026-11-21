@@ -257,7 +257,7 @@ pub fn install_menu() -> NativeMenu {
 
     let sep = PredefinedMenuItem::separator;
     let app_menu = Submenu::with_items(
-        "Sketch",
+        "drawio-rs",
         true,
         &[
             &PredefinedMenuItem::about(Some("About Sketch"), None),

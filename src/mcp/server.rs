@@ -36,7 +36,7 @@ pub fn tool_list() -> Vec<Tool> {
 /// Server identity, capabilities and instructions.
 pub fn info() -> ServerConfig {
     ServerConfig::new(ServerCapabilities::builder().enable_tools().build())
-        .with_server_info(Implementation::new("sketch-rs", env!("CARGO_PKG_VERSION")))
+        .with_server_info(Implementation::new("drawio-rs", env!("CARGO_PKG_VERSION")))
         .with_instructions(tools::INSTRUCTIONS)
 }
 
@@ -187,7 +187,7 @@ pub fn spawn(port: u16, dispatch: Dispatch) -> Result<Running, String> {
     let listener = std::net::TcpListener::bind(("127.0.0.1", port)).map_err(|e| {
         if e.kind() == std::io::ErrorKind::AddrInUse {
             format!(
-                "port {port} is in use (another Sketch instance?); set SKETCH_RS_MCP_PORT to use another"
+                "port {port} is in use (another Sketch instance?); set DRAWIO_RS_MCP_PORT to use another"
             )
         } else {
             format!("cannot listen on 127.0.0.1:{port}: {e}")
@@ -199,12 +199,12 @@ pub fn spawn(port: u16, dispatch: Dispatch) -> Result<Running, String> {
     let thread_ct = ct.clone();
     let rt = tokio::runtime::Builder::new_multi_thread()
         .worker_threads(2)
-        .thread_name("sketch-rs-mcp")
+        .thread_name("drawio-rs-mcp")
         .enable_all()
         .build()
         .map_err(|e| e.to_string())?;
     let thread = std::thread::Builder::new()
-        .name("sketch-rs-mcp-http".into())
+        .name("drawio-rs-mcp-http".into())
         .spawn(move || {
             rt.block_on(async move {
                 let listener = match tokio::net::TcpListener::from_std(listener) {

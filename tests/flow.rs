@@ -3,15 +3,15 @@
 mod common;
 
 use common::{editor, gpu, render_canvas};
-use sketch_rs::geom::{Rect, V2, v2};
-use sketch_rs::io::drawio;
-use sketch_rs::model::{
+use drawio_rs::geom::{Rect, V2, v2};
+use drawio_rs::io::drawio;
+use drawio_rs::model::{
     Color, Document, FlowDirection, FlowTiming, Head, LineJump, Node, NodeId, NodeKind, Route,
 };
-use sketch_rs::render::draw;
-use sketch_rs::render::scene;
-use sketch_rs::render::tess::Tess;
-use sketch_rs::ui::inspector;
+use drawio_rs::render::draw;
+use drawio_rs::render::scene;
+use drawio_rs::render::tess::Tess;
+use drawio_rs::ui::inspector;
 
 fn connector() -> Node {
     let mut n = Node::new(
@@ -79,7 +79,7 @@ fn flow_frames_render_different_pixels() {
     e.now_ms = 225.0;
     let unchanged = render_canvas(g, &e);
 
-    if let Ok(dir) = std::env::var("SKETCH_RS_FLOW_ARTIFACT_DIR") {
+    if let Ok(dir) = std::env::var("DRAWIO_RS_FLOW_ARTIFACT_DIR") {
         let dir = std::path::PathBuf::from(dir);
         std::fs::create_dir_all(&dir).unwrap();
         first.save(dir.join("flow-frame-start.png")).unwrap();
@@ -143,7 +143,7 @@ fn flow_defaults_keep_old_nodes_unchanged() {
 
 #[test]
 fn flow_timing_and_direction_change_the_dash_offset() {
-    use sketch_rs::model::FlowAnimation;
+    use drawio_rs::model::FlowAnimation;
     let pattern = [10.0, 10.0];
     let normal = FlowAnimation {
         enabled: true,

@@ -1,7 +1,7 @@
 //! MCP server: AI agents read and edit the canvas of the running app.
 //!
 //! Modeled on Paper's MCP server (behaviour notes in `analysis/paper-mcp.md`): the app serves
-//! MCP over streamable HTTP on loopback, and `sketch-rs-mcp` bridges stdio clients to it. Tool
+//! MCP over streamable HTTP on loopback, and `drawio-rs-mcp` bridges stdio clients to it. Tool
 //! calls are handed to the thread that owns the editor, so every change goes through the
 //! normal transaction / undo path and repaints the window.
 //!
@@ -20,7 +20,7 @@ pub mod tools;
 pub const DEFAULT_PORT: u16 = 29_980;
 pub const ENDPOINT: &str = "/mcp";
 
-/// The port to serve on / connect to: `$SKETCH_RS_MCP_PORT` (or `$PAPER_RS_MCP_PORT`), else
+/// The port to serve on / connect to: `$DRAWIO_RS_MCP_PORT` (or `$PAPER_RS_MCP_PORT`), else
 /// [`DEFAULT_PORT`].
 pub fn port() -> u16 {
     crate::env_var("MCP_PORT")

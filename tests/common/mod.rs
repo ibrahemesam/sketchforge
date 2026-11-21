@@ -1,11 +1,11 @@
 //! Helpers shared by the integration tests.
 #![allow(dead_code)]
 
-use sketch_rs::editor::{Button, Editor, InputEvent, Key, Modifiers};
-use sketch_rs::geom::{Camera, Rect, V2, v2};
-use sketch_rs::model::Color;
-use sketch_rs::render::gpu::Headless;
-use sketch_rs::render::scene;
+use drawio_rs::editor::{Button, Editor, InputEvent, Key, Modifiers};
+use drawio_rs::geom::{Camera, Rect, V2, v2};
+use drawio_rs::model::Color;
+use drawio_rs::render::gpu::Headless;
+use drawio_rs::render::scene;
 use std::path::PathBuf;
 use std::sync::OnceLock;
 
@@ -23,7 +23,7 @@ pub fn gpu() -> Option<&'static Headless> {
         }
         Err(e) => {
             assert!(
-                std::env::var_os("SKETCH_RS_REQUIRE_GPU").is_none(),
+                std::env::var_os("DRAWIO_RS_REQUIRE_GPU").is_none(),
                 "GPU required: {e}"
             );
             eprintln!("skipping GPU test: {e}");

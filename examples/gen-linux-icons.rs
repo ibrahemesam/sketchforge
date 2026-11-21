@@ -30,14 +30,14 @@ fn main() {
         let dir = root.join(format!("packaging/linux/icons/hicolor/{size}x{size}/apps"));
         std::fs::create_dir_all(&dir).expect("create the icon folder");
         image
-            .save(dir.join("sketch-rs.png"))
+            .save(dir.join("drawio-rs.png"))
             .expect("write the icon");
-        println!("wrote {}", dir.join("sketch-rs.png").display());
+        println!("wrote {}", dir.join("drawio-rs.png").display());
     }
 
     // The scalable copy is the source itself, so the theme can scale it to any size.
     let dir = root.join("packaging/linux/icons/hicolor/scalable/apps");
     std::fs::create_dir_all(&dir).expect("create the icon folder");
-    std::fs::copy(&source, dir.join("sketch-rs.svg")).expect("copy the scalable icon");
-    println!("wrote {}", dir.join("sketch-rs.svg").display());
+    std::fs::copy(&source, dir.join("drawio-rs.svg")).expect("copy the scalable icon");
+    println!("wrote {}", dir.join("drawio-rs.svg").display());
 }

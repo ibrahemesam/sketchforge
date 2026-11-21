@@ -1080,7 +1080,7 @@ fn font_info(a: &Args) -> ToolResult {
 fn guide(a: &Args) -> ToolResult {
     let t = a.req_str("topic")?;
     let s = match t {
-        "sketch-rs-mcp-instructions"
+        "drawio-rs-mcp-instructions"
         | "paper-rs-mcp-instructions"
         | "paper-mcp-instructions"
         | "instructions" => tools::GUIDE_INSTRUCTIONS,
@@ -1088,7 +1088,7 @@ fn guide(a: &Args) -> ToolResult {
         "whiteboard" | "excalidraw" => tools::GUIDE_WHITEBOARD,
         _ => {
             return Err(format!(
-                "unknown topic `{t}`; topics: sketch-rs-mcp-instructions, html, whiteboard"
+                "unknown topic `{t}`; topics: drawio-rs-mcp-instructions, html, whiteboard"
             ));
         }
     };
@@ -1350,7 +1350,7 @@ fn export_pdf(host: &mut dyn Host, a: &Args) -> ToolResult {
         None => {
             let dir = out_dir(a);
             std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
-            unique_path(&dir, project_name.as_deref().unwrap_or("Sketch"), "pdf")
+            unique_path(&dir, project_name.as_deref().unwrap_or("drawio-rs"), "pdf")
         }
     };
     let spec = Spec {

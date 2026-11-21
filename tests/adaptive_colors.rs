@@ -1,11 +1,11 @@
 //! Adaptive color resolution, storage, UI wiring and export tests for STY-22.
 
-use serde_json::json;
-use sketch_rs::io::{export, svg};
-use sketch_rs::model::{
+use drawio_rs::io::{export, svg};
+use drawio_rs::model::{
     AdaptiveColors, Color, ColorMode, DiagramSettings, Document, Node, NodeId, NodeKind, Paint,
     Style,
 };
+use serde_json::json;
 
 #[test]
 fn adaptive_modes_choose_the_expected_color() {
@@ -69,7 +69,7 @@ fn doc_with_dark_colors() -> Document {
     let mut n = Node::new(
         NodeId(1),
         NodeKind::Rect,
-        sketch_rs::geom::Rect::new(0.0, 0.0, 100.0, 60.0),
+        drawio_rs::geom::Rect::new(0.0, 0.0, 100.0, 60.0),
     );
     n.style.fills = vec![Paint::solid_pair(light, dark)];
     n.style.stroke = Some(light);

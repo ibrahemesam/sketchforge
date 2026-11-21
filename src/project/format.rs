@@ -11,14 +11,14 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use std::collections::{BTreeMap, HashMap};
 
-pub const PROJECT_FORMAT: &str = "sketch-rs-project";
-pub const PAGE_FORMAT: &str = "sketch-rs-page";
+pub const PROJECT_FORMAT: &str = "drawio-rs-project";
+pub const PAGE_FORMAT: &str = "drawio-rs-page";
 /// JSON bundle embedded in SVG and PNG exports so they can be reopened as native pages.
-pub const BUNDLE_FORMAT: &str = "sketch-rs-bundle";
+pub const BUNDLE_FORMAT: &str = "drawio-rs-bundle";
 /// Recovered bundle: project name, pages, and the active page id.
 pub type PageBundle = (String, Vec<PageData>, Option<String>);
-/// The single-file format of Sketch 0.1 (`.sketch-rs`), version 1. It migrates to a page.
-pub const LEGACY_FORMAT: &str = "sketch-rs";
+/// The single-file format of Sketch 0.1 (`.drawio-rs`), version 1. It migrates to a page.
+pub const LEGACY_FORMAT: &str = "drawio-rs";
 /// Tags from before the app was renamed from paper-rs to Sketch. Files carrying them still
 /// load, and are saved back under the current tags.
 pub const OLD_PROJECT_FORMAT: &str = "paper-rs-project";
@@ -227,7 +227,7 @@ const PAGE_STEPS: &[fn(Value) -> Value] =
 /// Formats accepted as older versions of a page.
 const PAGE_ALIASES: &[&str] = &[LEGACY_FORMAT, OLD_LEGACY_FORMAT, OLD_PAGE_FORMAT];
 
-/// v1 (`.sketch-rs` single file) → v2 page: new format tag and a page id.
+/// v1 (`.drawio-rs` single file) → v2 page: new format tag and a page id.
 fn page_v1_to_v2(mut v: Value) -> Value {
     v["format"] = json!(PAGE_FORMAT);
     if v.get("id").is_none() {
@@ -279,7 +279,7 @@ pub fn page_to_json(p: &PageData) -> String {
     serde_json::to_string_pretty(&PageFile::from_page(p)).expect("page serializes")
 }
 
-/// Parse a page file (or a legacy `.sketch-rs` document) of any supported version.
+/// Parse a page file (or a legacy `.drawio-rs` document) of any supported version.
 pub fn page_from_json(s: &str) -> Result<PageData, FormatError> {
     let v: Value = serde_json::from_str(s).map_err(FormatError::Json)?;
     let v = migrate(v, PAGE_FORMAT, PAGE_VERSION, PAGE_ALIASES, PAGE_STEPS)?;
@@ -426,14 +426,14 @@ mod tests {
             Err(FormatError::WrongFormat(_))
         ));
         assert!(matches!(
-            page_from_json(r#"{"format":"sketch-rs-page","version":99}"#),
+            page_from_json(r#"{"format":"drawio-rs-page","version":99}"#),
             Err(FormatError::TooNew { version: 99, .. })
         ));
         assert!(matches!(
-            Manifest::from_json(r#"{"format":"sketch-rs-page","version":1}"#),
+            Manifest::from_json(r#"{"format":"drawio-rs-page","version":1}"#),
             Err(FormatError::WrongFormat(_))
         ));
-        let broken = r#"{"format":"sketch-rs-page","version":2,"id":"a","name":"x","next_id":1,"root":[5],"nodes":[]}"#;
+        let broken = r#"{"format":"drawio-rs-page","version":2,"id":"a","name":"x","next_id":1,"root":[5],"nodes":[]}"#;
         assert!(matches!(
             page_from_json(broken),
             Err(FormatError::Invalid(_))
@@ -442,7 +442,7 @@ mod tests {
 
     #[test]
     fn v2_fill_migrates_to_fill_layers() {
-        let v2 = r##"{"format":"sketch-rs-page","version":2,"id":"a","name":"P","next_id":3,
+        let v2 = r##"{"format":"drawio-rs-page","version":2,"id":"a","name":"P","next_id":3,
             "root":[1,2],"nodes":[
             {"id":1,"name":"R","type":"rect","rect":{"x":0,"y":0,"w":5,"h":5},
              "style":{"fill":"#ff0000","stroke":null,"stroke_width":1,"corner_radius":2,"opacity":1}},
