@@ -456,7 +456,7 @@ documentation closeout completes the round.
 
 **Round 75 (committed 8088e64, pushed).** Verified IO-07 Export scale. Added io07_png_export_scale_changes_pixel_dimensions in tests/io.rs, asserting 1x/2x/4x PNG export pixel dimensions scale exactly. IO-07 moved from IMPLEMENTED to VERIFIED.
 
-**Round 76 (local, pending commit/push).** Verified STY-08 Line caps and joins. Added sty08_line_caps_and_joins_roundtrip in src/model/node.rs tests, confirming all Cap/Join values roundtrip through JSON on node style. STY-08 moved from IMPLEMENTED to VERIFIED. Targeted lib test, `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`, `git diff --check`, and `python3 .artifacts/check_parity_docs.py` passed before commit. Full `cargo test` and release build were not rerun.
+**Round 76 (committed 878c940, pushed).** Verified STY-08 Line caps and joins. Added sty08_line_caps_and_joins_roundtrip in src/model/node.rs tests, confirming all Cap/Join values roundtrip through JSON on node style. STY-08 moved from IMPLEMENTED to VERIFIED. Targeted lib test, `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`, `git diff --check`, and `python3 .artifacts/check_parity_docs.py` passed before commit. Full `cargo test` and release build were not rerun.
 
 **Scope.**
 

@@ -1,6 +1,6 @@
 # Sketch agent session state
 
-Last updated: 2026-11-21 (round 76 STY-08 caps/joins verified, local pending commit/push).
+Last updated: 2026-11-21 (round 76 STY-08 caps/joins verified, committed and pushed).
 
 ## Objective
 
@@ -709,7 +709,7 @@ TXT-17 Text shadow; TXT-15/TXT-17 moved from IMPLEMENTED to VERIFIED.
 Round 75 (committed 8088e64, pushed) verified IO-07 Export scale; IO-07 moved
 from IMPLEMENTED to VERIFIED.
 
-Round 76 (local, pending commit/push) verified STY-08 Line caps and joins:
+Round 76 (committed 878c940, pushed) verified STY-08 Line caps and joins:
 added sty08_line_caps_and_joins_roundtrip in src/model/node.rs tests, confirming
 all Cap/Join values roundtrip through JSON on node style. STY-08 moved from
 IMPLEMENTED to VERIFIED. Parity docs record VERIFIED 181, IMPLEMENTED 21,
