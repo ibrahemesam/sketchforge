@@ -1,6 +1,6 @@
 # Sketch agent session state
 
-Last updated: 2026-11-20 (round 67 context-sensitive tab filtering progress, local pending commit/push).
+Last updated: 2026-11-21 (round 68 context-sensitive style sections, local pending commit/push).
 
 ## Objective
 
@@ -677,19 +677,24 @@ Round 66 was committed as `cb6a98c` and pushed: stale IMPLEMENTED row UIX-01
 was closed as an evidence-only doc update against HEAD tabbed-inspector
 behavior and existing tests (UIX-01 VERIFIED).
 
-Round 67 (local, pending commit/push) advanced UIX-02 with selection-aware
-element tab computation in `src/ui/inspector.rs` and `src/ui/mod.rs`: the Text
-tab is omitted when no selected element carries editable text or a label, and
-the active tab is clamped to a valid tab for the current selection context.
-Added/updated ui tests in src/ui/mod.rs (inspector_tabs_follow_selection_presence,
-inspector_element_tabs_depend_on_text_capability). UIX-02 remains IN_PROGRESS
+Round 67 was committed as `a187293` and pushed: advanced UIX-02 with
+selection-aware element tab computation in `src/ui/inspector.rs` and
+`src/ui/mod.rs`; Text tab omitted when no selected element carries editable
+text or a label and active tab clamped to current selection context.
+
+Round 68 (local, pending commit/push) advanced UIX-02 by making Style-tab
+connector/sticky/sketch sections resolve from any selected element, not only the
+first selected node, so mixed selections that include a connector still show the
+Arrow section. Added inspector tests covering connector-only style sections
+(Arrow shown, Fill hidden), text-only style sections (Arrow and Fill hidden),
+and mixed rect+connector selection (Arrow shown). UIX-02 remains IN_PROGRESS
 because connector and standalone text-layer selections still receive the same
-tab set and empty/irrelevant sections within tabs are not fully eliminated.
-Parity docs record VERIFIED 173, IMPLEMENTED 29, IN_PROGRESS 1, ANALYZED 0,
-DISCOVERED 1 and BLOCKED 27. `cargo fmt --check`,
-`cargo clippy --all-targets -- -D warnings`, targeted lib/ui tests,
-`git diff --check`, and `python3 .artifacts/check_parity_docs.py` passed before
-commit. Full `cargo test` and release build were not rerun.
+top-level tab set because both have text targets; some irrelevant controls/
+sections may remain in non-Style tabs. Parity docs record VERIFIED 173,
+IMPLEMENTED 29, IN_PROGRESS 1, ANALYZED 0, DISCOVERED 1 and BLOCKED 27.
+`cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`, targeted lib
+tests, `git diff --check`, and `python3 .artifacts/check_parity_docs.py` passed
+before commit. Full `cargo test` and release build were not rerun.
 
 ## Blockers
 
@@ -705,14 +710,15 @@ commit. Full `cargo test` and release build were not rerun.
 
 ## Exact next task
 
-Commit and `git push --quiet` the round 67 context-sensitive tab filtering
+Commit and `git push --quiet` the round 68 context-sensitive style-section
 progress (code + tests + parity/docs updates) on `agent/drawio-features`,
-keeping checks passing. After pushing, continue verifying remaining
-stale/closeable rows at HEAD (UIX-02 remains IN_PROGRESS; assess for further
-concrete, testable progress toward connector-vs-text-layer tab differentiation
-and elimination of empty sections, capturing a failing test before real code
-fixes; UIX-12 appears genuinely unaudited/absent as specified). Otherwise close
-or correct rows as evidence-only with cited HEAD identifiers and update
+keeping checks passing. After pushing, continue assessing UIX-02 (still
+IN_PROGRESS): the stated acceptance asks for a different tab set for connector
+and text-layer selections with no empty sections; connector and text nodes both
+have text targets so tab differentiation needs a careful, user-meaningful
+decision. Capture a failing test before real code fixes. Assess UIX-12 for any
+genuine HEAD evidence (remains DISCOVERED/unaudited). Otherwise close or
+correct stale rows as evidence-only with cited HEAD identifiers and update
 verification/session docs. Do not restart completed rounds. Keep blocked/
 deferred items blocked. No release, tag, or PR.
 

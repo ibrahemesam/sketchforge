@@ -2126,19 +2126,33 @@ fn style_tab(
     opacity_section(ui, ed, st, ids, first);
     separator(ui);
     effects_section(ui, ed, st, ids, first);
-    if matches!(first.kind, NodeKind::Connector { .. }) {
-        separator(ui);
-        arrow_section(ui, ed, st, ids, first);
-    }
-    if matches!(first.kind, NodeKind::Sticky { .. }) {
-        separator(ui);
-        sticky_section(ui, ed, st, ids, first);
-    }
-    if first.style.sketch.is_some_and(|s| s)
-        || (first.style.sketch.is_none() && first.style.rough.is_some())
+    if let Some(conn) = ids
+        .iter()
+        .find_map(|id| ed.doc.get(*id).filter(|n| n.is_connector()).cloned())
     {
         separator(ui);
-        sketch_section(ui, ed, st, ids, first);
+        arrow_section(ui, ed, st, ids, &conn);
+    }
+    if let Some(sticky) = ids.iter().find_map(|id| {
+        ed.doc
+            .get(*id)
+            .filter(|n| matches!(n.kind, NodeKind::Sticky { .. }))
+            .cloned()
+    }) {
+        separator(ui);
+        sticky_section(ui, ed, st, ids, &sticky);
+    }
+    if let Some(sketchy) = ids.iter().find_map(|id| {
+        ed.doc
+            .get(*id)
+            .filter(|n| {
+                n.style.sketch.is_some_and(|s| s)
+                    || (n.style.sketch.is_none() && n.style.rough.is_some())
+            })
+            .cloned()
+    }) {
+        separator(ui);
+        sketch_section(ui, ed, st, ids, &sketchy);
     }
     separator(ui);
     style_actions(ui, ed, st, vis, ids, first);
@@ -6083,5 +6097,176 @@ mod tests {
         assert_eq!(ed.doc.get(id).unwrap().style.opacity, 0.5);
         assert!(ed.doc.get(id).unwrap().style.glass);
         assert_eq!(ed.doc.get(id).unwrap().style.dash, vec![4.0, 2.0]);
+    }
+
+    fn panel_text_for(ed: &mut Editor, st: &mut UiState, width: f32, height: f32) -> String {
+        fn collect(shape: &egui::Shape, out: &mut String) {
+            match shape {
+                egui::Shape::Text(text) => {
+                    out.push_str(&text.galley.job.text);
+                    out.push('\n');
+                }
+                egui::Shape::Vec(shapes) => {
+                    for shape in shapes {
+                        collect(shape, out);
+                    }
+                }
+                _ => {}
+            }
+        }
+        let ctx = egui::Context::default();
+        crate::ui::setup_style(&ctx);
+        let input = egui::RawInput {
+            screen_rect: Some(egui::Rect::from_min_size(
+                egui::Pos2::ZERO,
+                egui::vec2(width, height),
+            )),
+            ..Default::default()
+        };
+        let mut out = ctx.run_ui(input, |ui| panel(ui, ed, st));
+        out.textures_delta.clear();
+        let mut text = String::new();
+        for clipped in &out.shapes {
+            collect(&clipped.shape, &mut text);
+        }
+        text
+    }
+
+    #[test]
+    fn style_tab_shows_connector_sections_for_connector_selection() {
+        let mut ed = Editor::default();
+        let a = ed.add_node(
+            Node::new(
+                NodeId(1),
+                NodeKind::Rect,
+                crate::geom::Rect::new(0.0, 0.0, 100.0, 60.0),
+            ),
+            None,
+        );
+        let b = ed.add_node(
+            Node::new(
+                NodeId(2),
+                NodeKind::Rect,
+                crate::geom::Rect::new(300.0, 0.0, 100.0, 60.0),
+            ),
+            None,
+        );
+        let bind = |node| crate::model::Binding {
+            node,
+            fixed: crate::geom::v2(0.5, 0.5),
+            inside: false,
+            floating: false,
+        };
+        let conn = ed.add_node(
+            Node::new(
+                NodeId(3),
+                NodeKind::Connector {
+                    points: vec![crate::geom::v2(0.0, 30.0), crate::geom::v2(400.0, 30.0)],
+                    start: Some(bind(a)),
+                    end: Some(bind(b)),
+                    route: crate::model::Route::Straight,
+                    start_head: crate::model::Head::None,
+                    end_head: crate::model::Head::Arrow,
+                    jump: crate::model::LineJump::None,
+                    jump_size: 6.0,
+                },
+                crate::geom::Rect::new(0.0, 0.0, 400.0, 60.0),
+            ),
+            None,
+        );
+        ed.selection = vec![conn];
+        let mut st = UiState {
+            inspector_tab: crate::ui::InspectorTab::Style,
+            ..Default::default()
+        };
+        let text = panel_text_for(&mut ed, &mut st, 320.0, 1600.0);
+        assert!(text.contains("Arrow"), "{text}");
+        assert!(!text.contains("Fill\nAuto"), "{text}");
+    }
+
+    #[test]
+    fn style_tab_hides_arrow_and_fill_for_text_only_selection() {
+        let mut ed = Editor::default();
+        let text_id = ed.add_node(
+            Node::new(
+                NodeId(1),
+                NodeKind::Text {
+                    text: "Hello".into(),
+                    font_size: 16.0,
+                    auto_width: true,
+                    align: crate::model::TextAlign::Left,
+                },
+                crate::geom::Rect::new(0.0, 0.0, 120.0, 24.0),
+            ),
+            None,
+        );
+        ed.selection = vec![text_id];
+        let mut st = UiState {
+            inspector_tab: crate::ui::InspectorTab::Style,
+            ..Default::default()
+        };
+        let text = panel_text_for(&mut ed, &mut st, 320.0, 1600.0);
+        assert!(!text.contains("\nArrow\n"), "{text}");
+        assert!(!text.contains("Fill\nAuto"), "{text}");
+    }
+
+    #[test]
+    fn mixed_selection_shows_arrow_section_when_any_connector_selected() {
+        let mut ed = Editor::default();
+        let rect = ed.add_node(
+            Node::new(
+                NodeId(1),
+                NodeKind::Rect,
+                crate::geom::Rect::new(0.0, 0.0, 100.0, 60.0),
+            ),
+            None,
+        );
+        let a = ed.add_node(
+            Node::new(
+                NodeId(2),
+                NodeKind::Rect,
+                crate::geom::Rect::new(200.0, 0.0, 100.0, 60.0),
+            ),
+            None,
+        );
+        let b = ed.add_node(
+            Node::new(
+                NodeId(3),
+                NodeKind::Rect,
+                crate::geom::Rect::new(400.0, 0.0, 100.0, 60.0),
+            ),
+            None,
+        );
+        let bind = |node| crate::model::Binding {
+            node,
+            fixed: crate::geom::v2(0.5, 0.5),
+            inside: false,
+            floating: false,
+        };
+        let conn = ed.add_node(
+            Node::new(
+                NodeId(4),
+                NodeKind::Connector {
+                    points: vec![crate::geom::v2(200.0, 30.0), crate::geom::v2(500.0, 30.0)],
+                    start: Some(bind(a)),
+                    end: Some(bind(b)),
+                    route: crate::model::Route::Straight,
+                    start_head: crate::model::Head::None,
+                    end_head: crate::model::Head::Arrow,
+                    jump: crate::model::LineJump::None,
+                    jump_size: 6.0,
+                },
+                crate::geom::Rect::new(200.0, 0.0, 300.0, 60.0),
+            ),
+            None,
+        );
+        // Rect is first, connector is second - arrow section should still show.
+        ed.selection = vec![rect, conn];
+        let mut st = UiState {
+            inspector_tab: crate::ui::InspectorTab::Style,
+            ..Default::default()
+        };
+        let text = panel_text_for(&mut ed, &mut st, 320.0, 1600.0);
+        assert!(text.contains("Arrow"), "{text}");
     }
 }
