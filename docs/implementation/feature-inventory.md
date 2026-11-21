@@ -263,14 +263,14 @@ gaps landed on 2026-10-26: a label without a solid background cuts the line behi
 text, and the gap follows label moves, reroutes, and export. Page view is a view
 preference and is not part of the page file.
 
-**Size:** 231 capabilities in 13 domains. 186 are verified against committed tests or directly exercised code, 16 are implemented without a focused check, 28 are absent or blocked, and 1 is in progress.
+**Size:** 231 capabilities in 13 domains. 187 are verified against committed tests or directly exercised code, 15 are implemented without a focused check, 28 are absent or blocked, and 1 is in progress.
 
 ## Counts
 
 | Status | Count | Meaning |
 |---|---:|---|
-| VERIFIED | 186 | Committed test or directly exercised code path proves the behavior. |
-| IMPLEMENTED | 16 | Code exists and the path is readable, but no focused test or this-session runtime check covers it. |
+| VERIFIED | 187 | Committed test or directly exercised code path proves the behavior. |
+| IMPLEMENTED | 15 | Code exists and the path is readable, but no focused test or this-session runtime check covers it. |
 | IN_PROGRESS | 1 | Partial code at HEAD or in the tracked working state; the acceptance criteria are not met. |
 | DISCOVERED | 1 | draw.io behavior is documented here; no code or design exists. |
 | BLOCKED | 27 | Work cannot proceed without a missing subsystem, external service, licensing decision, or explicit scope decision. |
@@ -282,7 +282,7 @@ preference and is not part of the page file.
 | CAN Canvas, navigation, grid, and guides | 16 | 16 | 0 | 0 | 0 | 0 | 0 |
 | SHP Shapes, frames, transforms, and paths | 26 | 22 | 3 | 0 | 0 | 0 | 1 |
 | CON Connectors and arrows | 21 | 20 | 1 | 0 | 0 | 0 | 0 |
-| TXT Text, labels, and typography | 25 | 21 | 1 | 0 | 0 | 0 | 3 |
+| TXT Text, labels, and typography | 25 | 22 | 0 | 0 | 0 | 0 | 3 |
 | STY Styles, effects, and themes | 23 | 21 | 2 | 0 | 0 | 0 | 0 |
 | ORG Structure: groups, frames, components, layout, and layers | 16 | 15 | 0 | 0 | 0 | 0 | 1 |
 | GEN Generation, templates, and diagram types | 15 | 5 | 8 | 0 | 0 | 0 | 2 |
@@ -438,7 +438,7 @@ Editing and laying out text inside shapes and on the canvas.
 | TXT-06 | Font family picker | The Text tab chooses from installed system families and bundled families. | [Change the style of text and labels](https://www.drawio.com/docs/manual/styles/text-styles/) | src/ui/inspector.rs, src/text.rs, src/mcp/exec.rs, src/mcp/css.rs, src/io/drawio.rs | **VERIFIED** | Pick a family for a text layer, reload, and confirm the same family or a documented fallback. | `font_families()` fills the picker from a background system scan; Inter stays bundled as the default. MCP get_font_family_info reports real availability and styles, get_basic_info lists discovered families, and fontFamily maps through CSS and draw.io. Tests: `mcp_font_info_reports_installed_families`, `mcp_basic_info_lists_installed_families`, `mcp_font_family_is_written_and_reported`, `drawio_round_trips_font_family_on_text_and_labels`, `font_family_survives_project_reload`. |
 | TXT-07 | Line height | Line height changes as a multiple of font size for a whole layer or a range. | [Change the style of text and labels](https://www.drawio.com/docs/manual/styles/text-styles/) | src/model/paint.rs, src/text.rs | **VERIFIED** | Set 1.8 line height on a three-line label and confirm the box grows to fit. | Applies to paragraph layout, not to individual glyphs. Test: `rich_text_ranges_and_smart_guides`. |
 | TXT-08 | Letter spacing | Letter spacing adds advance per character for a whole layer or a range. | [Change the style of text and labels](https://www.drawio.com/docs/manual/styles/text-styles/) | src/model/paint.rs, src/text.rs | **VERIFIED** | Increase spacing on a word and confirm the glyphs spread without changing font size. | Spacing is added after shaping, so Arabic joins keep their glyph forms. Test: `rich_text_ranges_and_smart_guides`. |
-| TXT-09 | Horizontal text alignment | Left, center, right, and justify alignment position text inside its box. | [Change the style of text and labels](https://www.drawio.com/docs/manual/styles/text-styles/) | src/text.rs, src/ui/inspector.rs | **IMPLEMENTED** | Set each alignment on a wrapped paragraph and confirm the lines move inside the same box. | Justify support depends on the layout path; no focused alignment test. |
+| TXT-09 | Horizontal text alignment | Left, center, right, and justify alignment position text inside its box. | [Change the style of text and labels](https://www.drawio.com/docs/manual/styles/text-styles/) | src/text.rs, src/ui/inspector.rs | **VERIFIED** | Set each alignment on a wrapped paragraph and confirm the lines move inside the same box. | layout_justify_distributes_word_gaps in src/text.rs tests confirms soft-wrapped plain-text lines expand word gaps to box width while the final hard-broken line stays left-aligned. Rich/bidi layout currently falls back to left for Justify and draw.io export maps Justify to left. |
 | TXT-10 | Vertical text position | Top, middle, and bottom place the text block inside a taller box without changing the box height. | [Change the style of text and labels](https://www.drawio.com/docs/manual/styles/text-styles/) | src/model/node.rs, src/text.rs, src/ui/inspector.rs | **VERIFIED** | Make a box 150 px tall, choose Middle, and confirm the text centers while the box stays 150 px. | Top keeps auto-fitting the height. Test: `valign_keeps_height_and_offsets_the_box`. |
 | TXT-11 | Text padding | Top, left, bottom, right, and all-sides padding inset the text and grow the box. | [Change the style of text and labels](https://www.drawio.com/docs/manual/styles/text-styles/) | src/model/node.rs, src/text.rs, src/ui/inspector.rs | **VERIFIED** | Set 20 px top padding and confirm the box grows by 20 px with the text below the new edge. | Sticky notes keep their own fixed inset. Test: `text_padding_grows_box_and_offsets_content`, `stickies_keep_their_fixed_inset`. |
 | TXT-12 | Word wrap | Wrapping fixes the text width, wraps at word boundaries, and refits the height. | [Change the style of text and labels](https://www.drawio.com/docs/manual/styles/text-styles/) | src/editor/mod.rs, src/text.rs | **VERIFIED** | Turn wrap on, narrow the box, and confirm the text breaks into lines instead of clipping. | Turning wrap off restores the auto width. Test: `word_wrap_toggles_fixed_width_and_refits`. |

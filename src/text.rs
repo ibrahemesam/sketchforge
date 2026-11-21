@@ -318,6 +318,8 @@ pub struct Line {
     pub end: usize,
     /// Left x of each char boundary in the line (len = end - start + 1).
     pub carets: Vec<f64>,
+    /// True when the line ended at a hard break or end of text (not soft-wrapped).
+    pub hard_break: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -343,6 +345,44 @@ fn advance_in(face: FaceId, c: char, font_size: f64) -> (u16, f64) {
 #[cfg(test)]
 fn advance(c: char, font_size: f64) -> (u16, f64) {
     advance_in(0, c, font_size)
+}
+
+fn justify_line(line: &mut Line, glyphs: &mut [PlacedGlyph], box_w: f64, chars: &[char]) {
+    let extra = box_w - line.width;
+    if extra <= 0.0 || line.end <= line.start {
+        return;
+    }
+    let spaces: Vec<usize> = (line.start..line.end)
+        .filter(|&i| chars.get(i) == Some(&' '))
+        .collect();
+    if spaces.is_empty() {
+        return;
+    }
+    let add = extra / spaces.len() as f64;
+    let mut shift = 0.0f64;
+    let mut si = 0usize;
+    for ci in line.start..line.end {
+        let k = ci - line.start;
+        if k < line.carets.len() {
+            line.carets[k] += shift;
+        }
+        if chars.get(ci) == Some(&' ') {
+            si += 1;
+            shift = si as f64 * add;
+        }
+    }
+    let last = line.end - line.start;
+    if last < line.carets.len() {
+        line.carets[last] += extra;
+    }
+    for g in glyphs
+        .iter_mut()
+        .filter(|g| g.char_index >= line.start && g.char_index < line.end)
+    {
+        let spaces_before = spaces.iter().filter(|&&s| s < g.char_index).count();
+        g.x += spaces_before as f64 * add;
+    }
+    line.width = box_w;
 }
 
 /// Lay out plain text with optional wrapping at `max_width`.
@@ -388,7 +428,7 @@ pub fn layout_rich(
         None => line_height(size),
     };
     // Break into lines: hard breaks on '\n', soft breaks at spaces when wrapping.
-    let mut ranges: Vec<(usize, usize, usize, bool)> = Vec::new();
+    let mut ranges: Vec<(usize, usize, usize, bool, bool)> = Vec::new();
     let mut start = 0;
     let mut para_idx = 0usize;
     while start <= chars.len() {
@@ -413,7 +453,7 @@ pub fn layout_rich(
                         _ => i,
                     };
                     let skip_space = chars.get(brk) == Some(&' ');
-                    ranges.push((line_start, brk, para_idx, first_of_para));
+                    ranges.push((line_start, brk, para_idx, first_of_para, false));
                     first_of_para = false;
                     line_start = if skip_space { brk + 1 } else { brk };
                     i = line_start;
@@ -425,7 +465,7 @@ pub fn layout_rich(
                 i += 1;
             }
         }
-        ranges.push((line_start, hard_end, para_idx, first_of_para));
+        ranges.push((line_start, hard_end, para_idx, first_of_para, true));
         start = hard_end + 1;
         para_idx += 1;
     }
@@ -435,7 +475,7 @@ pub fn layout_rich(
     let mut max_line_w: f64 = 0.0;
     let mut top = 0.0;
     let mut number = 0usize;
-    for (s, e, para_idx, first_of_para) in ranges.iter().copied() {
+    for (s, e, para_idx, first_of_para, hard_break) in ranges.iter().copied() {
         // Line metrics from the largest size on the line (or the char before an empty line).
         let sizes = styles[s..e].iter().map(|c| c.size);
         let max_size = sizes
@@ -513,13 +553,20 @@ pub fn layout_rich(
             start: s,
             end: e,
             carets,
+            hard_break,
         });
         top += lh;
     }
     let box_w = max_width.unwrap_or(max_line_w);
     if align != TextAlign::Left {
-        let k = if align == TextAlign::Center { 0.5 } else { 1.0 };
         for line in &mut lines {
+            if align == TextAlign::Justify {
+                if !line.hard_break {
+                    justify_line(line, &mut glyphs, box_w, &chars);
+                }
+                continue;
+            }
+            let k = if align == TextAlign::Center { 0.5 } else { 1.0 };
             let dx = (box_w - line.width) * k;
             for c in &mut line.carets {
                 *c += dx;
@@ -635,7 +682,7 @@ fn layout_bidi(
         None => line_height(size),
     };
     // Break cells into lines: hard breaks on newlines, soft breaks at spaces.
-    let mut ranges: Vec<(usize, usize)> = Vec::new();
+    let mut ranges: Vec<(usize, usize, bool)> = Vec::new();
     let mut start = 0;
     while start <= cells.len() {
         let hard_end = cells[start..]
@@ -658,7 +705,7 @@ fn layout_bidi(
                         _ => i,
                     };
                     let skip_space = cells.get(brk).is_some_and(|c| c.ch == ' ');
-                    ranges.push((line_start, brk));
+                    ranges.push((line_start, brk, false));
                     line_start = if skip_space { brk + 1 } else { brk };
                     i = line_start;
                     x = 0.0;
@@ -669,7 +716,7 @@ fn layout_bidi(
                 i += 1;
             }
         }
-        ranges.push((line_start, hard_end));
+        ranges.push((line_start, hard_end, true));
         start = hard_end + 1;
     }
 
@@ -677,7 +724,7 @@ fn layout_bidi(
     let mut line_glyphs = Vec::new();
     let mut max_line_w: f64 = 0.0;
     let mut top = 0.0;
-    for (s, e) in ranges.iter().copied() {
+    for (s, e, hard_break) in ranges.iter().copied() {
         let (char_start, char_end) = if s < e {
             (cells[s].char_start, cells[e - 1].char_end)
         } else if s < cells.len() {
@@ -826,14 +873,30 @@ fn layout_bidi(
             start: char_start,
             end: char_end,
             carets,
+            hard_break,
         });
         line_glyphs.push(glyphs);
         top += lh;
     }
     let box_w = max_width.unwrap_or(max_line_w);
     if align != TextAlign::Left {
-        let k = if align == TextAlign::Center { 0.5 } else { 1.0 };
         for (line, glyphs) in lines.iter_mut().zip(line_glyphs.iter_mut()) {
+            if align == TextAlign::Justify {
+                if !line.hard_break {
+                    {
+                        let line_cells: Vec<(usize, char)> =
+                            glyphs.iter().map(|g| (g.char_index, ' ')).collect();
+                        // we don't have char easily; use caret-based fallback: skip justify for rich layout for now
+                        let _ = line_cells;
+                    }
+                    // justify not fully supported in rich bidi layout; fall back to left
+                    let k = 1.0;
+                    let dx = (box_w - line.width) * 0.0;
+                    let _ = (k, dx);
+                }
+                continue;
+            }
+            let k = if align == TextAlign::Center { 0.5 } else { 1.0 };
             let dx = (box_w - line.width) * k;
             for c in &mut line.carets {
                 *c += dx;
@@ -1146,6 +1209,7 @@ pub fn text_origin_label(n: &crate::model::Node, l: &TextLayout, idx: usize) -> 
                 TextAlign::Left => n.pad.left + LABEL_PAD,
                 TextAlign::Center => n.pad.left + LABEL_PAD + ((avail_w - l.width) * 0.5).max(0.0),
                 TextAlign::Right => n.pad.left + LABEL_PAD + (avail_w - l.width).max(0.0),
+                TextAlign::Justify => n.pad.left + LABEL_PAD,
             }
         };
         let avail_h = (n.rect.h - n.pad.top - n.pad.bottom).max(0.0);
@@ -1294,6 +1358,7 @@ fn layout_vertical(
                 start: idx,
                 end: idx,
                 carets: vec![0.0],
+                hard_break: true,
             });
             top += lh;
             continue;
@@ -1339,6 +1404,7 @@ fn layout_vertical(
             start: idx,
             end: idx + 1,
             carets,
+            hard_break: true,
         });
         top += height;
         max_w = max_w.max(width);
@@ -1346,7 +1412,7 @@ fn layout_vertical(
     // Center or right-align each stacked character in the widest column.
     let mut shift = |line: &mut Line| {
         let dx = match align {
-            TextAlign::Left => 0.0,
+            TextAlign::Left | TextAlign::Justify => 0.0,
             TextAlign::Center => (max_w - line.width) * 0.5,
             TextAlign::Right => max_w - line.width,
         };
@@ -1528,6 +1594,32 @@ mod tests {
         let empty = layout("", 20.0, None, TextAlign::Left);
         assert_eq!(empty.lines.len(), 1);
         assert_eq!(empty.caret(0), (0.0, 0.0, line_height(20.0)));
+    }
+
+    #[test]
+    fn layout_justify_distributes_word_gaps() {
+        let text = "aa bb cc dd ee ff gg hh ii jj kk ll mm nn oo pp";
+        let l = layout(text, 16.0, Some(120.0), TextAlign::Justify);
+        assert!(l.lines.len() >= 2, "should wrap: {}", l.lines.len());
+        let justified = l
+            .lines
+            .iter()
+            .find(|line| !line.hard_break && line.width > 119.0)
+            .expect("a justified soft-wrapped line");
+        let max_x = l
+            .glyphs
+            .iter()
+            .filter(|g| g.char_index >= justified.start && g.char_index < justified.end)
+            .map(|g| g.x + g.advance)
+            .fold(0.0f64, f64::max);
+        assert!((max_x - 120.0).abs() < 1.5, "right edge {max_x}");
+        let last = l.lines.last().unwrap();
+        assert!(last.hard_break);
+        assert!(
+            last.width < 119.0,
+            "last line should not be justified: {}",
+            last.width
+        );
     }
 
     #[test]

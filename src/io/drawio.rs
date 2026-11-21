@@ -2290,6 +2290,7 @@ fn style_options(out: &mut String, style: &mut String, n: &Node) {
                     TextAlign::Left => "left",
                     TextAlign::Center => "center",
                     TextAlign::Right => "right",
+                    TextAlign::Justify => "left",
                 }
             );
         }
@@ -2335,6 +2336,7 @@ fn style_options(out: &mut String, style: &mut String, n: &Node) {
                 TextAlign::Left => "left",
                 TextAlign::Center => "center",
                 TextAlign::Right => "right",
+                TextAlign::Justify => "left",
             }
         );
     }

@@ -356,6 +356,7 @@ pub enum TextAlign {
     Left,
     Center,
     Right,
+    Justify,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

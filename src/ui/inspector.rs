@@ -5143,6 +5143,7 @@ fn text_tab(
                 (TextAlign::Left, theme::Icon::AlignLeft, "Align left"),
                 (TextAlign::Center, theme::Icon::AlignHCenter, "Align center"),
                 (TextAlign::Right, theme::Icon::AlignRight, "Align right"),
+                (TextAlign::Justify, theme::Icon::AlignJustify, "Justify"),
             ] {
                 let active = aligns.iter().all(|x| *x == a);
                 if icon_btn(ui, ic, active, tip) {

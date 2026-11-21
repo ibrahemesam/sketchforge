@@ -1332,6 +1332,7 @@ pub fn computed(n: &Node, parent_layout: Option<&AutoLayout>, is_root: bool) -> 
                     TextAlign::Left => "left",
                     TextAlign::Center => "center",
                     TextAlign::Right => "right",
+                    TextAlign::Justify => "justify",
                 }
                 .into(),
             );

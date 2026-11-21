@@ -336,6 +336,7 @@ pub enum Icon {
     AlignLeft,
     AlignHCenter,
     AlignRight,
+    AlignJustify,
     AlignTop,
     AlignVCenter,
     AlignBottom,
@@ -587,17 +588,20 @@ pub fn paint_icon(painter: &egui::Painter, rect: Rect, icon: Icon, color: Color3
             ]);
             painter.circle_stroke(pt(10.5, 5.8), 1.1 * u, st);
         }
-        Icon::AlignLeft | Icon::AlignHCenter | Icon::AlignRight => {
-            let x = match icon {
-                Icon::AlignLeft => 2.5,
-                Icon::AlignHCenter => 8.0,
-                _ => 13.5,
-            };
-            line(&[pt(x, 1.5), pt(x, 14.5)]);
+        Icon::AlignLeft | Icon::AlignHCenter | Icon::AlignRight | Icon::AlignJustify => {
+            if icon != Icon::AlignJustify {
+                let x = match icon {
+                    Icon::AlignLeft => 2.5,
+                    Icon::AlignHCenter => 8.0,
+                    _ => 13.5,
+                };
+                line(&[pt(x, 1.5), pt(x, 14.5)]);
+            }
             let bar = |y0: f32, w: f32| {
                 let (x0, x1) = match icon {
                     Icon::AlignLeft => (4.0, 4.0 + w),
                     Icon::AlignHCenter => (8.0 - w / 2.0, 8.0 + w / 2.0),
+                    Icon::AlignJustify => (2.5, 13.5),
                     _ => (12.0 - w, 12.0),
                 };
                 painter.rect_filled(
@@ -606,8 +610,13 @@ pub fn paint_icon(painter: &egui::Painter, rect: Rect, icon: Icon, color: Color3
                     color,
                 );
             };
+            let w2 = if icon == Icon::AlignJustify {
+                11.0
+            } else {
+                5.0
+            };
             bar(4.0, 8.0);
-            bar(9.0, 5.0);
+            bar(9.0, w2);
         }
         Icon::AlignTop | Icon::AlignVCenter | Icon::AlignBottom => {
             let y = match icon {
