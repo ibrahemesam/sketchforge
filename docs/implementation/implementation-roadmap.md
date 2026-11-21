@@ -476,6 +476,8 @@ documentation closeout completes the round.
 
 **SHP-11/12/13 verification (committed f5e091a, pushed).** Added shape_arrange_tab_exposes_position_size_and_size_tools in src/ui/inspector.rs tests confirming Arrange tab exposes X/Y/W/H, Constrain Proportions, and Copy Size controls for shape selections. SHP-11/12/13 moved from IMPLEMENTED to VERIFIED.
 
+**STY-17/18 verification (local, pending commit/push).** Added style_tab_exposes_palette_section in src/ui/inspector.rs tests; cited existing selected_style_tab_exposes_scheme_scope and editor scheme apply/preview tests. STY-17/18 moved from IMPLEMENTED to VERIFIED with honest notes on actual palette/scheme counts.
+
 **Scope.**
 
 - A selection context resolver that classifies the current selection as document, single

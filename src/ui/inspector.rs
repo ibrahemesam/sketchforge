@@ -6433,4 +6433,10 @@ mod tests {
         assert!(text.contains("Constrain Proportions"), "{text}");
         assert!(text.contains("Copy Size"), "{text}");
     }
+
+    #[test]
+    fn style_tab_exposes_palette_section() {
+        let text = tab_panel_text(crate::ui::InspectorTab::Style, "", Some(NodeId(9)));
+        assert!(text.contains("Palette"), "{text}");
+    }
 }
