@@ -91,6 +91,7 @@ impl App {
             st: UiState {
                 options,
                 welcome: show_welcome.then(ui::WelcomeUi::default),
+                show_library: true,
                 ..UiState::default()
             },
             ctx,
