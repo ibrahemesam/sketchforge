@@ -1,6 +1,6 @@
 # Sketch agent session state
 
-Last updated: 2026-11-21 (round 70 IO-06 transparent PNG verified, committed and pushed).
+Last updated: 2026-11-21 (round 71 SHP-10 flip verified, local pending commit/push).
 
 ## Objective
 
@@ -692,12 +692,14 @@ Style, Text, Arrange, Data, giving different tab sets for the typical connector
 vs text-layer case. UIX-02 remains IN_PROGRESS.
 
 Round 70 (committed 848ac44, pushed) verified IO-06 Transparent PNG background:
-added transparent_png_export_omits_page_background in tests/io.rs asserting
-transparent page export produces alpha-0 corner pixels while keeping visible
-content, and strengthened embedded_svg_and_png_reopen_all_pages with a
-transparent-pixel assertion. IO-06 moved from IMPLEMENTED to VERIFIED.
-Parity docs record VERIFIED 174, IMPLEMENTED 28, IN_PROGRESS 1, ANALYZED 0,
-DISCOVERED 1 and BLOCKED 27.
+IO-06 moved from IMPLEMENTED to VERIFIED with transparent corner-pixel assertions.
+
+Round 71 (local, pending commit/push) verified SHP-10 Flip horizontally and
+vertically: added shp10_flip_horizontal_mirrors_geometry_and_keeps_box_and_gradient
+in src/editor/commands.rs tests, asserting an asymmetric path with a linear
+gradient keeps its rect/fill and mirrors geometry on horizontal flip. SHP-10
+moved from IMPLEMENTED to VERIFIED. Parity docs record VERIFIED 175,
+IMPLEMENTED 27, IN_PROGRESS 1, ANALYZED 0, DISCOVERED 1 and BLOCKED 27.
 
 ## Blockers
 

@@ -263,14 +263,14 @@ gaps landed on 2026-10-26: a label without a solid background cuts the line behi
 text, and the gap follows label moves, reroutes, and export. Page view is a view
 preference and is not part of the page file.
 
-**Size:** 231 capabilities in 13 domains. 174 are verified against committed tests or directly exercised code, 28 are implemented without a focused check, 28 are absent or blocked, and 1 is in progress.
+**Size:** 231 capabilities in 13 domains. 175 are verified against committed tests or directly exercised code, 27 are implemented without a focused check, 28 are absent or blocked, and 1 is in progress.
 
 ## Counts
 
 | Status | Count | Meaning |
 |---|---:|---|
-| VERIFIED | 174 | Committed test or directly exercised code path proves the behavior. |
-| IMPLEMENTED | 28 | Code exists and the path is readable, but no focused test or this-session runtime check covers it. |
+| VERIFIED | 175 | Committed test or directly exercised code path proves the behavior. |
+| IMPLEMENTED | 27 | Code exists and the path is readable, but no focused test or this-session runtime check covers it. |
 | IN_PROGRESS | 1 | Partial code at HEAD or in the tracked working state; the acceptance criteria are not met. |
 | DISCOVERED | 1 | draw.io behavior is documented here; no code or design exists. |
 | BLOCKED | 27 | Work cannot proceed without a missing subsystem, external service, licensing decision, or explicit scope decision. |
@@ -280,7 +280,7 @@ preference and is not part of the page file.
 |---|---:|---:|---:|---:|---:|---:|---:|
 | DOC Document, projects, pages, and diagram settings | 15 | 14 | 0 | 0 | 0 | 0 | 1 |
 | CAN Canvas, navigation, grid, and guides | 16 | 15 | 1 | 0 | 0 | 0 | 0 |
-| SHP Shapes, frames, transforms, and paths | 26 | 20 | 5 | 0 | 0 | 0 | 1 |
+| SHP Shapes, frames, transforms, and paths | 26 | 21 | 4 | 0 | 0 | 0 | 1 |
 | CON Connectors and arrows | 21 | 20 | 1 | 0 | 0 | 0 | 0 |
 | TXT Text, labels, and typography | 25 | 18 | 4 | 0 | 0 | 0 | 3 |
 | STY Styles, effects, and themes | 23 | 18 | 5 | 0 | 0 | 0 | 0 |
@@ -378,7 +378,7 @@ Creating and manipulating geometry, including vector and freehand tools.
 | SHP-07 | Resize an unselected shape on hover | Hovering an unselected shape shows its handles; dragging a handle resizes without first selecting it. | [Resize shapes or groups of shapes](https://www.drawio.com/docs/manual/shapes/shape-resize/) | src/editor/mod.rs | **VERIFIED** | Hover a shape, drag a corner, and confirm the shape changes while the previous selection stays selected. | Only applies when the hovered shape is not part of the current selection. Test: `press_on_hovered_unselected_handle_resizes_without_selecting`. |
 | SHP-08 | Nudge with arrow keys | Arrow keys move the selection by one pixel or one grid step; Shift multiplies the step. | [Move a shape only horizontally or vertically](https://www.drawio.com/docs/manual/shapes/shape-move-horizontal-vertical/) | src/editor/mod.rs, src/editor/shortcuts.rs | **VERIFIED** | Nudge a shape and undo; the move is one history entry. | Nudging honors the grid when snapping is on. Test: `nudge_delete_duplicate_copy_paste_and_order`. |
 | SHP-09 | Duplicate and paste | Option-drag or copy and paste duplicates a selection with fresh node IDs, including frame children. | [Arrange shapes and connectors](https://www.drawio.com/docs/manual/editor/panels/arrange-tab/) | src/editor/mod.rs, src/editor/structure.rs | **VERIFIED** | Copy a frame with children, paste, and edit the copy without changing the original. | Pasted content keeps its internal component links. Test: `copy_paste_frame_with_children_and_undo`. |
-| SHP-10 | Flip horizontally and vertically | Flip mirrors the selection within its bounds and mirrors vector geometry without mirroring label text. | [Arrange shapes and connectors](https://www.drawio.com/docs/manual/editor/panels/arrange-tab/) | src/editor/commands.rs | **IMPLEMENTED** | Flip a shape with a gradient and an asymmetric path; the box stays in place and the geometry mirrors. | No focused test. Label text is not mirrored by design. |
+| SHP-10 | Flip horizontally and vertically | Flip mirrors the selection within its bounds and mirrors vector geometry without mirroring label text. | [Arrange shapes and connectors](https://www.drawio.com/docs/manual/editor/panels/arrange-tab/) | src/editor/commands.rs | **VERIFIED** | Flip a shape with a gradient and an asymmetric path; the box stays in place and the geometry mirrors. | shp10_flip_horizontal_mirrors_geometry_and_keeps_box_and_gradient in src/editor/commands.rs tests flips an asymmetric path with a linear gradient and asserts the rect and gradient fills are unchanged while path points mirror horizontally. Label text is not mirrored by design. |
 | SHP-11 | Exact position and size fields | The Arrange tab edits Left, Top, Width, and Height numerically for the selection. | [Arrange shapes and connectors](https://www.drawio.com/docs/manual/editor/panels/arrange-tab/) | src/ui/inspector.rs | **IMPLEMENTED** | Type a new Left and Width and confirm the canvas and selection outline agree. | Position is world coordinates from the page origin. Multi-selection shows mixed values. |
 | SHP-12 | Constrain proportions | A lock between Width and Height keeps the current aspect ratio while either field changes. | [Arrange shapes and connectors](https://www.drawio.com/docs/manual/editor/panels/arrange-tab/) | src/ui/inspector.rs | **IMPLEMENTED** | Lock proportions, change Width, and confirm Height follows and the shape does not distort. | The lock is inspector state, not a document property. |
 | SHP-13 | Copy and paste size | Copy Size stores one shape's dimensions; Apply Size stamps them onto the selection. | [Arrange shapes and connectors](https://www.drawio.com/docs/manual/editor/panels/arrange-tab/) | src/ui/inspector.rs, src/ui/mod.rs | **IMPLEMENTED** | Copy a 240 by 140 size, select two other shapes, apply, and confirm both become 240 by 140. | Stored in UiState, so it does not survive an app restart. |

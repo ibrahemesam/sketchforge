@@ -696,3 +696,49 @@ fn autosize_subtree(tx: &mut Tx, id: NodeId) {
         tx.node_mut(id).unwrap().rect = rect;
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::editor::Editor;
+    use crate::geom::{Rect, v2};
+    use crate::model::{Color, FillRule, Node, NodeId, NodeKind, Paint, PathPoint, SubPath};
+
+    #[test]
+    fn shp10_flip_horizontal_mirrors_geometry_and_keeps_box_and_gradient() {
+        let mut ed = Editor::default();
+        let mut node = Node::new(
+            NodeId(0),
+            NodeKind::Path {
+                subpaths: vec![SubPath {
+                    points: vec![
+                        PathPoint::corner(v2(10.0, 20.0)),
+                        PathPoint::corner(v2(80.0, 30.0)),
+                        PathPoint::corner(v2(60.0, 90.0)),
+                    ],
+                    closed: true,
+                }],
+                fill_rule: FillRule::NonZero,
+            },
+            Rect::new(100.0, 50.0, 100.0, 100.0),
+        );
+        node.style.fills = vec![Paint::linear(Color::rgb(255, 0, 0), Color::rgb(0, 0, 255))];
+        let id = ed.add_node(node, None);
+        ed.selection = vec![id];
+        let before_rect = ed.doc.get(id).unwrap().rect;
+        let before_fills = ed.doc.get(id).unwrap().style.fills.clone();
+
+        ed.flip(0);
+
+        let n = ed.doc.get(id).unwrap();
+        assert_eq!(n.rect, before_rect, "flip should keep the box in place");
+        assert_eq!(
+            n.style.fills, before_fills,
+            "gradient fill should be preserved"
+        );
+        let NodeKind::Path { subpaths, .. } = &n.kind else {
+            panic!("expected path");
+        };
+        let pts: Vec<_> = subpaths[0].points.iter().map(|p| (p.p.x, p.p.y)).collect();
+        assert_eq!(pts, vec![(90.0, 20.0), (20.0, 30.0), (40.0, 90.0)]);
+    }
+}
