@@ -1,6 +1,6 @@
 # Sketch agent session state
 
-Last updated: 2026-11-21 (round 79 IO-13 image import verified, local pending commit/push).
+Last updated: 2026-11-21 (round 79 IO-13 image import verified, committed and pushed).
 
 ## Objective
 
@@ -718,7 +718,7 @@ evidence-only VERIFIED.
 Round 78 (committed ddff74b, pushed) verified ORG-10 Auto layout wrapping;
 ORG-10 moved from IMPLEMENTED to VERIFIED.
 
-Round 79 (local, pending commit/push) verified IO-13 Image import and
+Round 79 (committed 871801f, pushed) verified IO-13 Image import and
 drag-and-drop: added io13_image_import_roundtrips_through_project_reload in
 tests/projects.rs, asserting inserted image fill, non-zero size, and embedded
 asset survive project save/reload. IO-13 moved from IMPLEMENTED to VERIFIED.

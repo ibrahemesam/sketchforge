@@ -462,7 +462,7 @@ documentation closeout completes the round.
 
 **Round 78 (committed ddff74b, pushed).** Verified ORG-10 Auto layout wrapping. Added org10_wrap_flows_children_into_second_row in src/layout.rs tests, confirming a wrap-enabled narrow frame flows the third child onto a second row. ORG-10 moved from IMPLEMENTED to VERIFIED.
 
-**Round 79 (local, pending commit/push).** Verified IO-13 Image import and drag-and-drop. Added io13_image_import_roundtrips_through_project_reload in tests/projects.rs, asserting inserted image fill, non-zero size, and embedded asset survive project save/reload. IO-13 moved from IMPLEMENTED to VERIFIED. Targeted projects test, `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`, `git diff --check`, and `python3 .artifacts/check_parity_docs.py` passed before commit. Full `cargo test` and release build were not rerun.
+**Round 79 (committed 871801f, pushed).** Verified IO-13 Image import and drag-and-drop. Added io13_image_import_roundtrips_through_project_reload in tests/projects.rs, asserting inserted image fill, non-zero size, and embedded asset survive project save/reload. IO-13 moved from IMPLEMENTED to VERIFIED. Targeted projects test, `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`, `git diff --check`, and `python3 .artifacts/check_parity_docs.py` passed before commit. Full `cargo test` and release build were not rerun.
 
 **Scope.**
 
