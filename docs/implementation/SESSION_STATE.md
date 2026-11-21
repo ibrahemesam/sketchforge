@@ -1,6 +1,6 @@
 # Sketch agent session state
 
-Last updated: 2026-11-21 (round 78 ORG-10 wrap verified, local pending commit/push).
+Last updated: 2026-11-21 (round 78 ORG-10 wrap verified, committed and pushed).
 
 ## Objective
 
@@ -715,7 +715,7 @@ STY-08 moved from IMPLEMENTED to VERIFIED.
 Round 77 (committed d94609e, pushed) closed CAN-10 Equal-spacing guides as
 evidence-only VERIFIED.
 
-Round 78 (local, pending commit/push) verified ORG-10 Auto layout wrapping:
+Round 78 (committed ddff74b, pushed) verified ORG-10 Auto layout wrapping:
 added org10_wrap_flows_children_into_second_row in src/layout.rs tests,
 confirming wrap-enabled narrow frame flows the third child onto a second row.
 ORG-10 moved from IMPLEMENTED to VERIFIED. Parity docs record VERIFIED 183,

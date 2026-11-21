@@ -460,7 +460,7 @@ documentation closeout completes the round.
 
 **Round 77 (committed d94609e, pushed).** Evidence-only verification of CAN-10 Equal-spacing guides. spacing_equalizes_gaps in src/editor/snap.rs tests already proves snap_spacing equalizes gaps and emits gap guides. CAN-10 moved from IMPLEMENTED to VERIFIED.
 
-**Round 78 (local, pending commit/push).** Verified ORG-10 Auto layout wrapping. Added org10_wrap_flows_children_into_second_row in src/layout.rs tests, confirming a wrap-enabled narrow frame flows the third child onto a second row. ORG-10 moved from IMPLEMENTED to VERIFIED. Targeted lib test, `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`, `git diff --check`, and `python3 .artifacts/check_parity_docs.py` passed before commit. Full `cargo test` and release build were not rerun.
+**Round 78 (committed ddff74b, pushed).** Verified ORG-10 Auto layout wrapping. Added org10_wrap_flows_children_into_second_row in src/layout.rs tests, confirming a wrap-enabled narrow frame flows the third child onto a second row. ORG-10 moved from IMPLEMENTED to VERIFIED. Targeted lib test, `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`, `git diff --check`, and `python3 .artifacts/check_parity_docs.py` passed before commit. Full `cargo test` and release build were not rerun.
 
 **Scope.**
 
