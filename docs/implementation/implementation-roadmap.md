@@ -468,7 +468,7 @@ documentation closeout completes the round.
 
 **Round 81 (committed a4e5a4f, pushed).** Added simple-layout Justify support for TXT-09. Added TextAlign::Justify, inspector Justify control, simple-layout word-gap justification, and layout_justify_distributes_word_gaps in src/text.rs tests. TXT-09 moved from IMPLEMENTED to VERIFIED with honest limitations (rich/bidi layout falls back to left for Justify; draw.io export maps Justify to left).
 
-**Round 82 (local, pending commit/push).** Verified CUS-11 Shape properties dialog using existing tests import_reads_user_object_metadata_links_tooltips_and_tags and node_info_reports_links_tooltips_tags_and_metadata. CUS-11 moved from IMPLEMENTED to VERIFIED with limitation: no separate generic typed-property schema beyond metadata map and existing typed fields. Targeted tests and `python3 .artifacts/check_parity_docs.py` passed before commit.
+**Round 82 (committed 9d6cac1, pushed).** Verified CUS-11 Shape properties dialog using existing tests import_reads_user_object_metadata_links_tooltips_and_tags and node_info_reports_links_tooltips_tags_and_metadata. CUS-11 moved from IMPLEMENTED to VERIFIED with limitation: no separate generic typed-property schema beyond metadata map and existing typed fields. Targeted tests and `python3 .artifacts/check_parity_docs.py` passed before commit.
 
 **Scope.**
 
