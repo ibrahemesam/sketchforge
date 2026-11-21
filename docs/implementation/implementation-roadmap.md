@@ -466,7 +466,7 @@ documentation closeout completes the round.
 
 **Round 80 (committed e1cfd10, pushed).** Verified TXT-16 Text border and SHP-26 Place images. Added txt16_text_border_roundtrips in src/model/node.rs tests and shp26_placed_image_move_resize_survives_reload in tests/projects.rs. TXT-16 and SHP-26 moved from IMPLEMENTED to VERIFIED.
 
-**Round 81 (local, pending commit/push).** Added simple-layout Justify support for TXT-09. Added TextAlign::Justify, inspector Justify control, simple-layout word-gap justification, and layout_justify_distributes_word_gaps in src/text.rs tests. TXT-09 moved from IMPLEMENTED to VERIFIED with honest limitations (rich/bidi layout falls back to left for Justify; draw.io export maps Justify to left). Targeted test, `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`, `git diff --check`, and `python3 .artifacts/check_parity_docs.py` passed before commit. Full `cargo test` and release build were not rerun.
+**Round 81 (committed a4e5a4f, pushed).** Added simple-layout Justify support for TXT-09. Added TextAlign::Justify, inspector Justify control, simple-layout word-gap justification, and layout_justify_distributes_word_gaps in src/text.rs tests. TXT-09 moved from IMPLEMENTED to VERIFIED with honest limitations (rich/bidi layout falls back to left for Justify; draw.io export maps Justify to left). Targeted test, `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`, `git diff --check`, and `python3 .artifacts/check_parity_docs.py` passed before commit. Full `cargo test` and release build were not rerun.
 
 **Scope.**
 
