@@ -1,6 +1,6 @@
 # Sketch agent session state
 
-Last updated: 2026-11-21 (round 73 STY-10 per-corner radius verified, committed and pushed).
+Last updated: 2026-11-21 (round 74 TXT-15/TXT-17 verified, local pending commit/push).
 
 ## Objective
 
@@ -700,12 +700,15 @@ vertically; SHP-10 moved from IMPLEMENTED to VERIFIED.
 Round 72 (committed f3d8f4e, pushed) verified STY-19 Copy and paste style;
 STY-19 moved from IMPLEMENTED to VERIFIED.
 
-Round 73 (committed a6d27e1, pushed) verified STY-10 Per-corner radius:
-added sty10_per_corner_radius_changes_only_selected_corner in src/model/node.rs
-tests, asserting per-corner radii change only the selected corner and survive
-JSON roundtrip. STY-10 moved from IMPLEMENTED to VERIFIED. Parity docs record
-VERIFIED 177, IMPLEMENTED 25, IN_PROGRESS 1, ANALYZED 0, DISCOVERED 1 and
-BLOCKED 27.
+Round 73 (committed a6d27e1, pushed) verified STY-10 Per-corner radius; STY-10
+moved from IMPLEMENTED to VERIFIED.
+
+Round 74 (local, pending commit/push) verified TXT-15 Text background color and
+TXT-17 Text shadow: added txt15_text_background_color_roundtrips and
+txt17_text_shadow_flag_roundtrips in src/model/node.rs tests, confirming text
+background colors and text shadow flag persist through JSON roundtrip. TXT-15
+and TXT-17 moved from IMPLEMENTED to VERIFIED. Parity docs record VERIFIED 179,
+IMPLEMENTED 23, IN_PROGRESS 1, ANALYZED 0, DISCOVERED 1 and BLOCKED 27.
 
 ## Blockers
 

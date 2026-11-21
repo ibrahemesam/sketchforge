@@ -1450,4 +1450,25 @@ mod tests {
         let back: Node = serde_json::from_str(&s).unwrap();
         assert_eq!(back.style.corner_radii(), [12.0, 4.0, 4.0, 4.0]);
     }
+
+    #[test]
+    fn txt15_text_background_color_roundtrips() {
+        let mut n = Node::new(NodeId(1), NodeKind::Rect, Rect::new(0.0, 0.0, 100.0, 40.0));
+        n.text_bg = Some(Color::rgb(255, 240, 200));
+        n.text_bg_dark = Some(Color::rgb(40, 30, 20));
+        let s = serde_json::to_string(&n).unwrap();
+        let back: Node = serde_json::from_str(&s).unwrap();
+        assert_eq!(back.text_bg, Some(Color::rgb(255, 240, 200)));
+        assert_eq!(back.text_bg_dark, Some(Color::rgb(40, 30, 20)));
+    }
+
+    #[test]
+    fn txt17_text_shadow_flag_roundtrips() {
+        let mut n = Node::new(NodeId(1), NodeKind::Rect, Rect::new(0.0, 0.0, 100.0, 40.0));
+        assert!(!n.text_shadow);
+        n.text_shadow = true;
+        let s = serde_json::to_string(&n).unwrap();
+        let back: Node = serde_json::from_str(&s).unwrap();
+        assert!(back.text_shadow);
+    }
 }
