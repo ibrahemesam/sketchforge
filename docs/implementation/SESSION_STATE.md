@@ -1,6 +1,6 @@
 # Sketch agent session state
 
-Last updated: 2026-11-21 (round 73 STY-10 per-corner radius verified, local pending commit/push).
+Last updated: 2026-11-21 (round 73 STY-10 per-corner radius verified, committed and pushed).
 
 ## Objective
 
@@ -700,7 +700,7 @@ vertically; SHP-10 moved from IMPLEMENTED to VERIFIED.
 Round 72 (committed f3d8f4e, pushed) verified STY-19 Copy and paste style;
 STY-19 moved from IMPLEMENTED to VERIFIED.
 
-Round 73 (local, pending commit/push) verified STY-10 Per-corner radius:
+Round 73 (committed a6d27e1, pushed) verified STY-10 Per-corner radius:
 added sty10_per_corner_radius_changes_only_selected_corner in src/model/node.rs
 tests, asserting per-corner radii change only the selected corner and survive
 JSON roundtrip. STY-10 moved from IMPLEMENTED to VERIFIED. Parity docs record

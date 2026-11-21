@@ -450,7 +450,7 @@ documentation closeout completes the round.
 
 **Round 72 (committed f3d8f4e, pushed).** Verified STY-19 Copy and paste style. Added sty19_copy_paste_style_transfers_properties_and_clears_text_spans in src/editor/commands.rs tests, asserting style properties transfer to two targets and text style transfers while rich-text spans are cleared on text layers. STY-19 moved from IMPLEMENTED to VERIFIED.
 
-**Round 73 (local, pending commit/push).** Verified STY-10 Per-corner radius. Added sty10_per_corner_radius_changes_only_selected_corner in src/model/node.rs tests, asserting per-corner radii change only the selected corner and survive JSON roundtrip. STY-10 moved from IMPLEMENTED to VERIFIED. Targeted lib test, `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`, `git diff --check`, and `python3 .artifacts/check_parity_docs.py` passed before commit. Full `cargo test` and release build were not rerun.
+**Round 73 (committed a6d27e1, pushed).** Verified STY-10 Per-corner radius. Added sty10_per_corner_radius_changes_only_selected_corner in src/model/node.rs tests, asserting per-corner radii change only the selected corner and survive JSON roundtrip. STY-10 moved from IMPLEMENTED to VERIFIED. Targeted lib test, `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`, `git diff --check`, and `python3 .artifacts/check_parity_docs.py` passed before commit. Full `cargo test` and release build were not rerun.
 
 **Scope.**
 
