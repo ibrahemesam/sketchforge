@@ -1,6 +1,6 @@
 # Sketch agent session state
 
-Last updated: 2026-11-21 (round 83 CON-21 pushed; UIX-02 connector-only Arrange controls hidden, committed f8e4a03 and pushed).
+Last updated: 2026-11-21 (UIX-02 Arrange increment pushed; SHP-11/12/13 verified, pending commit/push).
 
 ## Objective
 
@@ -726,7 +726,7 @@ Round 81 (committed a4e5a4f, pushed) added simple-layout Justify support for TXT
 
 Round 82 (committed 9d6cac1, pushed) verified CUS-11 Shape properties dialog.
 
-Round 83 (committed 90b1680, pushed) verified CON-21 Auto-route around obstacles. Added con21_elbow_route_avoids_third_shape in src/connector.rs tests; CON-21 moved from IMPLEMENTED to VERIFIED. Parity docs record VERIFIED 189, IMPLEMENTED 13, IN_PROGRESS 1, ANALYZED 0, DISCOVERED 1 and BLOCKED 27.
+Round 83 (committed 90b1680, pushed) verified CON-21 Auto-route around obstacles. Added con21_elbow_route_avoids_third_shape in src/connector.rs tests; CON-21 moved from IMPLEMENTED to VERIFIED. Parity docs record VERIFIED 192, IMPLEMENTED 10, IN_PROGRESS 1, ANALYZED 0, DISCOVERED 1 and BLOCKED 27.
 
 ## Blockers
 

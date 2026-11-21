@@ -6408,4 +6408,29 @@ mod tests {
         assert!(!text.contains("Constrain Proportions"), "{text}");
         assert!(!text.contains("Autosize"), "{text}");
     }
+
+    #[test]
+    fn shape_arrange_tab_exposes_position_size_and_size_tools() {
+        let mut ed = Editor::default();
+        let id = ed.add_node(
+            Node::new(
+                NodeId(1),
+                NodeKind::Rect,
+                crate::geom::Rect::new(20.0, 30.0, 240.0, 140.0),
+            ),
+            None,
+        );
+        ed.selection = vec![id];
+        let mut st = UiState {
+            inspector_tab: crate::ui::InspectorTab::Arrange,
+            ..Default::default()
+        };
+        let text = panel_text_for(&mut ed, &mut st, 320.0, 1800.0);
+        assert!(text.contains("W "), "{text}");
+        assert!(text.contains("H "), "{text}");
+        assert!(text.contains("X "), "{text}");
+        assert!(text.contains("Y "), "{text}");
+        assert!(text.contains("Constrain Proportions"), "{text}");
+        assert!(text.contains("Copy Size"), "{text}");
+    }
 }
