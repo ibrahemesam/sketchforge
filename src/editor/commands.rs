@@ -741,4 +741,68 @@ mod tests {
         let pts: Vec<_> = subpaths[0].points.iter().map(|p| (p.p.x, p.p.y)).collect();
         assert_eq!(pts, vec![(90.0, 20.0), (20.0, 30.0), (40.0, 90.0)]);
     }
+
+    #[test]
+    fn sty19_copy_paste_style_transfers_properties_and_clears_text_spans() {
+        use crate::model::{TextSpan, TextStyle};
+
+        let mut ed = Editor::default();
+        let mut src = Node::new(NodeId(0), NodeKind::Rect, Rect::new(0.0, 0.0, 80.0, 40.0));
+        src.style.fills = vec![Paint::solid(Color::rgb(10, 20, 30))];
+        src.style.stroke = Some(Color::rgb(1, 2, 3));
+        src.style.stroke_width = 3.5;
+        src.style.corner_radius = 7.0;
+        src.text_style = TextStyle {
+            bold: true,
+            italic: true,
+            letter_spacing: 2.0,
+            ..TextStyle::default()
+        };
+        let src_id = ed.add_node(src, None);
+
+        let t1 = ed.add_node(
+            Node::new(NodeId(0), NodeKind::Rect, Rect::new(100.0, 0.0, 80.0, 40.0)),
+            None,
+        );
+        let mut text_node = Node::new(
+            NodeId(0),
+            NodeKind::Text {
+                text: "hello".into(),
+                font_size: 14.0,
+                auto_width: true,
+                align: crate::model::TextAlign::Left,
+            },
+            Rect::new(200.0, 0.0, 80.0, 40.0),
+        );
+        text_node.text_style.spans = vec![TextSpan {
+            start: 0,
+            end: 5,
+            color: Some(Color::rgb(255, 0, 0)),
+            ..TextSpan::default()
+        }];
+        let t2 = ed.add_node(text_node, None);
+
+        ed.selection = vec![src_id];
+        ed.copy_props();
+        assert!(ed.has_style_clipboard());
+
+        ed.selection = vec![t1, t2];
+        ed.paste_props();
+
+        for id in [t1, t2] {
+            let n = ed.doc.get(id).unwrap();
+            assert_eq!(n.style.fills, vec![Paint::solid(Color::rgb(10, 20, 30))]);
+            assert_eq!(n.style.stroke, Some(Color::rgb(1, 2, 3)));
+            assert_eq!(n.style.stroke_width, 3.5);
+            assert_eq!(n.style.corner_radius, 7.0);
+        }
+        let text_n = ed.doc.get(t2).unwrap();
+        assert!(text_n.text_style.bold);
+        assert!(text_n.text_style.italic);
+        assert_eq!(text_n.text_style.letter_spacing, 2.0);
+        assert!(
+            text_n.text_style.spans.is_empty(),
+            "paste style should clear rich-text spans on text layers"
+        );
+    }
 }
