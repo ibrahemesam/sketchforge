@@ -448,7 +448,7 @@ documentation closeout completes the round.
 
 **Round 71 (committed e3d9878, pushed).** Verified SHP-10 Flip horizontally and vertically. Added shp10_flip_horizontal_mirrors_geometry_and_keeps_box_and_gradient in src/editor/commands.rs tests, asserting an asymmetric path with a linear gradient keeps its rect/fills and mirrors geometry on horizontal flip. SHP-10 moved from IMPLEMENTED to VERIFIED.
 
-**Round 72 (local, pending commit/push).** Verified STY-19 Copy and paste style. Added sty19_copy_paste_style_transfers_properties_and_clears_text_spans in src/editor/commands.rs tests, asserting style properties transfer to two targets and text style transfers while rich-text spans are cleared on text layers. STY-19 moved from IMPLEMENTED to VERIFIED. Targeted lib test, `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`, `git diff --check`, and `python3 .artifacts/check_parity_docs.py` passed before commit. Full `cargo test` and release build were not rerun.
+**Round 72 (committed f3d8f4e, pushed).** Verified STY-19 Copy and paste style. Added sty19_copy_paste_style_transfers_properties_and_clears_text_spans in src/editor/commands.rs tests, asserting style properties transfer to two targets and text style transfers while rich-text spans are cleared on text layers. STY-19 moved from IMPLEMENTED to VERIFIED. Targeted lib test, `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`, `git diff --check`, and `python3 .artifacts/check_parity_docs.py` passed before commit. Full `cargo test` and release build were not rerun.
 
 **Scope.**
 
