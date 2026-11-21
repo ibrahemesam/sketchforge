@@ -263,14 +263,14 @@ gaps landed on 2026-10-26: a label without a solid background cuts the line behi
 text, and the gap follows label moves, reroutes, and export. Page view is a view
 preference and is not part of the page file.
 
-**Size:** 231 capabilities in 13 domains. 181 are verified against committed tests or directly exercised code, 21 are implemented without a focused check, 28 are absent or blocked, and 1 is in progress.
+**Size:** 231 capabilities in 13 domains. 182 are verified against committed tests or directly exercised code, 20 are implemented without a focused check, 28 are absent or blocked, and 1 is in progress.
 
 ## Counts
 
 | Status | Count | Meaning |
 |---|---:|---|
-| VERIFIED | 181 | Committed test or directly exercised code path proves the behavior. |
-| IMPLEMENTED | 21 | Code exists and the path is readable, but no focused test or this-session runtime check covers it. |
+| VERIFIED | 182 | Committed test or directly exercised code path proves the behavior. |
+| IMPLEMENTED | 20 | Code exists and the path is readable, but no focused test or this-session runtime check covers it. |
 | IN_PROGRESS | 1 | Partial code at HEAD or in the tracked working state; the acceptance criteria are not met. |
 | DISCOVERED | 1 | draw.io behavior is documented here; no code or design exists. |
 | BLOCKED | 27 | Work cannot proceed without a missing subsystem, external service, licensing decision, or explicit scope decision. |
@@ -279,7 +279,7 @@ preference and is not part of the page file.
 | Domain | Rows | VERIFIED | IMPLEMENTED | IN_PROGRESS | ANALYZED | DISCOVERED | BLOCKED |
 |---|---:|---:|---:|---:|---:|---:|---:|
 | DOC Document, projects, pages, and diagram settings | 15 | 14 | 0 | 0 | 0 | 0 | 1 |
-| CAN Canvas, navigation, grid, and guides | 16 | 15 | 1 | 0 | 0 | 0 | 0 |
+| CAN Canvas, navigation, grid, and guides | 16 | 16 | 0 | 0 | 0 | 0 | 0 |
 | SHP Shapes, frames, transforms, and paths | 26 | 21 | 4 | 0 | 0 | 0 | 1 |
 | CON Connectors and arrows | 21 | 20 | 1 | 0 | 0 | 0 | 0 |
 | TXT Text, labels, and typography | 25 | 20 | 2 | 0 | 0 | 0 | 3 |
@@ -355,7 +355,7 @@ Moving around the canvas and the alignment aids that support placement.
 | CAN-07 | Snap to grid | Moves, creates, resizes, path points, and connector endpoints fall back to the grid when no shape anchor wins. | [Change the diagram editor grid](https://www.drawio.com/docs/manual/editor/panels/editor-grid-change/) | src/editor/snap.rs, src/editor/mod.rs | **VERIFIED** | Disable shape snapping, create and resize at arbitrary positions, and confirm every coordinate is a grid multiple. | Command or Control suspends snapping. Tests: `move_snaps_to_the_grid`, `creating_uses_grid_when_no_anchor_hit`, `resizing_uses_grid_when_no_anchor_hit`. |
 | CAN-08 | Center and grid snapping | While moving or resizing, centers and grid anchors snap to sibling layout with visible guide lines. | [Arrange shapes and connectors](https://www.drawio.com/docs/manual/editor/panels/arrange-tab/) | src/editor/snap.rs, src/editor/mod.rs | **VERIFIED** | Drag a shape near a sibling center and confirm it lands on a guide, then confirm grid snapping without an anchor. | The magnet works within the same parent or frame. Edge snapping was removed. Tests: `move_snaps_centers_into_rows_and_columns`, `move_snaps_to_the_grid`. |
 | CAN-09 | Smart guides | Ruler guides can be dragged onto the canvas and used while creating, moving, and resizing at the page root. | [Arrange shapes and connectors](https://www.drawio.com/docs/manual/editor/panels/arrange-tab/) | src/editor/snap.rs, src/editor/mod.rs | **VERIFIED** | Drag a guide from the ruler, place a shape against it, and confirm creation inside a frame uses the grid. | Page guides persist; alignment guides are transient. Tests: `dragging_from_a_ruler_adds_a_guide_with_undo`, `creating_inside_frame_snaps_to_the_grid_not_the_sibling`. |
-| CAN-10 | Equal-spacing guides | Dragging between siblings shows gap guides and can equalize the gaps. | [Arrange shapes and connectors](https://www.drawio.com/docs/manual/editor/panels/arrange-tab/) | src/editor/snap.rs | **IMPLEMENTED** | Drag a shape into a row of three and confirm the two gaps become equal when the guide appears. | No focused test. The gap logic lives in src/editor/snap.rs and is exercised through the move gesture. |
+| CAN-10 | Equal-spacing guides | Dragging between siblings shows gap guides and can equalize the gaps. | [Arrange shapes and connectors](https://www.drawio.com/docs/manual/editor/panels/arrange-tab/) | src/editor/snap.rs | **VERIFIED** | Drag a shape into a row of three and confirm the two gaps become equal when the guide appears. | spacing_equalizes_gaps in src/editor/snap.rs tests confirms snap_spacing equalizes gaps and emits gap guides when a shape is between two siblings; returns zero correction when outside threshold. |
 | CAN-11 | Distance measurement | Option or Alt with a selection measures to the hovered layer or parent frame. | [Arrange shapes and connectors](https://www.drawio.com/docs/manual/editor/panels/arrange-tab/) | src/editor/mod.rs | **VERIFIED** | Hover a sibling with Option held and see the horizontal and vertical distance to the selection. | Measurements appear only while the modifier is held. Test: `measures_inside_and_beside`. |
 | CAN-12 | Marquee selection | Drag on empty canvas to select intersecting content, including children of a grazed frame. | [Work with shapes in draw.io](https://www.drawio.com/docs/manual/shapes/) | src/editor/mod.rs, src/editor/hit.rs | **VERIFIED** | Drag a marquee across a frame and confirm its children select without selecting the frame itself. | A frame body starts a marquee instead of moving the frame. Test: `marquee_selects_children_of_grazed_frame_but_not_the_frame`. |
 | CAN-13 | Shift multi-select and selection cycling | Shift-click adds or removes items; Tab cycles siblings and Enter selects the parent. | [Keyboard shortcuts](https://www.drawio.com/docs/reference/shortcuts/) | src/editor/mod.rs, src/editor/hit.rs | **VERIFIED** | Build a selection by clicking and Shift-clicking, then enter and leave a group with Enter and Tab. | Selection is not part of undo history. Test: `click_shift_click_and_marquee_selection`. |

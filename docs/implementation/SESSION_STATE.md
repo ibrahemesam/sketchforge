@@ -1,6 +1,6 @@
 # Sketch agent session state
 
-Last updated: 2026-11-21 (round 76 STY-08 caps/joins verified, committed and pushed).
+Last updated: 2026-11-21 (round 77 CAN-10 evidence-only verified, local pending commit/push).
 
 ## Objective
 
@@ -709,10 +709,13 @@ TXT-17 Text shadow; TXT-15/TXT-17 moved from IMPLEMENTED to VERIFIED.
 Round 75 (committed 8088e64, pushed) verified IO-07 Export scale; IO-07 moved
 from IMPLEMENTED to VERIFIED.
 
-Round 76 (committed 878c940, pushed) verified STY-08 Line caps and joins:
-added sty08_line_caps_and_joins_roundtrip in src/model/node.rs tests, confirming
-all Cap/Join values roundtrip through JSON on node style. STY-08 moved from
-IMPLEMENTED to VERIFIED. Parity docs record VERIFIED 181, IMPLEMENTED 21,
+Round 76 (committed 878c940, pushed) verified STY-08 Line caps and joins;
+STY-08 moved from IMPLEMENTED to VERIFIED.
+
+Round 77 (local, pending commit/push) closed CAN-10 Equal-spacing guides as
+evidence-only VERIFIED: spacing_equalizes_gaps in src/editor/snap.rs tests
+already proves snap_spacing equalizes gaps and emits gap guides. CAN-10 moved
+from IMPLEMENTED to VERIFIED. Parity docs record VERIFIED 182, IMPLEMENTED 20,
 IN_PROGRESS 1, ANALYZED 0, DISCOVERED 1 and BLOCKED 27.
 
 ## Blockers
