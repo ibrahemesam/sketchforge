@@ -1,6 +1,6 @@
 # Sketch agent session state
 
-Last updated: 2026-11-21 (round 81 TXT-09 justify verified, committed and pushed).
+Last updated: 2026-11-21 (round 82 CUS-11 verified, local pending commit/push).
 
 ## Objective
 
@@ -722,7 +722,9 @@ Round 79 (committed 871801f, pushed) verified IO-13 Image import and drag-and-dr
 
 Round 80 (committed e1cfd10, pushed) verified TXT-16 Text border and SHP-26 Place images.
 
-Round 81 (committed a4e5a4f, pushed) added simple-layout Justify support for TXT-09. Added TextAlign::Justify, inspector Justify control, simple-layout word-gap justification, and layout_justify_distributes_word_gaps in src/text.rs tests. TXT-09 moved from IMPLEMENTED to VERIFIED with honest limitations: rich/bidi layout falls back to left for Justify and draw.io export maps Justify to left. Parity docs record VERIFIED 187, IMPLEMENTED 15, IN_PROGRESS 1, ANALYZED 0, DISCOVERED 1 and BLOCKED 27.
+Round 81 (committed a4e5a4f, pushed) added simple-layout Justify support for TXT-09.
+
+Round 82 (local, pending commit/push) verified CUS-11 Shape properties dialog. Existing tests import_reads_user_object_metadata_links_tooltips_and_tags and node_info_reports_links_tooltips_tags_and_metadata cover metadata round-trips/reporting; CUS-11 moved from IMPLEMENTED to VERIFIED with limitation that there is no separate generic typed-property schema beyond metadata map and existing typed fields. Parity docs record VERIFIED 188, IMPLEMENTED 14, IN_PROGRESS 1, ANALYZED 0, DISCOVERED 1 and BLOCKED 27.
 
 ## Blockers
 
