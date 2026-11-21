@@ -178,3 +178,74 @@ fn page_row(ui: &mut Ui, ed: &mut Editor, st: &mut UiState, i: usize, top: f32) 
         }
     });
 }
+
+/// Draw.io-style page tabs at the bottom of the canvas.
+pub fn bottom_tabs(ui: &mut Ui, ed: &mut Editor, st: &mut UiState) {
+    let p = theme::pal(ui);
+    ui.horizontal(|ui| {
+        ui.spacing_mut().item_spacing.x = 2.0;
+        let n = ed.pages.len();
+        for i in 0..n {
+            let active = i == ed.active_page;
+            let renaming = st.pages.renaming.as_ref().is_some_and(|(r, _)| *r == i);
+            if renaming {
+                let (_, name) = st.pages.renaming.as_mut().unwrap();
+                let r = ui.add(egui::TextEdit::singleline(name).desired_width(120.0));
+                if !st.pages.renaming_focus {
+                    r.request_focus();
+                    st.pages.renaming_focus = true;
+                }
+                let esc = ui.input(|i| i.key_pressed(egui::Key::Escape));
+                if r.has_focus() && esc {
+                    st.pages.renaming = None;
+                } else if r.lost_focus() {
+                    let (idx, name) = st.pages.renaming.take().unwrap();
+                    if !ui.input(|i| i.key_pressed(egui::Key::Escape)) {
+                        ed.rename_page(idx, &name);
+                    }
+                }
+            } else {
+                let text = RichText::new(&ed.pages[i].name)
+                    .size(theme::SECONDARY)
+                    .color(if active { p.text } else { p.secondary });
+                let btn = egui::Button::new(text).frame(active).fill(if active {
+                    p.pressed
+                } else {
+                    Color32::TRANSPARENT
+                });
+                let resp = ui.add(btn);
+                if resp.clicked() {
+                    ed.switch_page(i);
+                }
+                if resp.double_clicked() {
+                    st.pages.renaming = Some((i, ed.pages[i].name.clone()));
+                    st.pages.renaming_focus = false;
+                }
+                resp.context_menu(|ui| {
+                    if ui.button("Rename").clicked() {
+                        st.pages.renaming = Some((i, ed.pages[i].name.clone()));
+                        st.pages.renaming_focus = false;
+                        ui.close();
+                    }
+                    if ui.button("Duplicate").clicked() {
+                        ed.duplicate_page(i);
+                        ui.close();
+                    }
+                    if ui
+                        .add_enabled(ed.pages.len() > 1, egui::Button::new("Delete"))
+                        .clicked()
+                    {
+                        ed.delete_page(i);
+                        ui.close();
+                    }
+                });
+            }
+        }
+        if theme::icon_button(ui, Icon::Plus, 20.0, false)
+            .on_hover_text("Add page")
+            .clicked()
+        {
+            ed.add_page();
+        }
+    });
+}

@@ -433,6 +433,16 @@ pub fn draw(ui: &mut Ui, ed: &mut Editor, st: &mut UiState) -> egui::Rect {
             });
         }
     }
+    egui::Panel::bottom("page-tabs")
+        .exact_size(28.0)
+        .frame(
+            egui::Frame::NONE
+                .fill(p.window)
+                .inner_margin(egui::Margin::symmetric(8, 2)),
+        )
+        .show(ui, |ui| {
+            pages::bottom_tabs(ui, ed, st);
+        });
     inspector::dialogs(ui.ctx(), ed, st);
     templates::dialog(ui.ctx(), ed, st);
     generate::dialog(ui.ctx(), ed, st);
