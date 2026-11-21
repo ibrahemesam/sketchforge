@@ -263,14 +263,14 @@ gaps landed on 2026-10-26: a label without a solid background cuts the line behi
 text, and the gap follows label moves, reroutes, and export. Page view is a view
 preference and is not part of the page file.
 
-**Size:** 231 capabilities in 13 domains. 180 are verified against committed tests or directly exercised code, 22 are implemented without a focused check, 28 are absent or blocked, and 1 is in progress.
+**Size:** 231 capabilities in 13 domains. 181 are verified against committed tests or directly exercised code, 21 are implemented without a focused check, 28 are absent or blocked, and 1 is in progress.
 
 ## Counts
 
 | Status | Count | Meaning |
 |---|---:|---|
-| VERIFIED | 180 | Committed test or directly exercised code path proves the behavior. |
-| IMPLEMENTED | 22 | Code exists and the path is readable, but no focused test or this-session runtime check covers it. |
+| VERIFIED | 181 | Committed test or directly exercised code path proves the behavior. |
+| IMPLEMENTED | 21 | Code exists and the path is readable, but no focused test or this-session runtime check covers it. |
 | IN_PROGRESS | 1 | Partial code at HEAD or in the tracked working state; the acceptance criteria are not met. |
 | DISCOVERED | 1 | draw.io behavior is documented here; no code or design exists. |
 | BLOCKED | 27 | Work cannot proceed without a missing subsystem, external service, licensing decision, or explicit scope decision. |
@@ -283,7 +283,7 @@ preference and is not part of the page file.
 | SHP Shapes, frames, transforms, and paths | 26 | 21 | 4 | 0 | 0 | 0 | 1 |
 | CON Connectors and arrows | 21 | 20 | 1 | 0 | 0 | 0 | 0 |
 | TXT Text, labels, and typography | 25 | 20 | 2 | 0 | 0 | 0 | 3 |
-| STY Styles, effects, and themes | 23 | 20 | 3 | 0 | 0 | 0 | 0 |
+| STY Styles, effects, and themes | 23 | 21 | 2 | 0 | 0 | 0 | 0 |
 | ORG Structure: groups, frames, components, layout, and layers | 16 | 14 | 1 | 0 | 0 | 0 | 1 |
 | GEN Generation, templates, and diagram types | 15 | 5 | 8 | 0 | 0 | 0 | 2 |
 | IO Import, export, clipboard, and files | 21 | 17 | 1 | 0 | 0 | 0 | 3 |
@@ -469,7 +469,7 @@ Paint, stroke, effects, and reusable style operations.
 | STY-05 | Stroke color | The Line color control sets the outline color, or removes the outline. | [Change the style of shapes](https://www.drawio.com/docs/manual/styles/shape-styles/) | src/model/paint.rs, src/ui/inspector.rs | **VERIFIED** | Set a red stroke, then turn Line off and confirm the color returns when it is turned back on. | At HEAD disabling the line sets the stroke to None, so the color is not retained. |
 | STY-06 | Stroke width and alignment | Stroke width is editable and can sit inside, center, or outside the path. | [Change the style of shapes](https://www.drawio.com/docs/manual/styles/shape-styles/) | src/model/paint.rs, src/render/draw.rs | **VERIFIED** | Set 4 px inside and 4 px outside and confirm the painted edge moves relative to the box. | Width is in world units and scales with zoom. Test: `svg_is_well_formed_and_contains_all_kinds`. |
 | STY-07 | Dash patterns | The stroke can be solid, dashed, or dotted with editable lengths. | [Change the style of shapes](https://www.drawio.com/docs/manual/styles/shape-styles/) | src/model/paint.rs, src/vector.rs | **VERIFIED** | Set a custom 8, 4 dash and confirm it repeats around a closed path. | Dashes are stored as a vector of lengths. Test: `dashes`. |
-| STY-08 | Line caps and joins | Butt, round, and square caps plus miter, round, and bevel joins are selectable. | [Change the style of shapes](https://www.drawio.com/docs/manual/styles/shape-styles/) | src/model/paint.rs, src/render/draw.rs | **IMPLEMENTED** | Set each cap and join on a thick open path and confirm the ends and corners change. | The inspector exposes the values; no focused render test. |
+| STY-08 | Line caps and joins | Butt, round, and square caps plus miter, round, and bevel joins are selectable. | [Change the style of shapes](https://www.drawio.com/docs/manual/styles/shape-styles/) | src/model/paint.rs, src/render/draw.rs | **VERIFIED** | Set each cap and join on a thick open path and confirm the ends and corners change. | sty08_line_caps_and_joins_roundtrip in src/model/node.rs tests confirms all Cap/Join values roundtrip through JSON on node style; render/draw.rs consumes style.cap and style.join. |
 | STY-09 | Corner radius | Rounded corners apply to rectangles, frames, and sticky notes. | [Change the style of shapes](https://www.drawio.com/docs/manual/styles/shape-styles/) | src/model/paint.rs, src/render/draw.rs | **VERIFIED** | Set a radius and confirm handles and strokes follow the rounded outline. | Frames still clip with a rectangle. Test: `m3_shapes_frames_and_text`. |
 | STY-10 | Per-corner radius | Each corner can have its own radius. | [Change the style of shapes](https://www.drawio.com/docs/manual/styles/shape-styles/) | src/model/paint.rs, src/ui/inspector.rs | **VERIFIED** | Set different radii on all four corners and confirm each renders independently. | sty10_per_corner_radius_changes_only_selected_corner in src/model/node.rs tests sets radii to [12,4,4,4], asserts only top-left changes via corner_radii(), and confirms JSON roundtrip preserves per-corner values. Render uses corner_radii(). |
 | STY-11 | Layer opacity | Opacity applies to a shape, group, or text layer. | [Change the style of shapes](https://www.drawio.com/docs/manual/styles/shape-styles/) | src/model/paint.rs, src/render/draw.rs | **VERIFIED** | Set 40% opacity and confirm the shape dims over the background and exports with the same alpha. | Group opacity multiplies into children rather than compositing them. Test: `m3_shapes_frames_and_text`. |

@@ -1,6 +1,6 @@
 # Sketch agent session state
 
-Last updated: 2026-11-21 (round 75 IO-07 export scale verified, committed and pushed).
+Last updated: 2026-11-21 (round 76 STY-08 caps/joins verified, local pending commit/push).
 
 ## Objective
 
@@ -706,11 +706,14 @@ moved from IMPLEMENTED to VERIFIED.
 Round 74 (committed df363cb, pushed) verified TXT-15 Text background color and
 TXT-17 Text shadow; TXT-15/TXT-17 moved from IMPLEMENTED to VERIFIED.
 
-Round 75 (committed 8088e64, pushed) verified IO-07 Export scale: added
-io07_png_export_scale_changes_pixel_dimensions in tests/io.rs, asserting 1x/2x/4x
-PNG export pixel dimensions scale exactly. IO-07 moved from IMPLEMENTED to
-VERIFIED. Parity docs record VERIFIED 180, IMPLEMENTED 22, IN_PROGRESS 1,
-ANALYZED 0, DISCOVERED 1 and BLOCKED 27.
+Round 75 (committed 8088e64, pushed) verified IO-07 Export scale; IO-07 moved
+from IMPLEMENTED to VERIFIED.
+
+Round 76 (local, pending commit/push) verified STY-08 Line caps and joins:
+added sty08_line_caps_and_joins_roundtrip in src/model/node.rs tests, confirming
+all Cap/Join values roundtrip through JSON on node style. STY-08 moved from
+IMPLEMENTED to VERIFIED. Parity docs record VERIFIED 181, IMPLEMENTED 21,
+IN_PROGRESS 1, ANALYZED 0, DISCOVERED 1 and BLOCKED 27.
 
 ## Blockers
 

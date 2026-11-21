@@ -1471,4 +1471,20 @@ mod tests {
         let back: Node = serde_json::from_str(&s).unwrap();
         assert!(back.text_shadow);
     }
+
+    #[test]
+    fn sty08_line_caps_and_joins_roundtrip() {
+        use crate::model::{Cap, Join};
+        let mut n = Node::new(NodeId(1), NodeKind::Rect, Rect::new(0.0, 0.0, 100.0, 40.0));
+        for cap in [Cap::Butt, Cap::Round, Cap::Square] {
+            n.style.cap = cap;
+            let back: Node = serde_json::from_str(&serde_json::to_string(&n).unwrap()).unwrap();
+            assert_eq!(back.style.cap, cap);
+        }
+        for join in [Join::Miter, Join::Round, Join::Bevel] {
+            n.style.join = join;
+            let back: Node = serde_json::from_str(&serde_json::to_string(&n).unwrap()).unwrap();
+            assert_eq!(back.style.join, join);
+        }
+    }
 }
