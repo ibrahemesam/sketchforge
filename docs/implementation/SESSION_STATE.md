@@ -1,6 +1,6 @@
 # Sketch agent session state
 
-Last updated: 2026-11-21 (round 75 IO-07 export scale verified, local pending commit/push).
+Last updated: 2026-11-21 (round 75 IO-07 export scale verified, committed and pushed).
 
 ## Objective
 
@@ -706,7 +706,7 @@ moved from IMPLEMENTED to VERIFIED.
 Round 74 (committed df363cb, pushed) verified TXT-15 Text background color and
 TXT-17 Text shadow; TXT-15/TXT-17 moved from IMPLEMENTED to VERIFIED.
 
-Round 75 (local, pending commit/push) verified IO-07 Export scale: added
+Round 75 (committed 8088e64, pushed) verified IO-07 Export scale: added
 io07_png_export_scale_changes_pixel_dimensions in tests/io.rs, asserting 1x/2x/4x
 PNG export pixel dimensions scale exactly. IO-07 moved from IMPLEMENTED to
 VERIFIED. Parity docs record VERIFIED 180, IMPLEMENTED 22, IN_PROGRESS 1,
