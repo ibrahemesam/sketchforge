@@ -1,6 +1,6 @@
 # Sketch agent session state
 
-Last updated: 2026-11-21 (round 83 CON-21 verified, committed 90b1680 and pushed).
+Last updated: 2026-11-21 (round 83 CON-21 pushed; UIX-02 connector-only Arrange controls hidden, pending commit/push).
 
 ## Objective
 

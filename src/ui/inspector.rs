@@ -3937,14 +3937,21 @@ fn arrange_section(
         order(ui, "Send Backward", shortcuts::Action::Backward);
     });
     drop(order);
-    if ui
-        .add_sized([vis * 2.0 + 4.0, 20.0], egui::Button::new("Autosize"))
-        .on_hover_text("Shrink groups and containers to their contents (Alt+F)")
-        .clicked()
+    let all_connectors = !ids.is_empty()
+        && ids
+            .iter()
+            .all(|id| ed.doc.get(*id).is_some_and(|n| n.is_connector()));
+    if !all_connectors
+        && ui
+            .add_sized([vis * 2.0 + 4.0, 20.0], egui::Button::new("Autosize"))
+            .on_hover_text("Shrink groups and containers to their contents (Alt+F)")
+            .clicked()
     {
         ed.run(shortcuts::Action::Autosize);
     }
-    separator(ui);
+    if !all_connectors {
+        separator(ui);
+    }
 
     let locked = ids.iter().any(|id| ed.doc.is_effectively_locked(*id));
     let all_locked = !ids.is_empty() && ids.iter().all(|id| ed.doc.is_effectively_locked(*id));
@@ -4171,36 +4178,38 @@ fn arrange_section(
     {
         ed.run(shortcuts::Action::Ungroup);
     }
-    let r = ui
-        .add_enabled_ui(ids.len() == 1, |ui| {
-            ui.add_sized([vis, 20.0], egui::Button::new("Copy Size"))
-                .on_hover_text("Remember this element's size")
-        })
-        .inner;
-    if ids.len() != 1 {
-        r.on_disabled_hover_text("Select one element to copy its size.");
-    } else if r.clicked() {
-        st.copied_size = Some((first.rect.w, first.rect.h));
-    }
-    let r = ui
-        .add_enabled_ui(st.copied_size.is_some() && !locked, |ui| {
-            let (cw, ch) = st.copied_size.unwrap_or_default();
-            ui.add_sized(
-                [vis, 20.0],
-                egui::Button::new(format!("Apply Size {} × {}", fmt_num(cw), fmt_num(ch))),
-            )
-            .on_hover_text("Give every selected element the copied size")
-        })
-        .inner;
-    if st.copied_size.is_none() {
-        r.on_disabled_hover_text("Copy a size first.");
-    } else if locked {
-        r.on_disabled_hover_text("Unlock the selection to resize it.");
-    } else if r.clicked()
-        && let Some((cw, ch)) = st.copied_size
-    {
-        let dims = ids.iter().map(|id| (*id, v2(cw, ch))).collect();
-        resize_many(ed, ids, dims);
+    if !all_connectors {
+        let r = ui
+            .add_enabled_ui(ids.len() == 1, |ui| {
+                ui.add_sized([vis, 20.0], egui::Button::new("Copy Size"))
+                    .on_hover_text("Remember this element's size")
+            })
+            .inner;
+        if ids.len() != 1 {
+            r.on_disabled_hover_text("Select one element to copy its size.");
+        } else if r.clicked() {
+            st.copied_size = Some((first.rect.w, first.rect.h));
+        }
+        let r = ui
+            .add_enabled_ui(st.copied_size.is_some() && !locked, |ui| {
+                let (cw, ch) = st.copied_size.unwrap_or_default();
+                ui.add_sized(
+                    [vis, 20.0],
+                    egui::Button::new(format!("Apply Size {} × {}", fmt_num(cw), fmt_num(ch))),
+                )
+                .on_hover_text("Give every selected element the copied size")
+            })
+            .inner;
+        if st.copied_size.is_none() {
+            r.on_disabled_hover_text("Copy a size first.");
+        } else if locked {
+            r.on_disabled_hover_text("Unlock the selection to resize it.");
+        } else if r.clicked()
+            && let Some((cw, ch)) = st.copied_size
+        {
+            let dims = ids.iter().map(|id| (*id, v2(cw, ch))).collect();
+            resize_many(ed, ids, dims);
+        }
     }
     if ui
         .add_sized([vis, 20.0], egui::Button::new("Lock/Unlock"))
@@ -4238,6 +4247,10 @@ fn arrange_size(
     first: &Node,
     locked: bool,
 ) {
+    let all_connectors = !ids.is_empty()
+        && ids
+            .iter()
+            .all(|id| ed.doc.get(*id).is_some_and(|n| n.is_connector()));
     let _ = vis;
     let sizes: Vec<(f64, f64)> = ids
         .iter()
@@ -4293,15 +4306,17 @@ fn arrange_size(
             resize_many(ed, ids, dims);
         }
     });
-    let mut lock = st.lock_aspect;
-    if ui
-        .checkbox(&mut lock, "Constrain Proportions")
-        .on_hover_text("Scale width and height together")
-        .changed()
-    {
-        st.lock_aspect = lock;
-        if lock && first.rect.h.abs() > 1e-9 {
-            st.aspect_ratio = first.rect.w / first.rect.h;
+    if !all_connectors {
+        let mut lock = st.lock_aspect;
+        if ui
+            .checkbox(&mut lock, "Constrain Proportions")
+            .on_hover_text("Scale width and height together")
+            .changed()
+        {
+            st.lock_aspect = lock;
+            if lock && first.rect.h.abs() > 1e-9 {
+                st.aspect_ratio = first.rect.w / first.rect.h;
+            }
         }
     }
     if mixed {
@@ -6337,5 +6352,60 @@ mod tests {
         assert!(!text.contains("\nText\n"), "{text}");
         assert!(text.contains("Add label"), "{text}");
         assert!(text.contains("Arrow"), "{text}");
+    }
+
+    #[test]
+    fn connector_only_arrange_tab_hides_shape_only_controls() {
+        let mut ed = Editor::default();
+        let a = ed.add_node(
+            Node::new(
+                NodeId(1),
+                NodeKind::Rect,
+                crate::geom::Rect::new(0.0, 0.0, 100.0, 60.0),
+            ),
+            None,
+        );
+        let b = ed.add_node(
+            Node::new(
+                NodeId(2),
+                NodeKind::Rect,
+                crate::geom::Rect::new(300.0, 0.0, 100.0, 60.0),
+            ),
+            None,
+        );
+        let bind = |node| crate::model::Binding {
+            node,
+            fixed: crate::geom::v2(0.5, 0.5),
+            inside: false,
+            floating: false,
+        };
+        let conn = ed.add_node(
+            Node::new(
+                NodeId(3),
+                NodeKind::Connector {
+                    points: vec![crate::geom::v2(0.0, 30.0), crate::geom::v2(400.0, 30.0)],
+                    start: Some(bind(a)),
+                    end: Some(bind(b)),
+                    route: crate::model::Route::Straight,
+                    start_head: crate::model::Head::None,
+                    end_head: crate::model::Head::Arrow,
+                    jump: crate::model::LineJump::None,
+                    jump_size: 6.0,
+                },
+                crate::geom::Rect::new(0.0, 0.0, 400.0, 60.0),
+            ),
+            None,
+        );
+        ed.selection = vec![conn];
+        let mut st = UiState {
+            inspector_tab: crate::ui::InspectorTab::Arrange,
+            ..Default::default()
+        };
+        let text = panel_text_for(&mut ed, &mut st, 320.0, 1600.0);
+        assert!(text.contains("Arrange"), "{text}");
+        assert!(!text.contains("Copy Size"), "{text}");
+        assert!(!text.contains("Apply Size"), "{text}");
+        assert!(!text.contains("Constrain Proportions"), "{text}");
+        assert!(!text.contains("Autosize"), "{text}");
     }
 }
