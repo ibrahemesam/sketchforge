@@ -1,6 +1,6 @@
 # Sketch agent session state
 
-Last updated: 2026-11-21 (round 71 SHP-10 flip verified, local pending commit/push).
+Last updated: 2026-11-21 (round 71 SHP-10 flip verified, committed and pushed).
 
 ## Objective
 
@@ -694,7 +694,7 @@ vs text-layer case. UIX-02 remains IN_PROGRESS.
 Round 70 (committed 848ac44, pushed) verified IO-06 Transparent PNG background:
 IO-06 moved from IMPLEMENTED to VERIFIED with transparent corner-pixel assertions.
 
-Round 71 (local, pending commit/push) verified SHP-10 Flip horizontally and
+Round 71 (committed e3d9878, pushed) verified SHP-10 Flip horizontally and
 vertically: added shp10_flip_horizontal_mirrors_geometry_and_keeps_box_and_gradient
 in src/editor/commands.rs tests, asserting an asymmetric path with a linear
 gradient keeps its rect/fill and mirrors geometry on horizontal flip. SHP-10
