@@ -1,6 +1,6 @@
 # Sketch agent session state
 
-Last updated: 2026-11-21 (round 69 unlabeled connector tab differentiation, committed and pushed).
+Last updated: 2026-11-21 (round 70 IO-06 transparent PNG verified, local pending commit/push).
 
 ## Objective
 
@@ -689,11 +689,14 @@ node.
 Round 69 was committed as `a17d5a5` and pushed: unlabeled connector-only
 selections now omit the Text tab (Style, Arrange, Data) while text layers keep
 Style, Text, Arrange, Data, giving different tab sets for the typical connector
-vs text-layer case. Unlabeled single connectors show an Add label button in the
-Style tab Arrow section; labeled connectors still include Text. UIX-02 remains
-IN_PROGRESS because a labeled connector shares the same top-level tab set as a
-text layer and some irrelevant controls/sections may remain in non-Style tabs.
-Parity docs record VERIFIED 173, IMPLEMENTED 29, IN_PROGRESS 1, ANALYZED 0,
+vs text-layer case. UIX-02 remains IN_PROGRESS.
+
+Round 70 (local, pending commit/push) verified IO-06 Transparent PNG background:
+added transparent_png_export_omits_page_background in tests/io.rs asserting
+transparent page export produces alpha-0 corner pixels while keeping visible
+content, and strengthened embedded_svg_and_png_reopen_all_pages with a
+transparent-pixel assertion. IO-06 moved from IMPLEMENTED to VERIFIED.
+Parity docs record VERIFIED 174, IMPLEMENTED 28, IN_PROGRESS 1, ANALYZED 0,
 DISCOVERED 1 and BLOCKED 27.
 
 ## Blockers

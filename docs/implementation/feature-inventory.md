@@ -263,14 +263,14 @@ gaps landed on 2026-10-26: a label without a solid background cuts the line behi
 text, and the gap follows label moves, reroutes, and export. Page view is a view
 preference and is not part of the page file.
 
-**Size:** 231 capabilities in 13 domains. 173 are verified against committed tests or directly exercised code, 29 are implemented without a focused check, 28 are absent or blocked, and 1 is in progress.
+**Size:** 231 capabilities in 13 domains. 174 are verified against committed tests or directly exercised code, 28 are implemented without a focused check, 28 are absent or blocked, and 1 is in progress.
 
 ## Counts
 
 | Status | Count | Meaning |
 |---|---:|---|
-| VERIFIED | 173 | Committed test or directly exercised code path proves the behavior. |
-| IMPLEMENTED | 29 | Code exists and the path is readable, but no focused test or this-session runtime check covers it. |
+| VERIFIED | 174 | Committed test or directly exercised code path proves the behavior. |
+| IMPLEMENTED | 28 | Code exists and the path is readable, but no focused test or this-session runtime check covers it. |
 | IN_PROGRESS | 1 | Partial code at HEAD or in the tracked working state; the acceptance criteria are not met. |
 | DISCOVERED | 1 | draw.io behavior is documented here; no code or design exists. |
 | BLOCKED | 27 | Work cannot proceed without a missing subsystem, external service, licensing decision, or explicit scope decision. |
@@ -286,7 +286,7 @@ preference and is not part of the page file.
 | STY Styles, effects, and themes | 23 | 18 | 5 | 0 | 0 | 0 | 0 |
 | ORG Structure: groups, frames, components, layout, and layers | 16 | 14 | 1 | 0 | 0 | 0 | 1 |
 | GEN Generation, templates, and diagram types | 15 | 5 | 8 | 0 | 0 | 0 | 2 |
-| IO Import, export, clipboard, and files | 21 | 15 | 3 | 0 | 0 | 0 | 3 |
+| IO Import, export, clipboard, and files | 21 | 16 | 2 | 0 | 0 | 0 | 3 |
 | CUS Libraries, scratchpad, and custom shapes | 16 | 12 | 1 | 0 | 0 | 0 | 3 |
 | DIA Diagram data: metadata, links, tags, and placeholders | 12 | 10 | 0 | 0 | 0 | 0 | 2 |
 | STO Storage, sharing, collaboration, and integrations | 11 | 1 | 0 | 0 | 0 | 0 | 10 |
@@ -541,7 +541,7 @@ Moving diagram data in and out of Sketch.
 | IO-03 | SVG export | SVG export writes vector shapes, text outlines, gradients, images, and blend modes. | [Supported export formats](https://www.drawio.com/docs/manual/export/export-diagram/) | src/io/svg.rs | **VERIFIED** | Export a page with a gradient, image, text, and multiply blend; rasterize it and compare with the GPU render. | Text is outlined for fidelity. Test: `m6_svg_export_matches_gpu_render`. |
 | IO-04 | PDF export | PDF export writes one page per frame or one page for the whole document, with vector shapes and images. | [Export a diagram to a PDF file](https://www.drawio.com/docs/manual/export/export-to-pdf/) | src/io/pdf.rs, src/io/export.rs | **VERIFIED** | Export a frame and a page, then inspect the PDF structure and rasterize it when pdftoppm is present. | Text is outlined, not selectable. Test: `m6_pdf_export_pages_frames_and_selection`. |
 | IO-05 | Export scopes | Export targets the selection, each frame, the current page, or all pages. | [Export, embed, publish and print diagrams](https://www.drawio.com/docs/manual/export/) | src/io/export.rs, src/ui/inspector.rs | **VERIFIED** | Choose each scope and confirm the file count and names follow the scope. | Selection scope falls back to the page when nothing is selected. Test: `m6_png_and_svg_export_of_frames_and_all_pages`. |
-| IO-06 | Transparent PNG background | PNG export can omit the white page background. | [Supported export formats](https://www.drawio.com/docs/manual/export/export-diagram/) | src/io/export.rs, src/io/png.rs | **IMPLEMENTED** | Export with transparency and confirm corner pixels have alpha 0. | The transparent flag applies to PNG, not PDF. The export test passes transparent:true but does not assert alpha. |
+| IO-06 | Transparent PNG background | PNG export can omit the white page background. | [Supported export formats](https://www.drawio.com/docs/manual/export/export-diagram/) | src/io/export.rs, src/io/png.rs | **VERIFIED** | Export with transparency and confirm corner pixels have alpha 0. | transparent_png_export_omits_page_background in tests/io.rs exports a page with transparent: true and asserts corner pixels have alpha 0 while content remains visible. embedded_svg_and_png_reopen_all_pages also asserts transparent PNG exports contain transparent pixels. |
 | IO-07 | Export scale | PNG export accepts a pixel scale factor. | [Supported export formats](https://www.drawio.com/docs/manual/export/export-diagram/) | src/io/export.rs | **IMPLEMENTED** | Export the same selection at 1x and 2x and confirm the pixel dimensions double. | CLI accepts --scale; the inspector exposes a smaller set of choices. |
 | IO-08 | Copy as PNG or SVG | Copy as PNG and Copy as SVG put rendered output on the system clipboard. | [Export, embed, publish and print diagrams](https://www.drawio.com/docs/manual/export/) | src/app.rs, src/io/clipboard.rs | **VERIFIED** | Copy a selection as PNG, paste into another app, and confirm the image matches the canvas. | Clipboard format support depends on the platform. Test: `m6_clipboard_between_apps_and_from_other_tools`. |
 | IO-09 | Cross-project clipboard | Native layers copied in one project paste into another with fresh IDs and preserved structure. | [Export, embed, publish and print diagrams](https://www.drawio.com/docs/manual/export/) | src/io/clipboard.rs | **VERIFIED** | Copy a frame from project A, paste into project B, and edit the copy without touching A. | External Excalidraw and SVG content also paste as new layers. Test: `m2_copy_paste_between_pages_and_projects`. |

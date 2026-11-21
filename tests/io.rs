@@ -469,6 +469,54 @@ fn cli_embeds_png_data_for_reopen() {
 }
 
 #[test]
+fn transparent_png_export_omits_page_background() {
+    let Some(g) = gpu() else { return };
+    let mut e = Editor::default();
+    let mut frame = Node::new(
+        NodeId(0),
+        NodeKind::Frame { clip: false },
+        Rect::new(0.0, 0.0, 200.0, 200.0),
+    );
+    frame.style.fills.clear();
+    frame.style.stroke = None;
+    let frame_id = e.add_node(frame, None);
+    e.add_node(
+        Node::new(NodeId(0), NodeKind::Rect, Rect::new(80.0, 80.0, 40.0, 40.0)),
+        Some(frame_id),
+    );
+    let dir = tmp("transparent-png");
+    let spec = Spec {
+        format: Format::Png,
+        scope: Scope::Page,
+        scale: 1.0,
+        transparent: true,
+        appearance: Default::default(),
+        embed_data: false,
+    };
+    let out = dir.join("page.png");
+    let pages = [("Page 1", &e.doc)];
+    export::write(&spec, &export::items(&spec, &pages, 0, &[]), &out, Some(g)).unwrap();
+    let img = image::open(&out).unwrap().to_rgba8();
+    let (w, h) = img.dimensions();
+    assert!(w >= 200 && h >= 200, "export should include frame bounds");
+    assert_eq!(
+        img.get_pixel(0, 0)[3],
+        0,
+        "top-left corner should be transparent"
+    );
+    assert_eq!(
+        img.get_pixel(w - 1, h - 1)[3],
+        0,
+        "bottom-right corner should be transparent"
+    );
+    assert!(
+        img.pixels().any(|p| p[3] > 0),
+        "content should remain visible"
+    );
+    std::fs::remove_dir_all(dir).ok();
+}
+
+#[test]
 fn embedded_svg_and_png_reopen_all_pages() {
     let Some(g) = gpu() else { return };
     let mut e = board();
@@ -496,6 +544,13 @@ fn embedded_svg_and_png_reopen_all_pages() {
         let path = dir.join(format!("board.{}", format.ext()));
         let items = export::items(&spec, &[("Page 1", &e.doc)], 0, &[]);
         export::write_with_data(&spec, &items, &path, Some(g), Some(&bundle)).unwrap();
+        if format == Format::Png {
+            let img = image::open(&path).unwrap().to_rgba8();
+            assert!(
+                img.pixels().any(|p| p[3] == 0),
+                "transparent export should include transparent pixels"
+            );
+        }
         let imported = sketch_rs::io::import::import_detailed(&path).unwrap();
         assert_eq!(imported.name, "Embedded board", "{format:?}");
         assert_eq!(imported.pages.len(), 2, "{format:?}");
