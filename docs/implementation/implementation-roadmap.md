@@ -452,7 +452,7 @@ documentation closeout completes the round.
 
 **Round 73 (committed a6d27e1, pushed).** Verified STY-10 Per-corner radius. Added sty10_per_corner_radius_changes_only_selected_corner in src/model/node.rs tests, asserting per-corner radii change only the selected corner and survive JSON roundtrip. STY-10 moved from IMPLEMENTED to VERIFIED.
 
-**Round 74 (local, pending commit/push).** Verified TXT-15 Text background color and TXT-17 Text shadow. Added txt15_text_background_color_roundtrips and txt17_text_shadow_flag_roundtrips in src/model/node.rs tests, confirming text background colors and text shadow flag persist through JSON roundtrip. TXT-15 and TXT-17 moved from IMPLEMENTED to VERIFIED. Targeted lib tests, `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`, `git diff --check`, and `python3 .artifacts/check_parity_docs.py` passed before commit. Full `cargo test` and release build were not rerun.
+**Round 74 (committed df363cb, pushed).** Verified TXT-15 Text background color and TXT-17 Text shadow. Added txt15_text_background_color_roundtrips and txt17_text_shadow_flag_roundtrips in src/model/node.rs tests, confirming text background colors and text shadow flag persist through JSON roundtrip. TXT-15 and TXT-17 moved from IMPLEMENTED to VERIFIED. Targeted lib tests, `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`, `git diff --check`, and `python3 .artifacts/check_parity_docs.py` passed before commit. Full `cargo test` and release build were not rerun.
 
 **Scope.**
 
