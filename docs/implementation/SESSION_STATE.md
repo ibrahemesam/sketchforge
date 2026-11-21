@@ -1,6 +1,6 @@
 # Sketch agent session state
 
-Last updated: 2026-11-21 (round 82 CUS-11 verified, committed and pushed).
+Last updated: 2026-11-21 (round 83 CON-21 verified, local pending commit/push).
 
 ## Objective
 
@@ -724,7 +724,9 @@ Round 80 (committed e1cfd10, pushed) verified TXT-16 Text border and SHP-26 Plac
 
 Round 81 (committed a4e5a4f, pushed) added simple-layout Justify support for TXT-09.
 
-Round 82 (committed 9d6cac1, pushed) verified CUS-11 Shape properties dialog. Existing tests import_reads_user_object_metadata_links_tooltips_and_tags and node_info_reports_links_tooltips_tags_and_metadata cover metadata round-trips/reporting; CUS-11 moved from IMPLEMENTED to VERIFIED with limitation that there is no separate generic typed-property schema beyond metadata map and existing typed fields. Parity docs record VERIFIED 188, IMPLEMENTED 14, IN_PROGRESS 1, ANALYZED 0, DISCOVERED 1 and BLOCKED 27.
+Round 82 (committed 9d6cac1, pushed) verified CUS-11 Shape properties dialog.
+
+Round 83 (local, pending commit/push) verified CON-21 Auto-route around obstacles. Added con21_elbow_route_avoids_third_shape in src/connector.rs tests; CON-21 moved from IMPLEMENTED to VERIFIED. Parity docs record VERIFIED 189, IMPLEMENTED 13, IN_PROGRESS 1, ANALYZED 0, DISCOVERED 1 and BLOCKED 27.
 
 ## Blockers
 

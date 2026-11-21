@@ -470,6 +470,8 @@ documentation closeout completes the round.
 
 **Round 82 (committed 9d6cac1, pushed).** Verified CUS-11 Shape properties dialog using existing tests import_reads_user_object_metadata_links_tooltips_and_tags and node_info_reports_links_tooltips_tags_and_metadata. CUS-11 moved from IMPLEMENTED to VERIFIED with limitation: no separate generic typed-property schema beyond metadata map and existing typed fields. Targeted tests and `python3 .artifacts/check_parity_docs.py` passed before commit.
 
+**Round 83 (local, pending commit/push).** Verified CON-21 Auto-route around obstacles. Added con21_elbow_route_avoids_third_shape in src/connector.rs tests; router avoids visible bindable third shape in routing area. CON-21 moved from IMPLEMENTED to VERIFIED. Targeted test, fmt, clippy -D warnings, diff --check, and parity docs check passed before commit.
+
 **Scope.**
 
 - A selection context resolver that classifies the current selection as document, single

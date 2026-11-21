@@ -1304,6 +1304,44 @@ mod tests {
     use crate::history::{Recording, Tx};
 
     #[test]
+    fn con21_elbow_route_avoids_third_shape() {
+        let doc = doc_with_shapes(&[
+            (1, NodeKind::Rect, Rect::new(0.0, 100.0, 100.0, 60.0), true),
+            (
+                2,
+                NodeKind::Rect,
+                Rect::new(400.0, 100.0, 100.0, 60.0),
+                true,
+            ),
+            (3, NodeKind::Rect, Rect::new(200.0, 80.0, 60.0, 100.0), true),
+        ]);
+        let a = Rect::new(0.0, 100.0, 100.0, 60.0);
+        let b = Rect::new(400.0, 100.0, 100.0, 60.0);
+        let obstacle = Rect::new(200.0, 80.0, 60.0, 100.0).inflate(OBSTACLE_PADDING);
+        let pts = route_elbow(
+            &doc,
+            v2(100.0, 130.0),
+            Some((NodeId(1), a, 2.0)),
+            v2(400.0, 130.0),
+            Some((NodeId(2), b, 2.0)),
+            false,
+            false,
+        );
+        assert!(pts.len() >= 2, "{pts:?}");
+        for w in pts.windows(2) {
+            assert!(
+                (w[0].x - w[1].x).abs() < 1e-6 || (w[0].y - w[1].y).abs() < 1e-6,
+                "not orthogonal: {pts:?}"
+            );
+            let m = (w[0] + w[1]) * 0.5;
+            assert!(
+                !strictly_inside(&obstacle, m),
+                "route crosses obstacle: mid={m:?} seg={w:?} pts={pts:?}"
+            );
+        }
+    }
+
+    #[test]
     fn elbow_routes_are_orthogonal_and_leave_perpendicular() {
         let doc = Document::default();
         let a = Rect::new(0.0, 0.0, 100.0, 60.0);
