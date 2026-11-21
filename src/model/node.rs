@@ -1487,4 +1487,15 @@ mod tests {
             assert_eq!(back.style.join, join);
         }
     }
+
+    #[test]
+    fn txt16_text_border_roundtrips() {
+        let mut n = Node::new(NodeId(1), NodeKind::Rect, Rect::new(0.0, 0.0, 100.0, 40.0));
+        n.text_border = Some(Color::rgb(0, 0, 0));
+        n.text_border_dark = Some(Color::rgb(255, 255, 255));
+        let s = serde_json::to_string(&n).unwrap();
+        let back: Node = serde_json::from_str(&s).unwrap();
+        assert_eq!(back.text_border, Some(Color::rgb(0, 0, 0)));
+        assert_eq!(back.text_border_dark, Some(Color::rgb(255, 255, 255)));
+    }
 }

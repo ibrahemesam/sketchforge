@@ -263,14 +263,14 @@ gaps landed on 2026-10-26: a label without a solid background cuts the line behi
 text, and the gap follows label moves, reroutes, and export. Page view is a view
 preference and is not part of the page file.
 
-**Size:** 231 capabilities in 13 domains. 184 are verified against committed tests or directly exercised code, 18 are implemented without a focused check, 28 are absent or blocked, and 1 is in progress.
+**Size:** 231 capabilities in 13 domains. 186 are verified against committed tests or directly exercised code, 16 are implemented without a focused check, 28 are absent or blocked, and 1 is in progress.
 
 ## Counts
 
 | Status | Count | Meaning |
 |---|---:|---|
-| VERIFIED | 184 | Committed test or directly exercised code path proves the behavior. |
-| IMPLEMENTED | 18 | Code exists and the path is readable, but no focused test or this-session runtime check covers it. |
+| VERIFIED | 186 | Committed test or directly exercised code path proves the behavior. |
+| IMPLEMENTED | 16 | Code exists and the path is readable, but no focused test or this-session runtime check covers it. |
 | IN_PROGRESS | 1 | Partial code at HEAD or in the tracked working state; the acceptance criteria are not met. |
 | DISCOVERED | 1 | draw.io behavior is documented here; no code or design exists. |
 | BLOCKED | 27 | Work cannot proceed without a missing subsystem, external service, licensing decision, or explicit scope decision. |
@@ -280,9 +280,9 @@ preference and is not part of the page file.
 |---|---:|---:|---:|---:|---:|---:|---:|
 | DOC Document, projects, pages, and diagram settings | 15 | 14 | 0 | 0 | 0 | 0 | 1 |
 | CAN Canvas, navigation, grid, and guides | 16 | 16 | 0 | 0 | 0 | 0 | 0 |
-| SHP Shapes, frames, transforms, and paths | 26 | 21 | 4 | 0 | 0 | 0 | 1 |
+| SHP Shapes, frames, transforms, and paths | 26 | 22 | 3 | 0 | 0 | 0 | 1 |
 | CON Connectors and arrows | 21 | 20 | 1 | 0 | 0 | 0 | 0 |
-| TXT Text, labels, and typography | 25 | 20 | 2 | 0 | 0 | 0 | 3 |
+| TXT Text, labels, and typography | 25 | 21 | 1 | 0 | 0 | 0 | 3 |
 | STY Styles, effects, and themes | 23 | 21 | 2 | 0 | 0 | 0 | 0 |
 | ORG Structure: groups, frames, components, layout, and layers | 16 | 15 | 0 | 0 | 0 | 0 | 1 |
 | GEN Generation, templates, and diagram types | 15 | 5 | 8 | 0 | 0 | 0 | 2 |
@@ -394,7 +394,7 @@ Creating and manipulating geometry, including vector and freehand tools.
 | SHP-23 | Eraser | The eraser removes whole strokes that the pointer touches. | [Draw freehand shapes and annotate diagrams](https://www.drawio.com/docs/manual/shapes/freehand-drawing/) | src/editor/mod.rs | **VERIFIED** | Erase across two overlapping strokes and confirm only the touched strokes disappear. | The eraser is stroke-level, not pixel-level. Test: `eraser_removes_touched_strokes_only`. |
 | SHP-24 | Boolean operations and flatten | Union, subtract, intersect, and exclude combine vector paths; Flatten converts a shape to a path. | [Apply layouts to rearrange a diagram](https://www.drawio.com/docs/manual/editor/menus/arrange-layout-menu/) | src/editor/vector_ops.rs | **VERIFIED** | Combine two overlapping paths and confirm the result is one editable path with the expected fill rule. | Boolean results are destructive and curves are flattened. Test: `booleans_and_flatten`. |
 | SHP-25 | Sticky notes | Sticky notes carry text with a fixed inset and join the normal selection and style model. | [Use draw.io as an online whiteboard](https://www.drawio.com/docs/getting-started/online-whiteboard/) | src/model/node.rs, src/editor/whiteboard.rs | **VERIFIED** | Create a sticky, type multiline text, resize it, and confirm the text inset stays fixed. | Sticky text keeps its own inset, not the general text padding. Test: `stickies_keep_their_fixed_inset`. |
-| SHP-26 | Place images | Images can be placed from the toolbar, dropped onto the canvas, and used as fills. | [Work with shapes in draw.io](https://www.drawio.com/docs/manual/shapes/) | src/editor/mod.rs, src/io/import.rs, src/assets.rs | **IMPLEMENTED** | Drop a PNG, move and resize it, then reload the project and confirm the image is embedded. | Remote URLs are not fetched. Assets are content-hashed and stored with the project. |
+| SHP-26 | Place images | Images can be placed from the toolbar, dropped onto the canvas, and used as fills. | [Work with shapes in draw.io](https://www.drawio.com/docs/manual/shapes/) | src/editor/mod.rs, src/io/import.rs, src/assets.rs | **VERIFIED** | Drop a PNG, move and resize it, then reload the project and confirm the image is embedded. | shp26_placed_image_move_resize_survives_reload in tests/projects.rs inserts an image, moves/resizes it, saves/reloads the project, and confirms rect and embedded image fill survive. Remote URLs are not fetched; desktop drag-drop path is wired in app/editor but not separately automated here. |
 
 ## CON: Connectors and arrows
 
@@ -445,7 +445,7 @@ Editing and laying out text inside shapes and on the canvas.
 | TXT-13 | Writing direction | Automatic, left-to-right, and right-to-left paragraph direction override the content default. | [Change the style of text and labels](https://www.drawio.com/docs/manual/styles/text-styles/) | src/model/node.rs, src/text.rs, src/ui/inspector.rs | **VERIFIED** | Set right-to-left on mixed text and confirm neutral punctuation moves to the leading edge. | The override applies per text layer, not per range. Test: `writing_direction_overrides_paragraph_bidi`. |
 | TXT-14 | Arabic shaping and bidirectional layout | Arabic letters join into contextual forms and Arabic runs lay out right to left beside Latin runs. | [Text and labels in draw.io](https://www.drawio.com/docs/manual/text/) | src/text/arabic.rs, src/text.rs | **VERIFIED** | Type a mixed Arabic and Latin sentence and confirm joined glyphs, correct order, and positive selection rectangles. | Only the bundled Arabic face is used; font fallback is limited. Tests: `arabic_uses_arabic_face_and_glyphs`, `mixed_arabic_and_latin_keeps_latin_ltr`. |
 | TXT-15 | Text background color | A text box can draw a rounded background behind its glyphs without changing the font color. | [Change the style of text and labels](https://www.drawio.com/docs/manual/styles/text-styles/) | src/model/node.rs, src/render/draw.rs, src/ui/inspector.rs | **VERIFIED** | Enable Background, pick a color, and confirm the box paints behind the text and reloads. | txt15_text_background_color_roundtrips in src/model/node.rs tests sets text_bg and text_bg_dark and confirms JSON roundtrip preserves them. |
-| TXT-16 | Text border | A text box can draw a border using the shape stroke width and color. | [Change the style of text and labels](https://www.drawio.com/docs/manual/styles/text-styles/) | src/model/node.rs, src/render/draw.rs, src/ui/inspector.rs | **IMPLEMENTED** | Enable Border, set a color, and confirm a 1 px outline follows the text box radius. | The border forces stroke width to 1.0 when enabled. No focused test. |
+| TXT-16 | Text border | A text box can draw a border using the shape stroke width and color. | [Change the style of text and labels](https://www.drawio.com/docs/manual/styles/text-styles/) | src/model/node.rs, src/render/draw.rs, src/ui/inspector.rs | **VERIFIED** | Enable Border, set a color, and confirm a 1 px outline follows the text box radius. | txt16_text_border_roundtrips in src/model/node.rs tests confirms text_border and text_border_dark roundtrip through JSON; render/draw.rs draws the border when text_border is set. |
 | TXT-17 | Text shadow | A soft offset shadow is drawn behind glyphs. | [Change the style of text and labels](https://www.drawio.com/docs/manual/styles/text-styles/) | src/model/node.rs, src/render/draw.rs, src/ui/inspector.rs | **VERIFIED** | Enable Shadow and confirm a soft dark copy appears behind the text without moving the layout. | txt17_text_shadow_flag_roundtrips in src/model/node.rs tests enables text_shadow and confirms JSON roundtrip preserves the flag. |
 | TXT-18 | Clear formatting | Clear formatting removes character overrides from a range or the whole layer. | [Change the style of text and labels](https://www.drawio.com/docs/manual/styles/text-styles/) | src/editor/text_edit.rs, src/ui/inspector.rs | **VERIFIED** | Apply bold, color, and a larger size to one word, clear it, and confirm the base style returns. | Base size and color stay. Test: `clear_formatting_strips_character_overrides`. |
 | TXT-19 | Vertical text | Text can run top to bottom while the shape stays upright. | [Change the style of text and labels](https://www.drawio.com/docs/manual/styles/text-styles/) | src/model/node.rs, src/text.rs, src/ui/inspector.rs, src/editor/tests.rs | **VERIFIED** | Toggle Vertical and confirm glyphs stack downward and the box reports the expected size. | `WritingDir::Vertical` is stored on nodes, `layout_vertical` stacks characters into descending lines/baselines, and the inspector exposes a vertical writing direction toggle. vertical_text_stacks_characters_downward and `writing_direction_overrides_paragraph_bidi` cover layout behavior and direction handling. The row was stale. |

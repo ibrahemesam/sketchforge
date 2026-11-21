@@ -450,3 +450,55 @@ fn io13_image_import_roundtrips_through_project_reload() {
         "image asset should be embedded in project"
     );
 }
+
+#[test]
+fn shp26_placed_image_move_resize_survives_reload() {
+    use drawio_rs::model::Paint;
+    let store = temp_store("shp26");
+    let (proj, page) = store.create("Image project").unwrap();
+    let mut ed = Editor::new(page.doc.clone());
+    let img = image::RgbaImage::from_fn(32, 32, |x, y| image::Rgba([x as u8, y as u8, 80, 255]));
+    let asset = drawio_rs::assets::register_rgba(&img);
+    let id = ed
+        .insert_image(&asset, v2(100.0, 100.0))
+        .expect("image inserted");
+    // Move and resize.
+    let n = ed.doc.nodes.get_mut(&id).unwrap();
+    n.rect.x = 240.0;
+    n.rect.y = 180.0;
+    n.rect.w = 160.0;
+    n.rect.h = 90.0;
+    let pages = vec![PageData {
+        id: page.id,
+        name: page.name.clone(),
+        doc: ed.doc.clone(),
+        camera: None,
+    }];
+    let p = Project::open(&proj.dir).unwrap();
+    for pg in &pages {
+        p.save_page(pg).unwrap();
+    }
+    drawio_rs::assets::save_to_dir(
+        &proj.dir.join(drawio_rs::project::ASSETS_DIR),
+        drawio_rs::assets::used_by(&ed.doc),
+    )
+    .unwrap();
+    let doc = Project::open(&proj.dir)
+        .unwrap()
+        .load_pages()
+        .unwrap()
+        .remove(0)
+        .doc;
+    let image_node = doc
+        .nodes
+        .values()
+        .find(|n| matches!(n.style.fills.first(), Some(Paint::Image { .. })))
+        .expect("image survives");
+    assert!((image_node.rect.x - 240.0).abs() < 0.01);
+    assert!((image_node.rect.y - 180.0).abs() < 0.01);
+    assert!((image_node.rect.w - 160.0).abs() < 0.01);
+    assert!((image_node.rect.h - 90.0).abs() < 0.01);
+    assert!(
+        matches!(image_node.style.fills.first(), Some(Paint::Image { asset: a, .. }) if a == &asset)
+    );
+}
