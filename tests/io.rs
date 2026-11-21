@@ -561,3 +561,39 @@ fn embedded_svg_and_png_reopen_all_pages() {
     }
     std::fs::remove_dir_all(dir).ok();
 }
+
+#[test]
+fn io07_png_export_scale_changes_pixel_dimensions() {
+    let Some(g) = gpu() else { return };
+    let mut e = Editor::default();
+    let mut frame = Node::new(
+        NodeId(0),
+        NodeKind::Frame { clip: false },
+        Rect::new(0.0, 0.0, 100.0, 50.0),
+    );
+    frame.style.fills.clear();
+    frame.style.stroke = None;
+    e.add_node(frame, None);
+    let pages = [("Page 1", &e.doc)];
+    let dir = tmp("scale");
+    let dims = |scale: f64| -> (u32, u32) {
+        let spec = Spec {
+            format: Format::Png,
+            scope: Scope::Page,
+            scale,
+            transparent: true,
+            appearance: Default::default(),
+            embed_data: false,
+        };
+        let out = dir.join(format!("s{scale}.png"));
+        export::write(&spec, &export::items(&spec, &pages, 0, &[]), &out, Some(g)).unwrap();
+        let img = image::open(&out).unwrap();
+        (img.width(), img.height())
+    };
+    let (w1, h1) = dims(1.0);
+    let (w2, h2) = dims(2.0);
+    let (w4, h4) = dims(4.0);
+    assert_eq!((w2, h2), (w1 * 2, h1 * 2), "2x should double dimensions");
+    assert_eq!((w4, h4), (w1 * 4, h1 * 4), "4x should quadruple dimensions");
+    std::fs::remove_dir_all(dir).ok();
+}

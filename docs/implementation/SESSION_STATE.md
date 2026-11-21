@@ -1,6 +1,6 @@
 # Sketch agent session state
 
-Last updated: 2026-11-21 (round 74 TXT-15/TXT-17 verified, committed and pushed).
+Last updated: 2026-11-21 (round 75 IO-07 export scale verified, local pending commit/push).
 
 ## Objective
 
@@ -704,11 +704,13 @@ Round 73 (committed a6d27e1, pushed) verified STY-10 Per-corner radius; STY-10
 moved from IMPLEMENTED to VERIFIED.
 
 Round 74 (committed df363cb, pushed) verified TXT-15 Text background color and
-TXT-17 Text shadow: added txt15_text_background_color_roundtrips and
-txt17_text_shadow_flag_roundtrips in src/model/node.rs tests, confirming text
-background colors and text shadow flag persist through JSON roundtrip. TXT-15
-and TXT-17 moved from IMPLEMENTED to VERIFIED. Parity docs record VERIFIED 179,
-IMPLEMENTED 23, IN_PROGRESS 1, ANALYZED 0, DISCOVERED 1 and BLOCKED 27.
+TXT-17 Text shadow; TXT-15/TXT-17 moved from IMPLEMENTED to VERIFIED.
+
+Round 75 (local, pending commit/push) verified IO-07 Export scale: added
+io07_png_export_scale_changes_pixel_dimensions in tests/io.rs, asserting 1x/2x/4x
+PNG export pixel dimensions scale exactly. IO-07 moved from IMPLEMENTED to
+VERIFIED. Parity docs record VERIFIED 180, IMPLEMENTED 22, IN_PROGRESS 1,
+ANALYZED 0, DISCOVERED 1 and BLOCKED 27.
 
 ## Blockers
 
