@@ -640,4 +640,51 @@ mod tests {
         assert_eq!(r(3), Rect::new(120.0, 60.0, 40.0, 20.0));
         assert_eq!(r(4), Rect::new(40.0, 20.0, 80.0, 40.0));
     }
+
+    #[test]
+    fn org10_wrap_flows_children_into_second_row() {
+        let mut doc = Document::default();
+        let mut rec = Recording::new("t", &doc);
+        let (fid, ids) = {
+            let mut tx = Tx::new(&mut doc, &mut rec);
+            let fid = tx.alloc_id();
+            let mut f = Node::new(
+                fid,
+                NodeKind::Frame { clip: false },
+                Rect::new(0.0, 0.0, 120.0, 200.0),
+            );
+            f.layout = Some(AutoLayout {
+                wrap: true,
+                gap: 10.0,
+                padding: [0.0; 4],
+                ..Default::default()
+            });
+            f.layout_child.sizing = [Sizing::Fixed, Sizing::Fixed];
+            tx.insert(f, None, None);
+            let mut ids = Vec::new();
+            for _ in 0..3 {
+                let id = tx.alloc_id();
+                let mut n = Node::new(id, NodeKind::Rect, Rect::new(0.0, 0.0, 50.0, 20.0));
+                n.layout_child.sizing = FX;
+                tx.insert(n, Some(fid), None);
+                ids.push(id);
+            }
+            layout_frame(&mut tx, fid);
+            (fid, ids)
+        };
+        let _ = fid;
+        // 120px wide: 50+10+50 fits, third wraps to a new row (cross_gap default 10).
+        assert_eq!(
+            doc.get(ids[0]).unwrap().rect,
+            Rect::new(0.0, 0.0, 50.0, 20.0)
+        );
+        assert_eq!(
+            doc.get(ids[1]).unwrap().rect,
+            Rect::new(60.0, 0.0, 50.0, 20.0)
+        );
+        assert_eq!(
+            doc.get(ids[2]).unwrap().rect,
+            Rect::new(0.0, 30.0, 50.0, 20.0)
+        );
+    }
 }

@@ -263,14 +263,14 @@ gaps landed on 2026-10-26: a label without a solid background cuts the line behi
 text, and the gap follows label moves, reroutes, and export. Page view is a view
 preference and is not part of the page file.
 
-**Size:** 231 capabilities in 13 domains. 182 are verified against committed tests or directly exercised code, 20 are implemented without a focused check, 28 are absent or blocked, and 1 is in progress.
+**Size:** 231 capabilities in 13 domains. 183 are verified against committed tests or directly exercised code, 19 are implemented without a focused check, 28 are absent or blocked, and 1 is in progress.
 
 ## Counts
 
 | Status | Count | Meaning |
 |---|---:|---|
-| VERIFIED | 182 | Committed test or directly exercised code path proves the behavior. |
-| IMPLEMENTED | 20 | Code exists and the path is readable, but no focused test or this-session runtime check covers it. |
+| VERIFIED | 183 | Committed test or directly exercised code path proves the behavior. |
+| IMPLEMENTED | 19 | Code exists and the path is readable, but no focused test or this-session runtime check covers it. |
 | IN_PROGRESS | 1 | Partial code at HEAD or in the tracked working state; the acceptance criteria are not met. |
 | DISCOVERED | 1 | draw.io behavior is documented here; no code or design exists. |
 | BLOCKED | 27 | Work cannot proceed without a missing subsystem, external service, licensing decision, or explicit scope decision. |
@@ -284,7 +284,7 @@ preference and is not part of the page file.
 | CON Connectors and arrows | 21 | 20 | 1 | 0 | 0 | 0 | 0 |
 | TXT Text, labels, and typography | 25 | 20 | 2 | 0 | 0 | 0 | 3 |
 | STY Styles, effects, and themes | 23 | 21 | 2 | 0 | 0 | 0 | 0 |
-| ORG Structure: groups, frames, components, layout, and layers | 16 | 14 | 1 | 0 | 0 | 0 | 1 |
+| ORG Structure: groups, frames, components, layout, and layers | 16 | 15 | 0 | 0 | 0 | 0 | 1 |
 | GEN Generation, templates, and diagram types | 15 | 5 | 8 | 0 | 0 | 0 | 2 |
 | IO Import, export, clipboard, and files | 21 | 17 | 1 | 0 | 0 | 0 | 3 |
 | CUS Libraries, scratchpad, and custom shapes | 16 | 12 | 1 | 0 | 0 | 0 | 3 |
@@ -501,7 +501,7 @@ Ways to organise many shapes beyond a flat z-order.
 | ORG-07 | Components and instances | Command-Option-K creates a main component; duplicating it creates linked instances. | [Work with shapes in draw.io](https://www.drawio.com/docs/manual/shapes/) | src/editor/structure.rs, src/model/paint.rs | **VERIFIED** | Edit the main, confirm every instance updates, then detach one instance. | One main per component link. Test: `components_sync_instances_and_respect_overrides`. |
 | ORG-08 | Instance overrides | Changing a property on an instance records an override instead of breaking the link. | [Work with shapes in draw.io](https://www.drawio.com/docs/manual/shapes/) | src/editor/structure.rs | **VERIFIED** | Override the fill on one instance, reset it, and confirm it follows the main again. | Overrides are tracked per property name. Test: `components_sync_instances_and_respect_overrides`. |
 | ORG-09 | Auto layout | Frames lay out children in a row or column with gap, padding, alignment, and hug, fill, or fixed sizing. | [Apply layouts to organise diagrams quickly](https://www.drawio.com/docs/manual/layouts/) | src/layout.rs, src/model/paint.rs | **VERIFIED** | Build a horizontal auto-layout frame with gap 12 and confirm children reflow when one is reordered. | The inspector no longer edits auto layout at HEAD; it remains on frames and through MCP. Test: `auto_layout_hugs_reorders_and_fills`. |
-| ORG-10 | Auto layout wrapping | A wrap-enabled layout flows children onto new lines when the main axis fills. | [Apply layouts to organise diagrams quickly](https://www.drawio.com/docs/manual/layouts/) | src/layout.rs | **IMPLEMENTED** | Set wrap on a row of fixed-width children, narrow the frame, and confirm a second line appears. | No focused wrap test; layout tests cover the non-wrapped paths. |
+| ORG-10 | Auto layout wrapping | A wrap-enabled layout flows children onto new lines when the main axis fills. | [Apply layouts to organise diagrams quickly](https://www.drawio.com/docs/manual/layouts/) | src/layout.rs | **VERIFIED** | Set wrap on a row of fixed-width children, narrow the frame, and confirm a second line appears. | org10_wrap_flows_children_into_second_row in src/layout.rs tests enables wrap on a narrow fixed frame and confirms the third child flows onto a second row with cross-gap spacing. |
 | ORG-11 | Drag to reorder in a layout | Dragging a child inside an auto-layout frame changes its order based on the drop position. | [Apply layouts to organise diagrams quickly](https://www.drawio.com/docs/manual/layouts/) | src/editor/mod.rs, src/layout.rs | **VERIFIED** | Drag the third child to the start of a row and confirm the order and positions update in one step. | Only applies to auto-layout frames. Test: `auto_layout_hugs_reorders_and_fills`. |
 | ORG-12 | Constraints | Children pin to left, right, center, scale, or stretch per axis when a frame resizes. | [Apply layouts to organise diagrams quickly](https://www.drawio.com/docs/manual/layouts/) | src/layout.rs, src/model/paint.rs | **VERIFIED** | Set right and bottom constraints, resize the frame, and confirm the child keeps its right and bottom margins. | Command or Control during resize ignores constraints. Test: `constraints_follow_frame_resize_and_cmd_ignores_them`. |
 | ORG-13 | Layers | A page has named layers with membership, visibility, lock, and ordering independent of groups. | [Using layers in draw.io](https://www.drawio.com/docs/manual/layers/) | src/model/layer.rs, src/model/document.rs, src/model/node.rs, src/editor/layers.rs, src/ui/inspector.rs, src/mcp/exec.rs, src/io/drawio.rs | **VERIFIED** | Create two layers, put shapes on each, hide one, and confirm only its shapes disappear. | Page-scoped named layers exist at HEAD with membership resolved through ancestors, visibility, lock, and layer-bucketed paint/hit/export order independent of groups. Editor, UI, MCP, and draw.io paths cover add, rename, duplicate, delete, reorder, visibility, lock, move-selection, and layer-aware import/export. Tests: `every_page_starts_with_a_background_layer`, `setting_a_layer_moves_the_whole_subtree_and_survives_validation`, `hiding_a_layer_hides_its_shapes_and_hit_testing`, `reordering_layers_only_changes_the_paint_order`, `duplicating_a_layer_copies_its_shapes_with_fresh_ids`, `deleting_a_layer_removes_its_shapes_but_keeps_the_last_layer`, `imports_layers_groups_geometry_labels_and_styles`. The row was stale. |

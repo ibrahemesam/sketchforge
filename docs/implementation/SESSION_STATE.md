@@ -1,6 +1,6 @@
 # Sketch agent session state
 
-Last updated: 2026-11-21 (round 77 CAN-10 evidence-only verified, committed and pushed).
+Last updated: 2026-11-21 (round 78 ORG-10 wrap verified, local pending commit/push).
 
 ## Objective
 
@@ -713,10 +713,13 @@ Round 76 (committed 878c940, pushed) verified STY-08 Line caps and joins;
 STY-08 moved from IMPLEMENTED to VERIFIED.
 
 Round 77 (committed d94609e, pushed) closed CAN-10 Equal-spacing guides as
-evidence-only VERIFIED: spacing_equalizes_gaps in src/editor/snap.rs tests
-already proves snap_spacing equalizes gaps and emits gap guides. CAN-10 moved
-from IMPLEMENTED to VERIFIED. Parity docs record VERIFIED 182, IMPLEMENTED 20,
-IN_PROGRESS 1, ANALYZED 0, DISCOVERED 1 and BLOCKED 27.
+evidence-only VERIFIED.
+
+Round 78 (local, pending commit/push) verified ORG-10 Auto layout wrapping:
+added org10_wrap_flows_children_into_second_row in src/layout.rs tests,
+confirming wrap-enabled narrow frame flows the third child onto a second row.
+ORG-10 moved from IMPLEMENTED to VERIFIED. Parity docs record VERIFIED 183,
+IMPLEMENTED 19, IN_PROGRESS 1, ANALYZED 0, DISCOVERED 1 and BLOCKED 27.
 
 ## Blockers
 
