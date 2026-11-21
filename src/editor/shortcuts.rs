@@ -529,18 +529,6 @@ pub fn menus() -> Vec<(&'static str, Vec<MenuEntry>)> {
             ],
         ),
         (
-            "Insert",
-            vec![
-                I(
-                    "Mermaid Diagram…",
-                    A::Generate(crate::generate::Source::Mermaid),
-                ),
-                I("CSV Rows…", A::Generate(crate::generate::Source::Csv)),
-                I("SQL Schema…", A::Generate(crate::generate::Source::Sql)),
-                I("JSON Graph…", A::Generate(crate::generate::Source::Json)),
-            ],
-        ),
-        (
             "Edit",
             vec![
                 I("Undo", A::Undo),
@@ -567,75 +555,6 @@ pub fn menus() -> Vec<(&'static str, Vec<MenuEntry>)> {
             ],
         ),
         (
-            "Object",
-            vec![
-                I("Group Selection", A::Group),
-                I("Ungroup", A::Ungroup),
-                I("Frame Selection", A::WrapInFrame),
-                S,
-                I("Create Component", A::CreateComponent),
-                I("Detach Instance", A::DetachInstance),
-                S,
-                I("Add Auto Layout", A::AddAutoLayout),
-                I("Remove Auto Layout", A::RemoveAutoLayout),
-                S,
-                I("Autosize", A::Autosize),
-                S,
-                Sub(
-                    "Align",
-                    vec![
-                        I("Align Left", A::Align(0, 0.0)),
-                        I("Align Horizontal Centers", A::Align(0, 0.5)),
-                        I("Align Right", A::Align(0, 1.0)),
-                        S,
-                        I("Align Top", A::Align(1, 0.0)),
-                        I("Align Vertical Centers", A::Align(1, 0.5)),
-                        I("Align Bottom", A::Align(1, 1.0)),
-                        S,
-                        I("Distribute Horizontal Spacing", A::Distribute(0)),
-                        I("Distribute Vertical Spacing", A::Distribute(1)),
-                    ],
-                ),
-                Sub(
-                    "Arrange",
-                    vec![
-                        I("Bring Forward", A::Forward),
-                        I("Send Backward", A::Backward),
-                        I("Bring to Front", A::ToFront),
-                        I("Send to Back", A::ToBack),
-                    ],
-                ),
-                S,
-                I("Flip Horizontal", A::FlipH),
-                I("Flip Vertical", A::FlipV),
-                S,
-                I("Show/Hide", A::ToggleVisible),
-                I("Lock/Unlock", A::ToggleLock),
-            ],
-        ),
-        (
-            "Vector",
-            vec![
-                I("Union", A::Boolean(BoolOp::Union)),
-                I("Subtract", A::Boolean(BoolOp::Subtract)),
-                I("Intersect", A::Boolean(BoolOp::Intersect)),
-                I("Exclude", A::Boolean(BoolOp::Exclude)),
-                S,
-                I("Flatten", A::Flatten),
-                S,
-                I("Hand-drawn Style", A::ToggleSketch),
-            ],
-        ),
-        (
-            "Text",
-            vec![
-                I("Bold", A::Bold),
-                I("Italic", A::Italic),
-                I("Underline", A::Underline),
-                I("Strikethrough", A::Strikethrough),
-            ],
-        ),
-        (
             "View",
             vec![
                 I("Zoom In", A::ZoomIn),
@@ -651,16 +570,101 @@ pub fn menus() -> Vec<(&'static str, Vec<MenuEntry>)> {
                 I("Dot Grid", A::ToggleGrid),
                 I("Format Panel", A::ToggleInspector),
                 I("Show/Hide UI", A::ToggleUi),
-                I("Keyboard Shortcuts", A::ToggleHelp),
             ],
         ),
         (
-            "Tools",
-            super::Tool::ALL
-                .iter()
-                .map(|t| I(t.label(), A::Tool(*t)))
-                .collect(),
+            "Arrange",
+            vec![
+                Sub(
+                    "Insert",
+                    vec![
+                        I(
+                            "Mermaid Diagram…",
+                            A::Generate(crate::generate::Source::Mermaid),
+                        ),
+                        I("CSV Rows…", A::Generate(crate::generate::Source::Csv)),
+                        I("SQL Schema…", A::Generate(crate::generate::Source::Sql)),
+                        I("JSON Graph…", A::Generate(crate::generate::Source::Json)),
+                    ],
+                ),
+                S,
+                Sub(
+                    "Direction",
+                    vec![I("Flip Horizontal", A::FlipH), I("Flip Vertical", A::FlipV)],
+                ),
+                Sub(
+                    "Align",
+                    vec![
+                        I("Align Left", A::Align(0, 0.0)),
+                        I("Align Horizontal Centers", A::Align(0, 0.5)),
+                        I("Align Right", A::Align(0, 1.0)),
+                        S,
+                        I("Align Top", A::Align(1, 0.0)),
+                        I("Align Vertical Centers", A::Align(1, 0.5)),
+                        I("Align Bottom", A::Align(1, 1.0)),
+                        S,
+                        I("Distribute Horizontal Spacing", A::Distribute(0)),
+                        I("Distribute Vertical Spacing", A::Distribute(1)),
+                    ],
+                ),
+                S,
+                I("Bring Forward", A::Forward),
+                I("Send Backward", A::Backward),
+                I("Bring to Front", A::ToFront),
+                I("Send to Back", A::ToBack),
+                S,
+                I("Group Selection", A::Group),
+                I("Ungroup", A::Ungroup),
+                I("Frame Selection", A::WrapInFrame),
+                S,
+                I("Create Component", A::CreateComponent),
+                I("Detach Instance", A::DetachInstance),
+                S,
+                I("Add Auto Layout", A::AddAutoLayout),
+                I("Remove Auto Layout", A::RemoveAutoLayout),
+                S,
+                I("Autosize", A::Autosize),
+                S,
+                I("Show/Hide", A::ToggleVisible),
+                I("Lock/Unlock", A::ToggleLock),
+            ],
         ),
+        (
+            "Extras",
+            vec![
+                Sub(
+                    "Vector",
+                    vec![
+                        I("Union", A::Boolean(BoolOp::Union)),
+                        I("Subtract", A::Boolean(BoolOp::Subtract)),
+                        I("Intersect", A::Boolean(BoolOp::Intersect)),
+                        I("Exclude", A::Boolean(BoolOp::Exclude)),
+                        S,
+                        I("Flatten", A::Flatten),
+                    ],
+                ),
+                I("Hand-drawn Style", A::ToggleSketch),
+                S,
+                Sub(
+                    "Text",
+                    vec![
+                        I("Bold", A::Bold),
+                        I("Italic", A::Italic),
+                        I("Underline", A::Underline),
+                        I("Strikethrough", A::Strikethrough),
+                    ],
+                ),
+                S,
+                Sub(
+                    "Tools",
+                    super::Tool::ALL
+                        .iter()
+                        .map(|t| I(t.label(), A::Tool(*t)))
+                        .collect(),
+                ),
+            ],
+        ),
+        ("Help", vec![I("Keyboard Shortcuts", A::ToggleHelp)]),
     ]
 }
 
@@ -693,6 +697,15 @@ pub fn chord_text(a: Action) -> String {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn top_level_menus_match_drawio_structure() {
+        let names: Vec<_> = super::menus().into_iter().map(|(n, _)| n).collect();
+        assert_eq!(
+            names,
+            vec!["File", "Edit", "View", "Arrange", "Extras", "Help"]
+        );
+    }
+
     #[test]
     fn print_is_bound_and_in_the_file_menu() {
         assert_eq!(
