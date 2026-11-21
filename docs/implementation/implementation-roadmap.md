@@ -472,7 +472,7 @@ documentation closeout completes the round.
 
 **Round 83 (committed 90b1680, pushed).** Verified CON-21 Auto-route around obstacles. Added con21_elbow_route_avoids_third_shape in src/connector.rs tests; router avoids visible bindable third shape in routing area. CON-21 moved from IMPLEMENTED to VERIFIED. Targeted test, fmt, clippy -D warnings, diff --check, and parity docs check passed before commit.
 
-**UIX-02 increment (local, pending commit/push).** Captured failing test connector_only_arrange_tab_hides_shape_only_controls, then hid Autosize/Copy Size/Apply Size/Constrain Proportions for connector-only Arrange selections. UIX-02 remains IN_PROGRESS: labeled connector still shares top-level tab set with text layer and other irrelevant controls may remain.
+**UIX-02 increment (committed f8e4a03, pushed).** Captured failing test connector_only_arrange_tab_hides_shape_only_controls, then hid Autosize/Copy Size/Apply Size/Constrain Proportions for connector-only Arrange selections. UIX-02 remains IN_PROGRESS: labeled connector still shares top-level tab set with text layer and other irrelevant controls may remain.
 
 **Scope.**
 
