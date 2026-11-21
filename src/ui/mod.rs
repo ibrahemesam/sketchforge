@@ -206,11 +206,15 @@ impl InspectorTab {
     pub const GLOBAL: [InspectorTab; 2] = [InspectorTab::Diagram, InspectorTab::Style];
 
     /// Tabs shown for the current selection. The Text tab is omitted when no
-    /// selected element carries editable text or a label.
+    /// selected element carries editable text or a label. Connectors only show
+    /// the Text tab when they carry a label or extra labels.
     pub fn element_tabs(ids: &[NodeId], doc: &crate::model::Document) -> Vec<InspectorTab> {
         let has_text = ids.iter().any(|id| {
-            doc.get(*id)
-                .is_some_and(|n| n.supports_label() || n.kind.text().is_some())
+            doc.get(*id).is_some_and(|n| {
+                n.kind.text().is_some()
+                    || (n.is_connector() && (!n.label.is_empty() || !n.labels.is_empty()))
+                    || (!n.is_connector() && n.supports_label())
+            })
         });
         let mut tabs = vec![InspectorTab::Style];
         if has_text {
@@ -1420,8 +1424,66 @@ mod tests {
                 InspectorTab::Data
             ]
         );
+        // An unlabeled connector gets a different tab set than a text layer;
+        // labeled connectors still get the Text tab.
+        assert_eq!(
+            InspectorTab::element_tabs(&[connector_id], &doc),
+            vec![
+                InspectorTab::Style,
+                InspectorTab::Arrange,
+                InspectorTab::Data
+            ]
+        );
+        let mut labeled_conn = doc.get(connector_id).cloned().unwrap();
+        labeled_conn.label = "Link".into();
+        doc.nodes.insert(connector_id, labeled_conn);
         assert!(InspectorTab::element_tabs(&[connector_id], &doc).contains(&InspectorTab::Text));
         assert!(!InspectorTab::Text.valid_for(true, &[group_id], &doc));
+    }
+
+    #[test]
+    fn connector_without_label_has_different_tab_set_than_text_layer() {
+        use crate::geom::Rect;
+        let mut doc = Document::default();
+        let text_id = NodeId(10);
+        let conn_id = NodeId(11);
+        let mut text = Node::new(
+            text_id,
+            NodeKind::Text {
+                text: "Label".into(),
+                font_size: 14.0,
+                auto_width: true,
+                align: crate::model::TextAlign::Left,
+            },
+            Rect::new(0.0, 0.0, 40.0, 20.0),
+        );
+        text.id = text_id;
+        let mut conn = Node::new(
+            conn_id,
+            NodeKind::Connector {
+                points: vec![crate::geom::v2(0.0, 0.0), crate::geom::v2(10.0, 10.0)],
+                start: None,
+                end: None,
+                route: crate::model::Route::Straight,
+                start_head: crate::model::Head::None,
+                end_head: crate::model::Head::Arrow,
+                jump: crate::model::LineJump::None,
+                jump_size: 6.0,
+            },
+            Rect::new(0.0, 0.0, 10.0, 10.0),
+        );
+        conn.id = conn_id;
+        doc.nodes.insert(text_id, text);
+        doc.nodes.insert(conn_id, conn);
+
+        let text_tabs = InspectorTab::element_tabs(&[text_id], &doc);
+        let conn_tabs = InspectorTab::element_tabs(&[conn_id], &doc);
+        assert_ne!(
+            text_tabs, conn_tabs,
+            "connector and text layer should get different tab sets"
+        );
+        assert!(text_tabs.contains(&InspectorTab::Text));
+        assert!(!conn_tabs.contains(&InspectorTab::Text));
     }
 
     #[test]

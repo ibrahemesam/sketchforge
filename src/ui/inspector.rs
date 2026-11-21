@@ -1168,6 +1168,7 @@ fn arrow_section(ui: &mut Ui, ed: &mut Editor, st: &mut UiState, ids: &[NodeId],
         "style.arrow",
         "Arrow",
         &[
+            "Add label",
             "Type",
             "Heads",
             "Head Size",
@@ -1185,6 +1186,20 @@ fn arrow_section(ui: &mut Ui, ed: &mut Editor, st: &mut UiState, ids: &[NodeId],
             "Direction",
         ],
         |ui| {
+            if ids.len() == 1
+                && first.is_connector()
+                && first.label.is_empty()
+                && first.labels.is_empty()
+                && !ed.doc.is_effectively_locked(ids[0])
+            {
+                let r = ui
+                    .add_sized([ui.available_width(), 20.0], egui::Button::new("Add label"))
+                    .on_hover_text("Add a text label to this connector");
+                if r.clicked() {
+                    ed.add_connector_label(ids[0]);
+                }
+                ui.add_space(2.0);
+            }
             let routes = [
                 (Route::Straight, "Straight"),
                 (Route::Curved, "Curved"),
@@ -6267,6 +6282,59 @@ mod tests {
             ..Default::default()
         };
         let text = panel_text_for(&mut ed, &mut st, 320.0, 1600.0);
+        assert!(text.contains("Arrow"), "{text}");
+    }
+
+    #[test]
+    fn unlabeled_connector_gets_no_text_tab_and_shows_add_label() {
+        let mut ed = Editor::default();
+        let a = ed.add_node(
+            Node::new(
+                NodeId(1),
+                NodeKind::Rect,
+                crate::geom::Rect::new(0.0, 0.0, 100.0, 60.0),
+            ),
+            None,
+        );
+        let b = ed.add_node(
+            Node::new(
+                NodeId(2),
+                NodeKind::Rect,
+                crate::geom::Rect::new(300.0, 0.0, 100.0, 60.0),
+            ),
+            None,
+        );
+        let bind = |node| crate::model::Binding {
+            node,
+            fixed: crate::geom::v2(0.5, 0.5),
+            inside: false,
+            floating: false,
+        };
+        let conn = ed.add_node(
+            Node::new(
+                NodeId(3),
+                NodeKind::Connector {
+                    points: vec![crate::geom::v2(0.0, 30.0), crate::geom::v2(400.0, 30.0)],
+                    start: Some(bind(a)),
+                    end: Some(bind(b)),
+                    route: crate::model::Route::Straight,
+                    start_head: crate::model::Head::None,
+                    end_head: crate::model::Head::Arrow,
+                    jump: crate::model::LineJump::None,
+                    jump_size: 6.0,
+                },
+                crate::geom::Rect::new(0.0, 0.0, 400.0, 60.0),
+            ),
+            None,
+        );
+        ed.selection = vec![conn];
+        let mut st = UiState {
+            inspector_tab: crate::ui::InspectorTab::Style,
+            ..Default::default()
+        };
+        let text = panel_text_for(&mut ed, &mut st, 320.0, 1600.0);
+        assert!(!text.contains("\nText\n"), "{text}");
+        assert!(text.contains("Add label"), "{text}");
         assert!(text.contains("Arrow"), "{text}");
     }
 }

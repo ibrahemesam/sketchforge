@@ -1,6 +1,6 @@
 # Sketch agent session state
 
-Last updated: 2026-11-21 (round 68 context-sensitive style sections, committed and pushed).
+Last updated: 2026-11-21 (round 69 unlabeled connector tab differentiation, local pending commit/push).
 
 ## Objective
 
@@ -682,17 +682,22 @@ selection-aware element tab computation in `src/ui/inspector.rs` and
 `src/ui/mod.rs`; Text tab omitted when no selected element carries editable
 text or a label and active tab clamped to current selection context.
 
-Round 68 was committed as `d23302f` and pushed: advanced UIX-02 by making
-Style-tab connector/sticky/sketch sections resolve from any selected element,
-not only the first selected node, so mixed selections that include a connector
-still show the Arrow section. Added inspector tests covering connector-only
-style sections (Arrow shown, Fill hidden), text-only style sections (Arrow and
-Fill hidden), and mixed rect+connector selection (Arrow shown). UIX-02 remains
-IN_PROGRESS because connector and standalone text-layer selections still
-receive the same top-level tab set because both have text targets; some
-irrelevant controls/sections may remain in non-Style tabs. Parity docs record
-VERIFIED 173, IMPLEMENTED 29, IN_PROGRESS 1, ANALYZED 0, DISCOVERED 1 and
-BLOCKED 27.
+Round 68 was committed as `d23302f` and pushed: Style-tab connector/sticky/
+sketch sections resolve from any selected element, not only the first selected
+node.
+
+Round 69 (local, pending commit/push) advanced UIX-02: unlabeled connector-only
+selections now omit the Text tab (Style, Arrange, Data) while text layers keep
+Style, Text, Arrange, Data, giving different tab sets for the typical connector
+vs text-layer case. Unlabeled single connectors show an Add label button in the
+Style tab Arrow section; labeled connectors still include Text. Added/updated
+tests in src/ui/mod.rs and src/ui/inspector.rs. UIX-02 remains IN_PROGRESS
+because a labeled connector shares the same top-level tab set as a text layer
+and some irrelevant controls/sections may remain in non-Style tabs. Parity docs
+record VERIFIED 173, IMPLEMENTED 29, IN_PROGRESS 1, ANALYZED 0, DISCOVERED 1 and
+BLOCKED 27. `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`,
+targeted lib tests, `git diff --check`, and `python3 .artifacts/check_parity_docs.py`
+passed before commit. Full `cargo test` and release build were not rerun.
 
 ## Blockers
 
@@ -708,14 +713,17 @@ BLOCKED 27.
 
 ## Exact next task
 
-Continue assessing UIX-02 (still IN_PROGRESS): the stated acceptance asks for a
-different tab set for connector and text-layer selections with no empty
-sections; connector and text nodes both have text targets so tab differentiation
-needs a careful, user-meaningful decision. Capture a failing test before real
-code fixes. Assess UIX-12 for any genuine HEAD evidence (remains DISCOVERED/
-unaudited). Otherwise close or correct stale rows as evidence-only with cited
-HEAD identifiers and update verification/session docs. Do not restart completed
-rounds. Keep blocked/deferred items blocked. No release, tag, or PR.
+Commit and `git push --quiet` the round 69 unlabeled-connector tab
+differentiation progress (code + tests + parity/docs updates) on
+`agent/drawio-features`, keeping checks passing. After pushing, continue
+assessing UIX-02 (still IN_PROGRESS): typical unlabeled connector vs text-layer
+selections now get different tab sets, but a labeled connector still shares the
+same tab set as a text layer and some irrelevant controls/sections may remain in
+non-Style tabs. Capture a failing test before real code fixes. Assess UIX-12 for
+any genuine HEAD evidence (remains DISCOVERED/unaudited). Otherwise close or
+correct stale rows as evidence-only with cited HEAD identifiers and update
+verification/session docs. Do not restart completed rounds. Keep blocked/
+deferred items blocked. No release, tag, or PR.
 
 ## Commands
 
