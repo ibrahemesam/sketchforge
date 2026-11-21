@@ -393,3 +393,60 @@ fn m2_pages_panel_screenshot() {
         )) > 500
     );
 }
+
+#[test]
+fn io13_image_import_roundtrips_through_project_reload() {
+    use sketch_rs::model::Paint;
+    let store = temp_store("io13");
+    let (proj, page) = store.create("Image project").unwrap();
+    let mut ed = Editor::new(page.doc.clone());
+    let img = image::RgbaImage::from_fn(64, 32, |x, y| image::Rgba([x as u8, y as u8, 120, 255]));
+    let asset = sketch_rs::assets::register_rgba(&img);
+    let id = ed
+        .insert_image(&asset, v2(200.0, 150.0))
+        .expect("image inserted");
+    let node = ed.doc.get(id).unwrap();
+    assert!(
+        node.rect.w > 0.0 && node.rect.h > 0.0,
+        "non-zero image size"
+    );
+    assert!(
+        matches!(node.style.fills.first(), Some(Paint::Image { asset: a, .. }) if a == &asset),
+        "image fill present"
+    );
+
+    let pages = vec![PageData {
+        id: page.id,
+        name: page.name.clone(),
+        doc: ed.doc.clone(),
+        camera: None,
+    }];
+    let p = Project::open(&proj.dir).unwrap();
+    for pg in &pages {
+        p.save_page(pg).unwrap();
+    }
+    sketch_rs::assets::save_to_dir(
+        &proj.dir.join(sketch_rs::project::ASSETS_DIR),
+        sketch_rs::assets::used_by(&ed.doc),
+    )
+    .unwrap();
+
+    let reloaded = Project::open(&proj.dir).unwrap();
+    let doc = reloaded.load_pages().unwrap().remove(0).doc;
+    let image_node = doc
+        .nodes
+        .values()
+        .find(|n| matches!(n.style.fills.first(), Some(Paint::Image { .. })))
+        .expect("image node survives reload");
+    assert!(image_node.rect.w > 0.0 && image_node.rect.h > 0.0);
+    assert!(
+        matches!(image_node.style.fills.first(), Some(Paint::Image { asset: a, .. }) if a == &asset),
+        "image fill still editable after reload"
+    );
+    let assets_dir = proj.dir.join(sketch_rs::project::ASSETS_DIR);
+    assert!(assets_dir.exists(), "project assets dir should exist");
+    assert!(
+        std::fs::read_dir(&assets_dir).unwrap().next().is_some(),
+        "image asset should be embedded in project"
+    );
+}

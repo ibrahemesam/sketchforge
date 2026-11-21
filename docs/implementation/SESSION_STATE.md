@@ -1,6 +1,6 @@
 # Sketch agent session state
 
-Last updated: 2026-11-21 (round 78 ORG-10 wrap verified, committed and pushed).
+Last updated: 2026-11-21 (round 79 IO-13 image import verified, local pending commit/push).
 
 ## Objective
 
@@ -715,11 +715,15 @@ STY-08 moved from IMPLEMENTED to VERIFIED.
 Round 77 (committed d94609e, pushed) closed CAN-10 Equal-spacing guides as
 evidence-only VERIFIED.
 
-Round 78 (committed ddff74b, pushed) verified ORG-10 Auto layout wrapping:
-added org10_wrap_flows_children_into_second_row in src/layout.rs tests,
-confirming wrap-enabled narrow frame flows the third child onto a second row.
-ORG-10 moved from IMPLEMENTED to VERIFIED. Parity docs record VERIFIED 183,
-IMPLEMENTED 19, IN_PROGRESS 1, ANALYZED 0, DISCOVERED 1 and BLOCKED 27.
+Round 78 (committed ddff74b, pushed) verified ORG-10 Auto layout wrapping;
+ORG-10 moved from IMPLEMENTED to VERIFIED.
+
+Round 79 (local, pending commit/push) verified IO-13 Image import and
+drag-and-drop: added io13_image_import_roundtrips_through_project_reload in
+tests/projects.rs, asserting inserted image fill, non-zero size, and embedded
+asset survive project save/reload. IO-13 moved from IMPLEMENTED to VERIFIED.
+Parity docs record VERIFIED 184, IMPLEMENTED 18, IN_PROGRESS 1, ANALYZED 0,
+DISCOVERED 1 and BLOCKED 27.
 
 ## Blockers
 

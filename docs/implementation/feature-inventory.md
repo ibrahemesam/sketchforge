@@ -263,14 +263,14 @@ gaps landed on 2026-10-26: a label without a solid background cuts the line behi
 text, and the gap follows label moves, reroutes, and export. Page view is a view
 preference and is not part of the page file.
 
-**Size:** 231 capabilities in 13 domains. 183 are verified against committed tests or directly exercised code, 19 are implemented without a focused check, 28 are absent or blocked, and 1 is in progress.
+**Size:** 231 capabilities in 13 domains. 184 are verified against committed tests or directly exercised code, 18 are implemented without a focused check, 28 are absent or blocked, and 1 is in progress.
 
 ## Counts
 
 | Status | Count | Meaning |
 |---|---:|---|
-| VERIFIED | 183 | Committed test or directly exercised code path proves the behavior. |
-| IMPLEMENTED | 19 | Code exists and the path is readable, but no focused test or this-session runtime check covers it. |
+| VERIFIED | 184 | Committed test or directly exercised code path proves the behavior. |
+| IMPLEMENTED | 18 | Code exists and the path is readable, but no focused test or this-session runtime check covers it. |
 | IN_PROGRESS | 1 | Partial code at HEAD or in the tracked working state; the acceptance criteria are not met. |
 | DISCOVERED | 1 | draw.io behavior is documented here; no code or design exists. |
 | BLOCKED | 27 | Work cannot proceed without a missing subsystem, external service, licensing decision, or explicit scope decision. |
@@ -286,7 +286,7 @@ preference and is not part of the page file.
 | STY Styles, effects, and themes | 23 | 21 | 2 | 0 | 0 | 0 | 0 |
 | ORG Structure: groups, frames, components, layout, and layers | 16 | 15 | 0 | 0 | 0 | 0 | 1 |
 | GEN Generation, templates, and diagram types | 15 | 5 | 8 | 0 | 0 | 0 | 2 |
-| IO Import, export, clipboard, and files | 21 | 17 | 1 | 0 | 0 | 0 | 3 |
+| IO Import, export, clipboard, and files | 21 | 18 | 0 | 0 | 0 | 0 | 3 |
 | CUS Libraries, scratchpad, and custom shapes | 16 | 12 | 1 | 0 | 0 | 0 | 3 |
 | DIA Diagram data: metadata, links, tags, and placeholders | 12 | 10 | 0 | 0 | 0 | 0 | 2 |
 | STO Storage, sharing, collaboration, and integrations | 11 | 1 | 0 | 0 | 0 | 0 | 10 |
@@ -548,7 +548,7 @@ Moving diagram data in and out of Sketch.
 | IO-10 | Excalidraw import | An .excalidraw scene opens as a new project with editable shapes, bindings, and text. | [draw.io import formats and sources](https://www.drawio.com/docs/manual/import/import-formats/) | src/io/excalidraw.rs, src/io/import.rs | **VERIFIED** | Import a scene with bound arrows, a frame, and hand-drawn shapes and confirm the structure. | Rotation is baked into paths and text rotation is dropped. Test: `m6_import_excalidraw_and_svg_screenshots`. |
 | IO-11 | Excalidraw library import | An .excalidrawlib file imports as reusable library items. | [draw.io import formats and sources](https://www.drawio.com/docs/manual/import/import-formats/) | src/io/excalidraw.rs, src/library.rs | **VERIFIED** | Import a library with two items and insert both with fresh IDs. | Only the first library page is imported. Test: `imports_the_library_fixture`. |
 | IO-12 | SVG import | SVG paths, gradients, strokes, embedded images, and text outlines become native layers. | [draw.io import formats and sources](https://www.drawio.com/docs/manual/import/import-formats/) | src/io/svg_import.rs | **VERIFIED** | Import an SVG with a gradient, a raster image, and text and confirm each is editable. | Patterns, filters, masks, and clip paths are not imported. Test: `imports_shapes_gradients_strokes_and_text`. |
-| IO-13 | Image import and drag-and-drop | A PNG, JPEG, or other supported image can be placed on the canvas or dropped from the desktop. | [draw.io import formats and sources](https://www.drawio.com/docs/manual/import/import-formats/) | src/editor/mod.rs, src/io/import.rs, src/assets.rs | **IMPLEMENTED** | Drop an image, reload the project, and confirm it is still embedded and editable as a fill. | Remote http images are not fetched. GIF animation is not preserved. |
+| IO-13 | Image import and drag-and-drop | A PNG, JPEG, or other supported image can be placed on the canvas or dropped from the desktop. | [draw.io import formats and sources](https://www.drawio.com/docs/manual/import/import-formats/) | src/editor/mod.rs, src/io/import.rs, src/assets.rs | **VERIFIED** | Drop an image, reload the project, and confirm it is still embedded and editable as a fill. | io13_image_import_roundtrips_through_project_reload in tests/projects.rs inserts an image via insert_image, saves/reloads the project, and confirms the image fill, non-zero size, and embedded asset file survive reload. Remote http images are not fetched; GIF animation is not preserved. |
 | IO-14 | CLI export and import | The binary exports PNG, SVG, and PDF and imports Excalidraw without a window. | [Export, embed, publish and print diagrams](https://www.drawio.com/docs/manual/export/) | src/main.rs, src/io/export.rs, src/io/import.rs | **VERIFIED** | Run the documented export and import commands on a demo project and open the results. | Requires a GPU adapter for raster export unless the software adapter is available. Test: `m6_cli_exports_pdf_and_imports_excalidraw`. |
 | IO-15 | draw.io XML import | A .drawio or .xml file opens as native pages, shapes, styles, labels, and edges. | [Open a diagram](https://www.drawio.com/docs/manual/open-diagram-file/) | src/io/drawio.rs, src/io/import.rs | **VERIFIED** | Open a two-page .drawio file with custom styles and confirm pages, geometry, labels, and edges map without silent loss. | The native draw.io adapter parses mxfile/mxGraphModel XML (including compressed payload handling and loss diagnostics) into pages, layers, groups, frames, styles, labels and edges. `import_reads_pages_layers_and_reports_fidelity` covers the two-page fixture, pages/layers and reported counts. The row was stale. |
 | IO-16 | draw.io XML export | The project can be written as .drawio XML for draw.io and compatible tools. | [Manually edit the XML source of your draw.io diagram](https://www.drawio.com/docs/manual/advanced/diagram-source-edit/) | src/io/drawio.rs, src/io/export.rs, src/main.rs | **VERIFIED** | Export a page, reopen it in draw.io, and compare geometry, text, connectors, and groups. | Export writes uncompressed mxfile content for project pages through the adapter/export paths and CLI integration. `export_writes_every_page_and_reimports_the_document` and `export_and_reimport_keep_the_source_connector_default` cover multi-page export and round-trip fidelity of supported structure and metadata. Opening the exported file in external draw.io was not rerun in this environment. The row was stale. |
