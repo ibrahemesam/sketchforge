@@ -458,7 +458,7 @@ documentation closeout completes the round.
 
 **Round 76 (committed 878c940, pushed).** Verified STY-08 Line caps and joins. Added sty08_line_caps_and_joins_roundtrip in src/model/node.rs tests, confirming all Cap/Join values roundtrip through JSON on node style. STY-08 moved from IMPLEMENTED to VERIFIED.
 
-**Round 77 (local, pending commit/push).** Evidence-only verification of CAN-10 Equal-spacing guides. spacing_equalizes_gaps in src/editor/snap.rs tests already proves snap_spacing equalizes gaps and emits gap guides. CAN-10 moved from IMPLEMENTED to VERIFIED. `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`, `git diff --check`, and `python3 .artifacts/check_parity_docs.py` passed before commit. No application code changed.
+**Round 77 (committed d94609e, pushed).** Evidence-only verification of CAN-10 Equal-spacing guides. spacing_equalizes_gaps in src/editor/snap.rs tests already proves snap_spacing equalizes gaps and emits gap guides. CAN-10 moved from IMPLEMENTED to VERIFIED. `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`, `git diff --check`, and `python3 .artifacts/check_parity_docs.py` passed before commit. No application code changed.
 
 **Scope.**
 

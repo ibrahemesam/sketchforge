@@ -1,6 +1,6 @@
 # Sketch agent session state
 
-Last updated: 2026-11-21 (round 77 CAN-10 evidence-only verified, local pending commit/push).
+Last updated: 2026-11-21 (round 77 CAN-10 evidence-only verified, committed and pushed).
 
 ## Objective
 
@@ -712,7 +712,7 @@ from IMPLEMENTED to VERIFIED.
 Round 76 (committed 878c940, pushed) verified STY-08 Line caps and joins;
 STY-08 moved from IMPLEMENTED to VERIFIED.
 
-Round 77 (local, pending commit/push) closed CAN-10 Equal-spacing guides as
+Round 77 (committed d94609e, pushed) closed CAN-10 Equal-spacing guides as
 evidence-only VERIFIED: spacing_equalizes_gaps in src/editor/snap.rs tests
 already proves snap_spacing equalizes gaps and emits gap guides. CAN-10 moved
 from IMPLEMENTED to VERIFIED. Parity docs record VERIFIED 182, IMPLEMENTED 20,
