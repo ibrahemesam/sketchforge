@@ -1,6 +1,6 @@
 # Sketch agent session state
 
-Last updated: 2026-11-21 (round 70 IO-06 transparent PNG verified, local pending commit/push).
+Last updated: 2026-11-21 (round 70 IO-06 transparent PNG verified, committed and pushed).
 
 ## Objective
 
@@ -691,7 +691,7 @@ selections now omit the Text tab (Style, Arrange, Data) while text layers keep
 Style, Text, Arrange, Data, giving different tab sets for the typical connector
 vs text-layer case. UIX-02 remains IN_PROGRESS.
 
-Round 70 (local, pending commit/push) verified IO-06 Transparent PNG background:
+Round 70 (committed 848ac44, pushed) verified IO-06 Transparent PNG background:
 added transparent_png_export_omits_page_background in tests/io.rs asserting
 transparent page export produces alpha-0 corner pixels while keeping visible
 content, and strengthened embedded_svg_and_png_reopen_all_pages with a
