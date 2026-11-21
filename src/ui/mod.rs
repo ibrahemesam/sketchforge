@@ -590,7 +590,7 @@ fn layers(ui: &mut Ui, ed: &mut Editor, st: &mut UiState) {
     ui.add_space(6.0);
     let p = theme::pal(ui);
     ui.horizontal(|ui| {
-        for (lib, label) in [(false, "Layers"), (true, "Library")] {
+        for (lib, label) in [(false, "Layers"), (true, "Shapes")] {
             let on = st.show_library == lib;
             let r = ui.add(
                 egui::Label::new(

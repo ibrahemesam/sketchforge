@@ -389,67 +389,97 @@ pub fn panel(ui: &mut Ui, ed: &mut Editor, st: &mut UiState) {
                     .size(theme::SECONDARY)
                     .color(p.secondary),
             );
-            let results = registry::search(&lib.query);
-            if results.is_empty() {
-                ui.label(
-                    RichText::new("No shapes match the search.")
-                        .size(theme::SECONDARY)
-                        .color(p.secondary),
-                );
-            }
-            ui.add_space(4.0);
+            let query = lib.query.trim().to_string();
             let cols = ((ui.available_width() + 6.0) / (TILE + 6.0))
                 .floor()
                 .max(1.0) as usize;
-            for (row_i, row) in results.chunks(cols).enumerate() {
-                if row_i > 0 {
-                    ui.add_space(6.0);
+            let draw_shape_tile = |ui: &mut Ui,
+                                   lib: &mut LibraryUi,
+                                   ed: &mut Editor,
+                                   def: &'static ShapeDef,
+                                   ds: Option<&DefaultStyle>| {
+                let it = def_item(def, ds);
+                let fp = node_fp(&it.nodes[0]);
+                let id = it.id.clone();
+                let insert_item = it.clone();
+                let (_, resp) = tile(ui, &p, lib, &id, fp, || preview_mesh(&insert_item, TILE));
+                if resp.drag_started() {
+                    lib.drag = Some(DragSource::Registry(def));
                 }
-                ui.horizontal_top(|ui| {
-                    ui.spacing_mut().item_spacing.x = 6.0;
-                    for def in row {
-                        let def = *def;
-                        let it = def_item(def, ds.as_ref());
-                        let fp = node_fp(&it.nodes[0]);
-                        let id = it.id.clone();
-                        let insert_item = it.clone();
-                        let (_, resp) =
-                            tile(ui, &p, lib, &id, fp, || preview_mesh(&insert_item, TILE));
-                        if resp.drag_started() {
-                            lib.drag = Some(DragSource::Registry(def));
-                        }
-                        if resp.clicked() {
-                            insert_source(ed, lib, &DragSource::Registry(def), None, ds.as_ref());
-                        }
-                        resp.on_hover_text(format!(
-                            "{} · {} — drag to the canvas, or click to insert",
-                            def.name,
-                            def.category.name()
-                        ))
-                        .context_menu(|ui| {
-                            if ui.button("Insert").clicked() {
-                                insert_source(
-                                    ed,
-                                    lib,
-                                    &DragSource::Registry(def),
-                                    None,
-                                    ds.as_ref(),
-                                );
-                                ui.close();
-                            }
-                            if ui.button("Pin to scratchpad").clicked() {
-                                lib.scratch.add(def_item(def, ds.as_ref()), true);
-                                lib.scratch_dirty = true;
-                                ui.close();
-                            }
-                            if ui.button("Add to library").clicked() {
-                                lib.library.items.push(def_item(def, ds.as_ref()));
-                                lib.dirty = true;
-                                ui.close();
-                            }
-                        });
+                if resp.clicked() {
+                    insert_source(ed, lib, &DragSource::Registry(def), None, ds);
+                }
+                resp.on_hover_text(format!(
+                    "{} · {} — drag to the canvas, or click to insert",
+                    def.name,
+                    def.category.name()
+                ))
+                .context_menu(|ui| {
+                    if ui.button("Insert").clicked() {
+                        insert_source(ed, lib, &DragSource::Registry(def), None, ds);
+                        ui.close();
+                    }
+                    if ui.button("Pin to scratchpad").clicked() {
+                        lib.scratch.add(def_item(def, ds), true);
+                        lib.scratch_dirty = true;
+                        ui.close();
+                    }
+                    if ui.button("Add to library").clicked() {
+                        lib.library.items.push(def_item(def, ds));
+                        lib.dirty = true;
+                        ui.close();
                     }
                 });
+            };
+            if query.is_empty() {
+                let all = registry::search("");
+                let mut cats: Vec<crate::registry::Category> = Vec::new();
+                for d in &all {
+                    if !cats.contains(&d.category) {
+                        cats.push(d.category);
+                    }
+                }
+                for cat in cats {
+                    let defs: Vec<&'static ShapeDef> =
+                        all.iter().copied().filter(|d| d.category == cat).collect();
+                    egui::CollapsingHeader::new(cat.name())
+                        .default_open(cat == crate::registry::Category::Flowchart)
+                        .show(ui, |ui| {
+                            for (row_i, row) in defs.chunks(cols).enumerate() {
+                                if row_i > 0 {
+                                    ui.add_space(6.0);
+                                }
+                                ui.horizontal_top(|ui| {
+                                    ui.spacing_mut().item_spacing.x = 6.0;
+                                    for def in row {
+                                        draw_shape_tile(ui, lib, ed, def, ds.as_ref());
+                                    }
+                                });
+                            }
+                        });
+                    ui.add_space(2.0);
+                }
+            } else {
+                let results = registry::search(&query);
+                if results.is_empty() {
+                    ui.label(
+                        RichText::new("No shapes match the search.")
+                            .size(theme::SECONDARY)
+                            .color(p.secondary),
+                    );
+                }
+                ui.add_space(4.0);
+                for (row_i, row) in results.chunks(cols).enumerate() {
+                    if row_i > 0 {
+                        ui.add_space(6.0);
+                    }
+                    ui.horizontal_top(|ui| {
+                        ui.spacing_mut().item_spacing.x = 6.0;
+                        for def in row {
+                            draw_shape_tile(ui, lib, ed, def, ds.as_ref());
+                        }
+                    });
+                }
             }
 
             ui.add_space(8.0);
