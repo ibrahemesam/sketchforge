@@ -1,6 +1,6 @@
 # Sketch agent session state
 
-Last updated: 2026-11-21 (round 80 TXT-16/SHP-26 verified, local pending commit/push).
+Last updated: 2026-11-21 (round 80 TXT-16/SHP-26 verified, committed and pushed).
 
 ## Objective
 
@@ -720,7 +720,7 @@ ORG-10 moved from IMPLEMENTED to VERIFIED.
 
 Round 79 (committed 871801f, pushed) verified IO-13 Image import and drag-and-drop.
 
-Round 80 (local, pending commit/push) verified TXT-16 Text border and SHP-26 Place images. Added txt16_text_border_roundtrips in src/model/node.rs tests and shp26_placed_image_move_resize_survives_reload in tests/projects.rs. TXT-16 and SHP-26 moved from IMPLEMENTED to VERIFIED. Parity docs record VERIFIED 186, IMPLEMENTED 16, IN_PROGRESS 1, ANALYZED 0, DISCOVERED 1 and BLOCKED 27.
+Round 80 (committed e1cfd10, pushed) verified TXT-16 Text border and SHP-26 Place images. Added txt16_text_border_roundtrips in src/model/node.rs tests and shp26_placed_image_move_resize_survives_reload in tests/projects.rs. TXT-16 and SHP-26 moved from IMPLEMENTED to VERIFIED. Parity docs record VERIFIED 186, IMPLEMENTED 16, IN_PROGRESS 1, ANALYZED 0, DISCOVERED 1 and BLOCKED 27.
 
 ## Blockers
 
