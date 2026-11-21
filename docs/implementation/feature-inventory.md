@@ -263,14 +263,14 @@ gaps landed on 2026-10-26: a label without a solid background cuts the line behi
 text, and the gap follows label moves, reroutes, and export. Page view is a view
 preference and is not part of the page file.
 
-**Size:** 231 capabilities in 13 domains. 176 are verified against committed tests or directly exercised code, 26 are implemented without a focused check, 28 are absent or blocked, and 1 is in progress.
+**Size:** 231 capabilities in 13 domains. 177 are verified against committed tests or directly exercised code, 25 are implemented without a focused check, 28 are absent or blocked, and 1 is in progress.
 
 ## Counts
 
 | Status | Count | Meaning |
 |---|---:|---|
-| VERIFIED | 176 | Committed test or directly exercised code path proves the behavior. |
-| IMPLEMENTED | 26 | Code exists and the path is readable, but no focused test or this-session runtime check covers it. |
+| VERIFIED | 177 | Committed test or directly exercised code path proves the behavior. |
+| IMPLEMENTED | 25 | Code exists and the path is readable, but no focused test or this-session runtime check covers it. |
 | IN_PROGRESS | 1 | Partial code at HEAD or in the tracked working state; the acceptance criteria are not met. |
 | DISCOVERED | 1 | draw.io behavior is documented here; no code or design exists. |
 | BLOCKED | 27 | Work cannot proceed without a missing subsystem, external service, licensing decision, or explicit scope decision. |
@@ -283,7 +283,7 @@ preference and is not part of the page file.
 | SHP Shapes, frames, transforms, and paths | 26 | 21 | 4 | 0 | 0 | 0 | 1 |
 | CON Connectors and arrows | 21 | 20 | 1 | 0 | 0 | 0 | 0 |
 | TXT Text, labels, and typography | 25 | 18 | 4 | 0 | 0 | 0 | 3 |
-| STY Styles, effects, and themes | 23 | 19 | 4 | 0 | 0 | 0 | 0 |
+| STY Styles, effects, and themes | 23 | 20 | 3 | 0 | 0 | 0 | 0 |
 | ORG Structure: groups, frames, components, layout, and layers | 16 | 14 | 1 | 0 | 0 | 0 | 1 |
 | GEN Generation, templates, and diagram types | 15 | 5 | 8 | 0 | 0 | 0 | 2 |
 | IO Import, export, clipboard, and files | 21 | 16 | 2 | 0 | 0 | 0 | 3 |
@@ -471,7 +471,7 @@ Paint, stroke, effects, and reusable style operations.
 | STY-07 | Dash patterns | The stroke can be solid, dashed, or dotted with editable lengths. | [Change the style of shapes](https://www.drawio.com/docs/manual/styles/shape-styles/) | src/model/paint.rs, src/vector.rs | **VERIFIED** | Set a custom 8, 4 dash and confirm it repeats around a closed path. | Dashes are stored as a vector of lengths. Test: `dashes`. |
 | STY-08 | Line caps and joins | Butt, round, and square caps plus miter, round, and bevel joins are selectable. | [Change the style of shapes](https://www.drawio.com/docs/manual/styles/shape-styles/) | src/model/paint.rs, src/render/draw.rs | **IMPLEMENTED** | Set each cap and join on a thick open path and confirm the ends and corners change. | The inspector exposes the values; no focused render test. |
 | STY-09 | Corner radius | Rounded corners apply to rectangles, frames, and sticky notes. | [Change the style of shapes](https://www.drawio.com/docs/manual/styles/shape-styles/) | src/model/paint.rs, src/render/draw.rs | **VERIFIED** | Set a radius and confirm handles and strokes follow the rounded outline. | Frames still clip with a rectangle. Test: `m3_shapes_frames_and_text`. |
-| STY-10 | Per-corner radius | Each corner can have its own radius. | [Change the style of shapes](https://www.drawio.com/docs/manual/styles/shape-styles/) | src/model/paint.rs, src/ui/inspector.rs | **IMPLEMENTED** | Set different radii on all four corners and confirm each renders independently. | The inspector edits the array; no focused test. |
+| STY-10 | Per-corner radius | Each corner can have its own radius. | [Change the style of shapes](https://www.drawio.com/docs/manual/styles/shape-styles/) | src/model/paint.rs, src/ui/inspector.rs | **VERIFIED** | Set different radii on all four corners and confirm each renders independently. | sty10_per_corner_radius_changes_only_selected_corner in src/model/node.rs tests sets radii to [12,4,4,4], asserts only top-left changes via corner_radii(), and confirms JSON roundtrip preserves per-corner values. Render uses corner_radii(). |
 | STY-11 | Layer opacity | Opacity applies to a shape, group, or text layer. | [Change the style of shapes](https://www.drawio.com/docs/manual/styles/shape-styles/) | src/model/paint.rs, src/render/draw.rs | **VERIFIED** | Set 40% opacity and confirm the shape dims over the background and exports with the same alpha. | Group opacity multiplies into children rather than compositing them. Test: `m3_shapes_frames_and_text`. |
 | STY-12 | Blend modes | Sixteen blend modes are selectable for canvas and export. | [Change the style of shapes](https://www.drawio.com/docs/manual/styles/shape-styles/) | src/model/paint.rs, src/render/draw.rs, src/io/svg.rs | **VERIFIED** | Set Multiply over two overlapping shapes and confirm the overlap darkens on canvas and in SVG. | Five modes are exact on the GPU canvas; the rest render as Normal there and are exact in SVG. Test: `m6_svg_export_matches_gpu_render`. |
 | STY-13 | Shape shadow | A drop shadow can be applied to shapes and connectors. | [Change the style of shapes](https://www.drawio.com/docs/manual/styles/shape-styles/) | src/model/node.rs, src/render/draw.rs, src/render/scene.rs, src/io/svg.rs, src/ui/inspector.rs | **VERIFIED** | Enable Shadow on a shape and confirm a soft offset shadow renders and exports. | Draw ops translate a translucent fill and stroke by (3, 4); rotated shapes rotate the offset with the path. The page flag and optional element flag stay separate. SVG bounds and scene culling include the shadow, hit testing does not. draw.io import and export map shadow=1 and shadow=0. Focused draw, bounds, SVG, draw.io and inspector tests plus live export pairs are in `.artifacts/round34/`. |

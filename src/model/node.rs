@@ -1438,4 +1438,16 @@ mod tests {
         let back: Node = serde_json::from_str(&s).unwrap();
         assert_eq!(back, n);
     }
+
+    #[test]
+    fn sty10_per_corner_radius_changes_only_selected_corner() {
+        let mut n = Node::new(NodeId(1), NodeKind::Rect, Rect::new(0.0, 0.0, 100.0, 80.0));
+        n.style.corner_radius = 4.0;
+        assert_eq!(n.style.corner_radii(), [4.0, 4.0, 4.0, 4.0]);
+        n.style.radii = Some([12.0, 4.0, 4.0, 4.0]);
+        assert_eq!(n.style.corner_radii(), [12.0, 4.0, 4.0, 4.0]);
+        let s = serde_json::to_string(&n).unwrap();
+        let back: Node = serde_json::from_str(&s).unwrap();
+        assert_eq!(back.style.corner_radii(), [12.0, 4.0, 4.0, 4.0]);
+    }
 }

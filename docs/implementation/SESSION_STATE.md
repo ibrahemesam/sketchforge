@@ -1,6 +1,6 @@
 # Sketch agent session state
 
-Last updated: 2026-11-21 (round 72 STY-19 copy/paste style verified, committed and pushed).
+Last updated: 2026-11-21 (round 73 STY-10 per-corner radius verified, local pending commit/push).
 
 ## Objective
 
@@ -697,12 +697,15 @@ IO-06 moved from IMPLEMENTED to VERIFIED with transparent corner-pixel assertion
 Round 71 (committed e3d9878, pushed) verified SHP-10 Flip horizontally and
 vertically; SHP-10 moved from IMPLEMENTED to VERIFIED.
 
-Round 72 (committed f3d8f4e, pushed) verified STY-19 Copy and paste style:
-added sty19_copy_paste_style_transfers_properties_and_clears_text_spans in
-src/editor/commands.rs tests, asserting style properties transfer to two targets
-and text style transfers while rich-text spans are cleared on text layers.
-STY-19 moved from IMPLEMENTED to VERIFIED. Parity docs record VERIFIED 176,
-IMPLEMENTED 26, IN_PROGRESS 1, ANALYZED 0, DISCOVERED 1 and BLOCKED 27.
+Round 72 (committed f3d8f4e, pushed) verified STY-19 Copy and paste style;
+STY-19 moved from IMPLEMENTED to VERIFIED.
+
+Round 73 (local, pending commit/push) verified STY-10 Per-corner radius:
+added sty10_per_corner_radius_changes_only_selected_corner in src/model/node.rs
+tests, asserting per-corner radii change only the selected corner and survive
+JSON roundtrip. STY-10 moved from IMPLEMENTED to VERIFIED. Parity docs record
+VERIFIED 177, IMPLEMENTED 25, IN_PROGRESS 1, ANALYZED 0, DISCOVERED 1 and
+BLOCKED 27.
 
 ## Blockers
 
