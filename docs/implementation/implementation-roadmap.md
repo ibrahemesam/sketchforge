@@ -474,7 +474,7 @@ documentation closeout completes the round.
 
 **UIX-02 increment (committed f8e4a03, pushed).** Captured failing test connector_only_arrange_tab_hides_shape_only_controls, then hid Autosize/Copy Size/Apply Size/Constrain Proportions for connector-only Arrange selections. UIX-02 remains IN_PROGRESS: labeled connector still shares top-level tab set with text layer and other irrelevant controls may remain.
 
-**SHP-11/12/13 verification (local, pending commit/push).** Added shape_arrange_tab_exposes_position_size_and_size_tools in src/ui/inspector.rs tests confirming Arrange tab exposes X/Y/W/H, Constrain Proportions, and Copy Size controls for shape selections. SHP-11/12/13 moved from IMPLEMENTED to VERIFIED.
+**SHP-11/12/13 verification (committed f5e091a, pushed).** Added shape_arrange_tab_exposes_position_size_and_size_tools in src/ui/inspector.rs tests confirming Arrange tab exposes X/Y/W/H, Constrain Proportions, and Copy Size controls for shape selections. SHP-11/12/13 moved from IMPLEMENTED to VERIFIED.
 
 **Scope.**
 
