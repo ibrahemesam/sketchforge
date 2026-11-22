@@ -483,6 +483,17 @@ pub fn panel(ui: &mut Ui, ed: &mut Editor, st: &mut UiState) {
             }
 
             ui.add_space(8.0);
+            if ui
+                .button("More Shapes...")
+                .on_hover_text("Browse additional diagram templates and shape packs")
+                .clicked()
+            {
+                st.templates.open = true;
+                if st.templates.libraries.is_empty() {
+                    st.templates.load(st.options.template_folder.clone());
+                }
+            }
+            ui.add_space(4.0);
             ui.separator();
             ui.add_space(4.0);
 

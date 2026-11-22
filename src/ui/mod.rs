@@ -515,6 +515,16 @@ fn top_bar(ui: &mut Ui, ed: &mut Editor, st: &mut UiState) {
         if redo.inner.clicked() {
             ed.run(Action::Redo);
         }
+        ui.add_space(2.0);
+        ui.separator();
+        ui.add_space(2.0);
+        let has_sel = !ed.selection.is_empty();
+        let del = ui.add_enabled_ui(has_sel, |ui| {
+            theme::icon_button(ui, theme::Icon::Trash, 26.0, false).on_hover_text("Delete (Del)")
+        });
+        if del.inner.clicked() {
+            ed.run(Action::Delete);
+        }
         ui.add_space(4.0);
         let title = if st.project_name.is_empty() {
             ed.doc.name.clone()
