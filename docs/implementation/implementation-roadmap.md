@@ -478,6 +478,8 @@ documentation closeout completes the round.
 
 **STY-17/18 verification (committed 3fbd2e8, pushed).** Added style_tab_exposes_palette_section in src/ui/inspector.rs tests; cited existing selected_style_tab_exposes_scheme_scope and editor scheme apply/preview tests. STY-17/18 moved from IMPLEMENTED to VERIFIED with honest notes on actual palette/scheme counts.
 
+**UIX-02 increment (local, pending commit/push).** Extended connector-only Arrange hiding to Angle, Rotate by 90°, Keep label upright, Connector default, and Flip after capturing failing test. UIX-02 remains IN_PROGRESS.
+
 **Scope.**
 
 - A selection context resolver that classifies the current selection as document, single

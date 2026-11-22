@@ -3960,119 +3960,121 @@ fn arrange_section(
     arrange_position(ui, ed, st, vis, ids, locked);
     separator(ui);
 
-    row(ui, "Angle", |ui| {
-        let values: Vec<f64> = ids
-            .iter()
-            .filter_map(|id| ed.doc.get(*id))
-            .map(|n| n.style.rotation)
-            .collect();
-        let v = ui
-            .add_enabled_ui(!locked, |ui| {
-                num_field(ui, ed, "", first.style.rotation, 1.0, -360.0..=360.0, 72.0)
-            })
-            .inner;
-        if let Some(v) = v {
-            ed.set_rotation(ids, v);
-        }
-        if !all_equal(&values) {
-            mixed_badge(ui);
-        }
-    });
-    let r = ui
-        .add_enabled_ui(!locked, |ui| {
-            ui.add_sized([vis, 20.0], egui::Button::new("Rotate shape only by 90°"))
-                .on_hover_text("Add a quarter turn, leaving the label upright")
-        })
-        .inner;
-    if locked {
-        r.on_disabled_hover_text("Unlock the selection to rotate it.");
-    } else if r.clicked() {
-        ed.rotate_90(ids);
-    }
-    row(ui, "Label", |ui| {
-        let states: Vec<bool> = ids
-            .iter()
-            .filter_map(|id| ed.doc.get(*id))
-            .map(|n| n.style.label_upright)
-            .collect();
-        if let Some(on) = ui
-            .add_enabled_ui(!locked, |ui| {
-                mixed_checkbox(ui, "Keep label upright", &states)
-            })
-            .inner
-        {
-            apply(ed, "label upright", ids, |n| n.style.label_upright = on);
-        }
-    });
-    if ids.iter().any(|id| {
-        ed.doc
-            .get(*id)
-            .is_some_and(|n| n.can_have_connector_default())
-    }) {
-        row(ui, "Connector", |ui| {
-            let page_default = ed.doc.settings.connector_default.is_some();
-            let any_set = ids.iter().any(|id| {
-                ed.doc
-                    .get(*id)
-                    .is_some_and(|n| n.connector_default.is_some())
-            });
-            let all_set = ids.iter().all(|id| {
-                ed.doc
-                    .get(*id)
-                    .is_some_and(|n| n.connector_default.is_some())
-            });
-            let use_page = ui
-                .add_enabled(
-                    !locked && page_default,
-                    egui::Button::new("Use page default"),
-                )
-                .on_hover_text(
-                    "Copy the page's connector default onto these shapes for new arrows",
-                );
-            if !page_default {
-                use_page.on_disabled_hover_text("Set a connector default on the page first.");
-            } else if use_page.clicked() {
-                ed.set_connector_default_from_page(ids);
+    if !all_connectors {
+        row(ui, "Angle", |ui| {
+            let values: Vec<f64> = ids
+                .iter()
+                .filter_map(|id| ed.doc.get(*id))
+                .map(|n| n.style.rotation)
+                .collect();
+            let v = ui
+                .add_enabled_ui(!locked, |ui| {
+                    num_field(ui, ed, "", first.style.rotation, 1.0, -360.0..=360.0, 72.0)
+                })
+                .inner;
+            if let Some(v) = v {
+                ed.set_rotation(ids, v);
             }
-            let clear = ui
-                .add_enabled(!locked && any_set, egui::Button::new("Clear"))
-                .on_hover_text("Remove the source connector default from these shapes");
-            if clear.clicked() {
-                ed.clear_connector_defaults(ids);
-            }
-            if any_set && !all_set {
+            if !all_equal(&values) {
                 mixed_badge(ui);
             }
         });
-    }
-    separator(ui);
+        let r = ui
+            .add_enabled_ui(!locked, |ui| {
+                ui.add_sized([vis, 20.0], egui::Button::new("Rotate shape only by 90°"))
+                    .on_hover_text("Add a quarter turn, leaving the label upright")
+            })
+            .inner;
+        if locked {
+            r.on_disabled_hover_text("Unlock the selection to rotate it.");
+        } else if r.clicked() {
+            ed.rotate_90(ids);
+        }
+        row(ui, "Label", |ui| {
+            let states: Vec<bool> = ids
+                .iter()
+                .filter_map(|id| ed.doc.get(*id))
+                .map(|n| n.style.label_upright)
+                .collect();
+            if let Some(on) = ui
+                .add_enabled_ui(!locked, |ui| {
+                    mixed_checkbox(ui, "Keep label upright", &states)
+                })
+                .inner
+            {
+                apply(ed, "label upright", ids, |n| n.style.label_upright = on);
+            }
+        });
+        if ids.iter().any(|id| {
+            ed.doc
+                .get(*id)
+                .is_some_and(|n| n.can_have_connector_default())
+        }) {
+            row(ui, "Connector", |ui| {
+                let page_default = ed.doc.settings.connector_default.is_some();
+                let any_set = ids.iter().any(|id| {
+                    ed.doc
+                        .get(*id)
+                        .is_some_and(|n| n.connector_default.is_some())
+                });
+                let all_set = ids.iter().all(|id| {
+                    ed.doc
+                        .get(*id)
+                        .is_some_and(|n| n.connector_default.is_some())
+                });
+                let use_page = ui
+                    .add_enabled(
+                        !locked && page_default,
+                        egui::Button::new("Use page default"),
+                    )
+                    .on_hover_text(
+                        "Copy the page's connector default onto these shapes for new arrows",
+                    );
+                if !page_default {
+                    use_page.on_disabled_hover_text("Set a connector default on the page first.");
+                } else if use_page.clicked() {
+                    ed.set_connector_default_from_page(ids);
+                }
+                let clear = ui
+                    .add_enabled(!locked && any_set, egui::Button::new("Clear"))
+                    .on_hover_text("Remove the source connector default from these shapes");
+                if clear.clicked() {
+                    ed.clear_connector_defaults(ids);
+                }
+                if any_set && !all_set {
+                    mixed_badge(ui);
+                }
+            });
+        }
+        separator(ui);
 
-    row(ui, "Flip", |ui| {
-        ui.spacing_mut().item_spacing.x = 4.0;
-        let half = (ui.available_width() - 4.0) * 0.5;
-        let h = ui
-            .add_enabled_ui(!all_locked, |ui| {
-                ui.add_sized([half, 20.0], egui::Button::new("Horizontal"))
-                    .on_hover_text("Mirror around the element's own center")
-            })
-            .inner;
-        if all_locked {
-            h.on_disabled_hover_text("Unlock the selection to flip it.");
-        } else if h.clicked() {
-            ed.run(shortcuts::Action::FlipH);
-        }
-        let v = ui
-            .add_enabled_ui(!all_locked, |ui| {
-                ui.add_sized([half, 20.0], egui::Button::new("Vertical"))
-                    .on_hover_text("Mirror around the element's own center")
-            })
-            .inner;
-        if all_locked {
-            v.on_disabled_hover_text("Unlock the selection to flip it.");
-        } else if v.clicked() {
-            ed.run(shortcuts::Action::FlipV);
-        }
-    });
+        row(ui, "Flip", |ui| {
+            ui.spacing_mut().item_spacing.x = 4.0;
+            let half = (ui.available_width() - 4.0) * 0.5;
+            let h = ui
+                .add_enabled_ui(!all_locked, |ui| {
+                    ui.add_sized([half, 20.0], egui::Button::new("Horizontal"))
+                        .on_hover_text("Mirror around the element's own center")
+                })
+                .inner;
+            if all_locked {
+                h.on_disabled_hover_text("Unlock the selection to flip it.");
+            } else if h.clicked() {
+                ed.run(shortcuts::Action::FlipH);
+            }
+            let v = ui
+                .add_enabled_ui(!all_locked, |ui| {
+                    ui.add_sized([half, 20.0], egui::Button::new("Vertical"))
+                        .on_hover_text("Mirror around the element's own center")
+                })
+                .inner;
+            if all_locked {
+                v.on_disabled_hover_text("Unlock the selection to flip it.");
+            } else if v.clicked() {
+                ed.run(shortcuts::Action::FlipV);
+            }
+        });
+    }
     separator(ui);
 
     let connectors: Vec<NodeId> = ids
@@ -6407,6 +6409,9 @@ mod tests {
         assert!(!text.contains("Apply Size"), "{text}");
         assert!(!text.contains("Constrain Proportions"), "{text}");
         assert!(!text.contains("Autosize"), "{text}");
+        assert!(!text.contains("Rotate shape only by 90°"), "{text}");
+        assert!(!text.contains("Keep label upright"), "{text}");
+        assert!(!text.contains("Flip"), "{text}");
     }
 
     #[test]
