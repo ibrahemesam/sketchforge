@@ -2852,62 +2852,70 @@ fn effects_section(ui: &mut Ui, ed: &mut Editor, st: &mut UiState, ids: &[NodeId
         .filter(|n| !n.is_group())
         .map(|n| n.style.shadow.unwrap_or(ed.doc.settings.shadow))
         .collect();
-    let w = ui.available_width();
-    let half = (w - 4.0) * 0.5;
     let can_round = !rounded.is_empty();
-    ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = 4.0;
-        if let Some(on) = effect_checkbox(
-            ui,
-            "Rounded",
-            &rounded,
-            can_round,
-            "Rounded corners (rectangles, frames, polygons and stars)",
-        ) {
-            apply(ed, "rounded", ids, |n| {
-                if rounded_shape(n) {
-                    n.style.corner_radius = if on { 8.0 } else { 0.0 };
-                    n.style.radii = None;
-                }
-            });
-        }
-        if let Some(on) = effect_checkbox(
-            ui,
-            "Sketch",
-            &sketch,
-            !sketch.is_empty(),
-            "Hand-drawn style for this element (overrides the diagram setting)",
-        ) {
-            apply(ed, "sketch", ids, |n| {
-                n.style.sketch = Some(on);
-                if on && n.style.rough.is_none() {
-                    n.style.rough = Some(crate::model::rough::Rough::default());
-                }
-            });
-        }
-    });
-    ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = 4.0;
-        if let Some(on) = effect_checkbox(
-            ui,
-            "Glass",
-            &glass,
-            !glass.is_empty(),
-            "Glossy highlight over the fill",
-        ) {
-            apply(ed, "glass", ids, |n| n.style.glass = on);
-        }
-        if let Some(on) = effect_checkbox(
-            ui,
-            "Shadow",
-            &shadow,
-            !shadow.is_empty(),
-            "Drop shadow for this element (overrides the diagram setting)",
-        ) {
-            apply(ed, "shadow", ids, |n| n.style.shadow = Some(on));
-        }
-    });
-    let _ = (first, half);
+    let can_sketch = !sketch.is_empty();
+    let can_glass = !glass.is_empty();
+    let can_shadow = !shadow.is_empty();
+    if can_round || can_sketch {
+        ui.horizontal(|ui| {
+            ui.spacing_mut().item_spacing.x = 4.0;
+            if can_round
+                && let Some(on) = effect_checkbox(
+                    ui,
+                    "Rounded",
+                    &rounded,
+                    true,
+                    "Rounded corners (rectangles, frames, polygons and stars)",
+                )
+            {
+                apply(ed, "rounded", ids, |n| {
+                    if rounded_shape(n) {
+                        n.style.corner_radius = if on { 8.0 } else { 0.0 };
+                        n.style.radii = None;
+                    }
+                });
+            }
+            if can_sketch
+                && let Some(on) = effect_checkbox(
+                    ui,
+                    "Sketch",
+                    &sketch,
+                    true,
+                    "Hand-drawn style for this element (overrides the diagram setting)",
+                )
+            {
+                apply(ed, "sketch", ids, |n| {
+                    n.style.sketch = Some(on);
+                    if on && n.style.rough.is_none() {
+                        n.style.rough = Some(crate::model::rough::Rough::default());
+                    }
+                });
+            }
+        });
+    }
+    if can_glass || can_shadow {
+        ui.horizontal(|ui| {
+            ui.spacing_mut().item_spacing.x = 4.0;
+            if can_glass
+                && let Some(on) =
+                    effect_checkbox(ui, "Glass", &glass, true, "Glossy highlight over the fill")
+            {
+                apply(ed, "glass", ids, |n| n.style.glass = on);
+            }
+            if can_shadow
+                && let Some(on) = effect_checkbox(
+                    ui,
+                    "Shadow",
+                    &shadow,
+                    true,
+                    "Drop shadow for this element (overrides the diagram setting)",
+                )
+            {
+                apply(ed, "shadow", ids, |n| n.style.shadow = Some(on));
+            }
+        });
+    }
+    let _ = first;
 }
 
 fn effect_checkbox(
@@ -3660,11 +3668,17 @@ fn properties_section(
             }
         });
     }
-    row(ui, "Rotation", |ui| {
-        if let Some(v) = num_field(ui, ed, "", s.rotation, 1.0, -360.0..=360.0, 68.0) {
-            ed.set_rotation(ids, v);
-        }
-    });
+    let all_connectors = !ids.is_empty()
+        && ids
+            .iter()
+            .all(|id| ed.doc.get(*id).is_some_and(|n| n.is_connector()));
+    if !all_connectors {
+        row(ui, "Rotation", |ui| {
+            if let Some(v) = num_field(ui, ed, "", s.rotation, 1.0, -360.0..=360.0, 68.0) {
+                ed.set_rotation(ids, v);
+            }
+        });
+    }
     row(ui, "Blend", |ui| {
         let opts: Vec<(BlendMode, &str)> = BlendMode::ALL.iter().map(|b| (*b, b.label())).collect();
         if let Some(v) = combo(ui, "prop-blend", s.blend, &opts, 100.0) {
@@ -3692,17 +3706,19 @@ fn properties_section(
             apply(ed, "shadow", ids, |n| n.style.shadow = Some(on));
         }
     });
-    row(ui, "Glass", |ui| {
-        let glasses: Vec<bool> = ids
-            .iter()
-            .filter_map(|id| ed.doc.get(*id))
-            .filter(|n| glass_capable(n))
-            .map(|n| n.style.glass)
-            .collect();
-        if let Some(on) = mixed_checkbox(ui, "", &glasses) {
-            apply(ed, "glass", ids, |n| n.style.glass = on);
-        }
-    });
+    let glasses: Vec<bool> = ids
+        .iter()
+        .filter_map(|id| ed.doc.get(*id))
+        .filter(|n| glass_capable(n))
+        .map(|n| n.style.glass)
+        .collect();
+    if !glasses.is_empty() {
+        row(ui, "Glass", |ui| {
+            if let Some(on) = mixed_checkbox(ui, "", &glasses) {
+                apply(ed, "glass", ids, |n| n.style.glass = on);
+            }
+        });
+    }
 
     separator(ui);
     ui.horizontal(|ui| {
@@ -6412,6 +6428,60 @@ mod tests {
         assert!(!text.contains("Rotate shape only by 90°"), "{text}");
         assert!(!text.contains("Keep label upright"), "{text}");
         assert!(!text.contains("Flip"), "{text}");
+    }
+
+    #[test]
+    fn connector_only_style_tab_hides_shape_only_effects() {
+        let mut ed = Editor::default();
+        let a = ed.add_node(
+            Node::new(
+                NodeId(1),
+                NodeKind::Rect,
+                crate::geom::Rect::new(0.0, 0.0, 100.0, 60.0),
+            ),
+            None,
+        );
+        let b = ed.add_node(
+            Node::new(
+                NodeId(2),
+                NodeKind::Rect,
+                crate::geom::Rect::new(200.0, 0.0, 100.0, 60.0),
+            ),
+            None,
+        );
+        let bind = |node| crate::model::Binding {
+            node,
+            fixed: crate::geom::v2(0.5, 0.5),
+            inside: false,
+            floating: false,
+        };
+        let conn = ed.add_node(
+            Node::new(
+                NodeId(3),
+                NodeKind::Connector {
+                    points: vec![crate::geom::v2(0.0, 30.0), crate::geom::v2(400.0, 30.0)],
+                    start: Some(bind(a)),
+                    end: Some(bind(b)),
+                    route: crate::model::Route::Straight,
+                    start_head: crate::model::Head::None,
+                    end_head: crate::model::Head::Arrow,
+                    jump: crate::model::LineJump::None,
+                    jump_size: 6.0,
+                },
+                crate::geom::Rect::new(0.0, 0.0, 400.0, 60.0),
+            ),
+            None,
+        );
+        ed.selection = vec![conn];
+        let mut st = UiState {
+            inspector_tab: crate::ui::InspectorTab::Style,
+            ..Default::default()
+        };
+        let text = panel_text_for(&mut ed, &mut st, 320.0, 1800.0);
+        assert!(!text.contains("Rounded"), "{text}");
+        assert!(!text.contains("Glass"), "{text}");
+        assert!(!text.contains("Corner"), "{text}");
+        assert!(!text.contains("Rotation"), "{text}");
     }
 
     #[test]
