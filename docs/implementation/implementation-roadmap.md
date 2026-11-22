@@ -480,7 +480,7 @@ documentation closeout completes the round.
 
 **UIX-02 increment (committed 3f1f409, pushed).** Extended connector-only Arrange hiding to Angle, Rotate by 90°, Keep label upright, Connector default, and Flip after capturing failing test. UIX-02 remains IN_PROGRESS.
 
-**UIX-02 increment (local, pending commit/push).** Connector-only Style tab now hides Rounded, Glass, Corner, and Rotation after capturing failing test. UIX-02 remains IN_PROGRESS.
+**UIX-02 increment (committed 3b921d6, pushed).** Connector-only Style tab now hides Rounded, Glass, Corner, and Rotation after capturing failing test. UIX-02 remains IN_PROGRESS.
 
 **Scope.**
 
