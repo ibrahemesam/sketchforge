@@ -305,79 +305,79 @@ pub fn panel(ui: &mut Ui, ed: &mut Editor, st: &mut UiState) {
         .auto_shrink(false)
         .show(ui, |ui| {
             // ---------------------------------------------------- scratchpad
-            ui.label(
-                RichText::new("Scratchpad")
-                    .size(theme::SECONDARY)
-                    .color(p.secondary),
-            );
-            let can_add = !ed.top_selection().is_empty();
-            if ui
-                .add_enabled(can_add, egui::Button::new("+ Add selection"))
-                .on_hover_text("Add the selection to the scratchpad")
-                .clicked()
-            {
-                let ids = ed.top_selection();
-                let name = ids
-                    .first()
-                    .and_then(|id| ed.doc.get(*id))
-                    .map_or("Item".to_string(), |n| n.name.clone());
-                if let Some(item) = LibItem::from_selection(&ed.doc, &ids, &name) {
-                    lib.scratch.add(item, false);
-                    lib.scratch_dirty = true;
-                }
-            }
-            if lib.scratch.items.is_empty() {
-                ui.label(
-                    RichText::new("Pinned and recently used shapes appear here.")
-                        .size(theme::SECONDARY)
-                        .color(p.secondary),
-                );
-            }
-            let scratch = lib.scratch.items.clone();
-            for (row_i, row) in scratch.chunks(4).enumerate() {
-                if row_i > 0 {
-                    ui.add_space(4.0);
-                }
-                ui.horizontal_top(|ui| {
-                    ui.spacing_mut().item_spacing.x = 6.0;
-                    for it in row {
-                        let id = it.item.id.clone();
-                        let fp = item_fp(&it.item);
-                        let pinned = it.pinned;
-                        let item = it.item.clone();
-                        let (_, resp) = tile(ui, &p, lib, &id, fp, || preview_mesh(&item, TILE));
-                        let started = resp.drag_started();
-                        let clicked = resp.clicked();
-                        let hover = format!(
-                            "{} — drag to the canvas, or click to insert{}",
-                            item.name,
-                            if pinned { " (pinned)" } else { "" }
-                        );
-                        resp.on_hover_text(hover).context_menu(|ui| {
-                            if ui.button("Insert").clicked() {
-                                ed.insert_library_item(&item, center);
-                                ui.close();
-                            }
-                            if ui.button(if pinned { "Unpin" } else { "Pin" }).clicked() {
-                                lib.scratch.set_pinned(&item.id, !pinned);
-                                lib.scratch_dirty = true;
-                                ui.close();
-                            }
-                            if ui.button("Remove").clicked() {
-                                lib.scratch.remove(&item.id);
-                                lib.scratch_dirty = true;
-                                ui.close();
-                            }
-                        });
-                        if started {
-                            lib.drag = Some(DragSource::Item(item.clone()));
-                        }
-                        if clicked {
-                            ed.insert_library_item(&item, center);
+            egui::CollapsingHeader::new("Scratchpad")
+                .default_open(true)
+                .show(ui, |ui| {
+                    let can_add = !ed.top_selection().is_empty();
+                    if ui
+                        .add_enabled(can_add, egui::Button::new("+ Add selection"))
+                        .on_hover_text("Add the selection to the scratchpad")
+                        .clicked()
+                    {
+                        let ids = ed.top_selection();
+                        let name = ids
+                            .first()
+                            .and_then(|id| ed.doc.get(*id))
+                            .map_or("Item".to_string(), |n| n.name.clone());
+                        if let Some(item) = LibItem::from_selection(&ed.doc, &ids, &name) {
+                            lib.scratch.add(item, false);
+                            lib.scratch_dirty = true;
                         }
                     }
+                    if lib.scratch.items.is_empty() {
+                        ui.label(
+                            RichText::new("Pinned and recently used shapes appear here.")
+                                .size(theme::SECONDARY)
+                                .color(p.secondary),
+                        );
+                    }
+                    let scratch = lib.scratch.items.clone();
+                    for (row_i, row) in scratch.chunks(4).enumerate() {
+                        if row_i > 0 {
+                            ui.add_space(4.0);
+                        }
+                        ui.horizontal_top(|ui| {
+                            ui.spacing_mut().item_spacing.x = 6.0;
+                            for it in row {
+                                let id = it.item.id.clone();
+                                let fp = item_fp(&it.item);
+                                let pinned = it.pinned;
+                                let item = it.item.clone();
+                                let (_, resp) =
+                                    tile(ui, &p, lib, &id, fp, || preview_mesh(&item, TILE));
+                                let started = resp.drag_started();
+                                let clicked = resp.clicked();
+                                let hover = format!(
+                                    "{} — drag to the canvas, or click to insert{}",
+                                    item.name,
+                                    if pinned { " (pinned)" } else { "" }
+                                );
+                                resp.on_hover_text(hover).context_menu(|ui| {
+                                    if ui.button("Insert").clicked() {
+                                        ed.insert_library_item(&item, center);
+                                        ui.close();
+                                    }
+                                    if ui.button(if pinned { "Unpin" } else { "Pin" }).clicked() {
+                                        lib.scratch.set_pinned(&item.id, !pinned);
+                                        lib.scratch_dirty = true;
+                                        ui.close();
+                                    }
+                                    if ui.button("Remove").clicked() {
+                                        lib.scratch.remove(&item.id);
+                                        lib.scratch_dirty = true;
+                                        ui.close();
+                                    }
+                                });
+                                if started {
+                                    lib.drag = Some(DragSource::Item(item.clone()));
+                                }
+                                if clicked {
+                                    ed.insert_library_item(&item, center);
+                                }
+                            }
+                        });
+                    }
                 });
-            }
 
             ui.add_space(8.0);
             ui.separator();
