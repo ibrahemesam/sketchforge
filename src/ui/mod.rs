@@ -502,6 +502,19 @@ fn top_bar(ui: &mut Ui, ed: &mut Editor, st: &mut UiState) {
         {
             ed.requests.push(crate::editor::AppRequest::Home);
         }
+        ui.add_space(2.0);
+        let undo = ui.add_enabled_ui(ed.history.can_undo(), |ui| {
+            theme::icon_button(ui, theme::Icon::Undo, 26.0, false).on_hover_text("Undo (⌘Z)")
+        });
+        if undo.inner.clicked() {
+            ed.run(Action::Undo);
+        }
+        let redo = ui.add_enabled_ui(ed.history.can_redo(), |ui| {
+            theme::icon_button(ui, theme::Icon::Redo, 26.0, false).on_hover_text("Redo (⌘⇧Z)")
+        });
+        if redo.inner.clicked() {
+            ed.run(Action::Redo);
+        }
         ui.add_space(4.0);
         let title = if st.project_name.is_empty() {
             ed.doc.name.clone()

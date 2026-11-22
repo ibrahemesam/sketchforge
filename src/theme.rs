@@ -347,6 +347,8 @@ pub enum Icon {
     ArrowRight,
     ArrowDown,
     SpaceBetween,
+    Undo,
+    Redo,
     Arrow,
     Sticky,
     Diamond,
@@ -695,6 +697,28 @@ pub fn paint_icon(painter: &egui::Painter, rect: Rect, icon: Icon, color: Color3
             line(&[pt(4.0, 8.0), pt(12.0, 8.0)]);
             line(&[pt(6.0, 6.0), pt(4.0, 8.0), pt(6.0, 10.0)]);
             line(&[pt(10.0, 6.0), pt(12.0, 8.0), pt(10.0, 10.0)]);
+        }
+        Icon::Undo => {
+            line(&[pt(11.5, 12.5), pt(6.0, 12.5)]);
+            line(&[
+                pt(6.0, 12.5),
+                pt(3.5, 10.0),
+                pt(3.5, 7.0),
+                pt(6.0, 4.5),
+                pt(12.5, 4.5),
+            ]);
+            line(&[pt(6.0, 2.0), pt(3.5, 4.5), pt(6.0, 7.0)]);
+        }
+        Icon::Redo => {
+            line(&[pt(4.5, 12.5), pt(10.0, 12.5)]);
+            line(&[
+                pt(10.0, 12.5),
+                pt(12.5, 10.0),
+                pt(12.5, 7.0),
+                pt(10.0, 4.5),
+                pt(3.5, 4.5),
+            ]);
+            line(&[pt(10.0, 2.0), pt(12.5, 4.5), pt(10.0, 7.0)]);
         }
         Icon::Arrow => {
             line(&[pt(3.0, 13.0), pt(13.0, 3.0)]);
