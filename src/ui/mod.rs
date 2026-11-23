@@ -525,6 +525,20 @@ fn top_bar(ui: &mut Ui, ed: &mut Editor, st: &mut UiState) {
         if del.inner.clicked() {
             ed.run(Action::Delete);
         }
+        let to_front = ui.add_enabled_ui(has_sel, |ui| {
+            theme::icon_button(ui, theme::Icon::ToFront, 26.0, false)
+                .on_hover_text("Bring to front (⌘⇧])")
+        });
+        if to_front.inner.clicked() {
+            ed.run(Action::ToFront);
+        }
+        let to_back = ui.add_enabled_ui(has_sel, |ui| {
+            theme::icon_button(ui, theme::Icon::ToBack, 26.0, false)
+                .on_hover_text("Send to back (⌘⇧[)")
+        });
+        if to_back.inner.clicked() {
+            ed.run(Action::ToBack);
+        }
         ui.add_space(4.0);
         let title = if st.project_name.is_empty() {
             ed.doc.name.clone()

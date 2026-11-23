@@ -342,6 +342,8 @@ pub enum Icon {
     AlignBottom,
     DistributeH,
     DistributeV,
+    ToFront,
+    ToBack,
     Corners,
     Wrap,
     ArrowRight,
@@ -658,6 +660,32 @@ pub fn paint_icon(painter: &egui::Painter, rect: Rect, icon: Icon, color: Color3
                 Rect::from_min_max(pt(4.5, 6.5), pt(11.5, 9.5)),
                 0.8 * u,
                 color,
+            );
+        }
+        Icon::ToFront => {
+            painter.rect_stroke(
+                Rect::from_min_max(pt(2.5, 5.5), pt(9.5, 12.5)),
+                1.0 * u,
+                st,
+                egui::StrokeKind::Middle,
+            );
+            painter.rect_filled(
+                Rect::from_min_max(pt(5.5, 2.5), pt(13.5, 10.5)),
+                1.0 * u,
+                color,
+            );
+        }
+        Icon::ToBack => {
+            painter.rect_filled(
+                Rect::from_min_max(pt(2.5, 5.5), pt(10.5, 13.5)),
+                1.0 * u,
+                color,
+            );
+            painter.rect_stroke(
+                Rect::from_min_max(pt(5.5, 2.5), pt(13.5, 10.5)),
+                1.0 * u,
+                st,
+                egui::StrokeKind::Middle,
             );
         }
         Icon::Corners => {
