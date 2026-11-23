@@ -525,6 +525,13 @@ fn top_bar(ui: &mut Ui, ed: &mut Editor, st: &mut UiState) {
         if del.inner.clicked() {
             ed.run(Action::Delete);
         }
+        let dup = ui.add_enabled_ui(has_sel, |ui| {
+            theme::icon_button(ui, theme::Icon::Duplicate, 26.0, false)
+                .on_hover_text("Duplicate (⌘D)")
+        });
+        if dup.inner.clicked() {
+            ed.run(Action::Duplicate);
+        }
         let to_front = ui.add_enabled_ui(has_sel, |ui| {
             theme::icon_button(ui, theme::Icon::ToFront, 26.0, false)
                 .on_hover_text("Bring to front (⌘⇧])")
