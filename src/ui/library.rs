@@ -30,6 +30,10 @@ pub struct LibraryUi {
     pub query: String,
     /// A shape being dragged out to the canvas.
     pub drag: Option<DragSource>,
+    /// Show the "More Shapes" library picker.
+    pub more_shapes_open: bool,
+    /// Registry categories hidden from the Shapes panel.
+    pub hidden_categories: std::collections::HashSet<crate::registry::Category>,
     previews: HashMap<String, (usize, egui::Mesh)>,
 }
 
@@ -431,11 +435,12 @@ pub fn panel(ui: &mut Ui, ed: &mut Editor, st: &mut UiState) {
                     }
                 });
             };
+            let hidden_cats = lib.hidden_categories.clone();
             if query.is_empty() {
                 let all = registry::search("");
                 let mut cats: Vec<crate::registry::Category> = Vec::new();
                 for d in &all {
-                    if !cats.contains(&d.category) {
+                    if !cats.contains(&d.category) && !hidden_cats.contains(&d.category) {
                         cats.push(d.category);
                     }
                 }
@@ -460,7 +465,10 @@ pub fn panel(ui: &mut Ui, ed: &mut Editor, st: &mut UiState) {
                     ui.add_space(2.0);
                 }
             } else {
-                let results = registry::search(&query);
+                let results: Vec<&'static ShapeDef> = registry::search(&query)
+                    .into_iter()
+                    .filter(|d| !hidden_cats.contains(&d.category))
+                    .collect();
                 if results.is_empty() {
                     ui.label(
                         RichText::new("No shapes match the search.")
@@ -485,13 +493,10 @@ pub fn panel(ui: &mut Ui, ed: &mut Editor, st: &mut UiState) {
             ui.add_space(8.0);
             if ui
                 .button("More Shapes...")
-                .on_hover_text("Browse additional diagram templates and shape packs")
+                .on_hover_text("Show or hide shape categories")
                 .clicked()
             {
-                st.templates.open = true;
-                if st.templates.libraries.is_empty() {
-                    st.templates.load(st.options.template_folder.clone());
-                }
+                lib.more_shapes_open = true;
             }
             ui.add_space(4.0);
             ui.separator();
@@ -595,6 +600,48 @@ pub fn panel(ui: &mut Ui, ed: &mut Editor, st: &mut UiState) {
                 lib.scratch_dirty = true;
             }
         });
+
+    if lib.more_shapes_open {
+        let mut open = lib.more_shapes_open;
+        egui::Window::new("More Shapes")
+            .open(&mut open)
+            .collapsible(false)
+            .resizable(false)
+            .anchor(egui::Align2::LEFT_TOP, [16.0, 120.0])
+            .show(&ctx, |ui| {
+                ui.label("Shape libraries");
+                ui.add_space(4.0);
+                for cat in [
+                    crate::registry::Category::Flowchart,
+                    crate::registry::Category::Uml,
+                    crate::registry::Category::Er,
+                    crate::registry::Category::Bpmn,
+                    crate::registry::Category::Network,
+                    crate::registry::Category::FloorPlan,
+                    crate::registry::Category::Org,
+                    crate::registry::Category::C4,
+                    crate::registry::Category::Sysml,
+                    crate::registry::Category::Charts,
+                ] {
+                    let mut visible = !lib.hidden_categories.contains(&cat);
+                    if ui.checkbox(&mut visible, cat.name()).changed() {
+                        if visible {
+                            lib.hidden_categories.remove(&cat);
+                        } else {
+                            lib.hidden_categories.insert(cat);
+                        }
+                    }
+                }
+                ui.add_space(8.0);
+                if ui.button("Templates...").clicked() {
+                    st.templates.open = true;
+                    if st.templates.libraries.is_empty() {
+                        st.templates.load(st.options.template_folder.clone());
+                    }
+                }
+            });
+        lib.more_shapes_open = open;
+    }
 
     // ------------------------------------------------------------ drag out
     // The pointer is tracked from here each frame while a drag runs, so the

@@ -12,7 +12,7 @@ use crate::vector::{VPath, to_subpaths};
 use std::f64::consts::PI;
 
 /// Shape categories for the search report and the MCP surface.
-#[derive(Clone, Copy, PartialEq, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub enum Category {
     Flowchart,
     Uml,
