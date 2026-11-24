@@ -1,6 +1,6 @@
 # Sketch agent session state
 
-Last updated: 2026-11-21 (UIX-02 Arrange increment pushed; SHP-11/12/13 pushed; STY-17/18 pushed; UIX-02 connector-only tab-set/data placement improved, committed 61e783f and pushed).
+Last updated: 2026-11-24 (UIX-02 connector Arrange controls aligned with draw.io, committed a3b73a2 and pushed).
 
 ## Objective
 
@@ -691,6 +691,8 @@ selections now omit the Text tab (Style, Arrange, Data) while text layers keep
 Style, Text, Arrange, Data, giving different tab sets for the typical connector
 vs text-layer case. UIX-02 remains IN_PROGRESS.
 
+Round 72 UI follow-up was committed as `a3b73a2` and pushed: connector Arrange now keeps Flip and Reverse, hides Size/Position fields, Align and Snap to Grid, matching the draw.io Arrange docs. Shape Arrange keeps those controls. UIX-02 remains IN_PROGRESS pending a review of Selection/Layout sections.
+
 Round 70 (committed 848ac44, pushed) verified IO-06 Transparent PNG background:
 IO-06 moved from IMPLEMENTED to VERIFIED with transparent corner-pixel assertions.
 
@@ -742,10 +744,11 @@ Round 83 (committed 90b1680, pushed) verified CON-21 Auto-route around obstacles
 
 ## Exact next task
 
-Continue assessing UIX-02 (still IN_PROGRESS): typical unlabeled connector vs
-text-layer selections now get different tab sets, but a labeled connector still
-shares the same tab set as a text layer and some irrelevant controls/sections
-may remain in non-Style tabs. Capture a failing test before real code fixes.
+Continue assessing UIX-02 (still IN_PROGRESS): connector and text-layer
+selections now get different tab sets, and connector Arrange no longer shows
+size, position, Align or Snap to Grid while keeping Flip and Reverse. Review
+the remaining Selection/Layout sections against draw.io and capture a failing
+test before any further real code fix.
 Assess UIX-12 for any genuine HEAD evidence (remains DISCOVERED/unaudited).
 Otherwise close or correct stale rows as evidence-only with cited HEAD
 identifiers and update verification/session docs. Do not restart completed

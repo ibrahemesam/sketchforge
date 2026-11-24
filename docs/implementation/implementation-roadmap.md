@@ -483,6 +483,7 @@ documentation closeout completes the round.
 **UIX-02 increment (committed 3b921d6, pushed).** Connector-only Style tab now hides Rounded, Glass, Corner, and Rotation after capturing failing test. UIX-02 remains IN_PROGRESS.
 
 **UIX-02 increment (committed 61e783f, pushed).** Connector-only selections omit Data tab and render Data sections in Arrange so metadata stays accessible; labeled connector tab set now differs from text layer. UIX-02 remains IN_PROGRESS pending further irrelevant-control audit.
+**UIX-02 increment (committed a3b73a2, pushed).** Captured failing tests, then aligned connector Arrange with the draw.io docs: kept Flip and Reverse, hid Size/Position fields, Align and Snap to Grid. Added a shape-regression test so those controls stay available for shapes. UIX-02 remains IN_PROGRESS pending review of Selection/Layout sections.
 
 **Scope.**
 
