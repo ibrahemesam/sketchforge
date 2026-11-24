@@ -487,6 +487,8 @@ documentation closeout completes the round.
 **DIA-12 increment (committed b4607aa and e98e2d9, pushed).** Added a safe `data:action/json,` interpreter for toggle, show, hide and select over layers, cells and tags. Unsupported effects are refused, draw.io ids are remapped on import and export, and MCP accepts these links. Click, runtime, parser, round-trip and MCP tests cover the path. DIA-12 is VERIFIED; DIA-11 remains BLOCKED for the full action set.
 **UIX-02 increment (committed f478440, pushed).** Connector-only Arrange no longer renders an empty Selection section or a Flatten button that would turn the connector into a path. Shape selections keep Selection and Flatten. UIX-02 remains IN_PROGRESS pending the Layout section review.
 
+**Round 86 (code committed 54a4358).** Added right-drag canvas panning on the existing pan path and replaced the plus-circle quick-connect knobs with outward blue arrowheads. Selected shapes now show the eight fixed-point crosses as well as the arrows, and the help footer names right-drag. Failing mesh and input tests were captured first; CAN-01, CAN-14 and CAN-15 keep VERIFIED status with updated evidence.
+
 **Scope.**
 
 - A selection context resolver that classifies the current selection as document, single
