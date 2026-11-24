@@ -482,6 +482,8 @@ documentation closeout completes the round.
 
 **UIX-02 increment (committed 3b921d6, pushed).** Connector-only Style tab now hides Rounded, Glass, Corner, and Rotation after capturing failing test. UIX-02 remains IN_PROGRESS.
 
+**UIX-02 increment (local, pending commit/push).** Connector-only selections omit Data tab and render Data sections in Arrange so metadata stays accessible; labeled connector tab set now differs from text layer. UIX-02 remains IN_PROGRESS pending further irrelevant-control audit.
+
 **Scope.**
 
 - A selection context resolver that classifies the current selection as document, single

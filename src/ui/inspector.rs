@@ -4246,6 +4246,11 @@ fn arrange_section(
         ui.label(title_text("Layout"));
         child_layout(ui, ed, ids, first);
     }
+
+    if all_connectors {
+        separator(ui);
+        data_tab(ui, ed, st, vis, ids, first);
+    }
 }
 
 fn fmt_num(v: f64) -> String {

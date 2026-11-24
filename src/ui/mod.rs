@@ -207,7 +207,9 @@ impl InspectorTab {
 
     /// Tabs shown for the current selection. The Text tab is omitted when no
     /// selected element carries editable text or a label. Connectors only show
-    /// the Text tab when they carry a label or extra labels.
+    /// the Text tab when they carry a label or extra labels. Connector-only
+    /// selections omit Data because Link/Tooltip/Tags/Properties are shown in
+    /// Arrange (draw.io-aligned, keeps connector metadata accessible).
     pub fn element_tabs(ids: &[NodeId], doc: &crate::model::Document) -> Vec<InspectorTab> {
         let has_text = ids.iter().any(|id| {
             doc.get(*id).is_some_and(|n| {
@@ -216,12 +218,18 @@ impl InspectorTab {
                     || (!n.is_connector() && n.supports_label())
             })
         });
+        let all_connectors = !ids.is_empty()
+            && ids
+                .iter()
+                .all(|id| doc.get(*id).is_some_and(|n| n.is_connector()));
         let mut tabs = vec![InspectorTab::Style];
         if has_text {
             tabs.push(InspectorTab::Text);
         }
         tabs.push(InspectorTab::Arrange);
-        tabs.push(InspectorTab::Data);
+        if !all_connectors {
+            tabs.push(InspectorTab::Data);
+        }
         tabs
     }
 
@@ -1479,19 +1487,28 @@ mod tests {
             ]
         );
         // An unlabeled connector gets a different tab set than a text layer;
-        // labeled connectors still get the Text tab.
+        // labeled connectors also get a different tab set than a text layer.
         assert_eq!(
             InspectorTab::element_tabs(&[connector_id], &doc),
-            vec![
-                InspectorTab::Style,
-                InspectorTab::Arrange,
-                InspectorTab::Data
-            ]
+            vec![InspectorTab::Style, InspectorTab::Arrange]
         );
         let mut labeled_conn = doc.get(connector_id).cloned().unwrap();
         labeled_conn.label = "Link".into();
         doc.nodes.insert(connector_id, labeled_conn);
-        assert!(InspectorTab::element_tabs(&[connector_id], &doc).contains(&InspectorTab::Text));
+        let labeled_tabs = InspectorTab::element_tabs(&[connector_id], &doc);
+        assert_eq!(
+            labeled_tabs,
+            vec![
+                InspectorTab::Style,
+                InspectorTab::Text,
+                InspectorTab::Arrange
+            ]
+        );
+        assert_ne!(
+            labeled_tabs,
+            InspectorTab::element_tabs(&[text_id], &doc),
+            "labeled connector and text layer should get different tab sets"
+        );
         assert!(!InspectorTab::Text.valid_for(true, &[group_id], &doc));
     }
 
