@@ -881,6 +881,30 @@ fn import_model(
         }
     }
 
+    // Custom action links name cells and layers by draw.io id. Translate them
+    // to native ids so the same link works after import.
+    for node in doc.nodes.values_mut() {
+        if node.link.is_empty() {
+            continue;
+        }
+        node.link = crate::link::action::remap_ids(
+            &node.link,
+            |id| {
+                drawio_to_native
+                    .get(id)
+                    .map(|n| n.0.to_string())
+                    .unwrap_or_else(|| id.to_string())
+            },
+            |id| match layer_ids.get(id) {
+                Some(Some(layer)) => layer.0.to_string(),
+                Some(None) => "1".to_string(),
+                None => native_layer_id(id)
+                    .map(|layer| layer.0.to_string())
+                    .unwrap_or_else(|| id.to_string()),
+            },
+        );
+    }
+
     doc.validate()
         .map_err(|e| format!("imported diagram \"{name}\" is invalid: {e}"))?;
 
@@ -1897,8 +1921,21 @@ fn emit_node(out: &mut String, doc: &Document, id: NodeId, parent: Option<NodeId
         attr(out, &value);
         out.push('"');
         if !n.link.is_empty() {
+            let link = crate::link::action::remap_ids(
+                &n.link,
+                |id| {
+                    native_node_id(id)
+                        .map(node_cell)
+                        .unwrap_or_else(|| id.to_string())
+                },
+                |id| {
+                    native_layer_id(id)
+                        .map(layer_cell)
+                        .unwrap_or_else(|| id.to_string())
+                },
+            );
             out.push_str(" link=\"");
-            attr(out, &n.link);
+            attr(out, &link);
             out.push('"');
         }
         if !n.tooltip.is_empty() {
@@ -2403,6 +2440,25 @@ fn node_cell(id: NodeId) -> String {
 
 fn layer_cell(id: LayerId) -> String {
     format!("l{}", id.0)
+}
+
+/// Custom action links store native decimal ids. draw.io exports prefix them.
+fn native_node_id(value: &str) -> Option<NodeId> {
+    value
+        .strip_prefix('n')
+        .unwrap_or(value)
+        .parse::<u64>()
+        .ok()
+        .map(NodeId)
+}
+
+fn native_layer_id(value: &str) -> Option<LayerId> {
+    value
+        .strip_prefix('l')
+        .unwrap_or(value)
+        .parse::<u64>()
+        .ok()
+        .map(LayerId)
 }
 
 fn attr(out: &mut String, value: &str) {

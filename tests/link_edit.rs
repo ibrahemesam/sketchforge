@@ -79,6 +79,30 @@ fn mcp_set_link_stores_page_and_external_targets() {
 }
 
 #[test]
+fn mcp_set_link_accepts_safe_action_links_and_rejects_unsupported_effects() {
+    let mut h = host();
+    let ok = rect(&mut h, "Actions");
+    let bad = rect(&mut h, "Unsupported");
+    let action = r#"data:action/json,{"actions":[{"toggle":{"layers":["2"]}}]}"#;
+    let unsupported = r#"data:action/json,{"actions":[{"highlight":{"cells":["1"]}}]}"#;
+    let ok_key = key(&h, ok);
+    let bad_key = key(&h, bad);
+
+    let out = set(&mut h, json!([{"nodeId": ok_key, "link": action}]));
+    assert_eq!(out["linked"], json!(1), "{out}");
+    assert_eq!(stored_link(&h, ok), action);
+
+    let err = raw(
+        &mut h,
+        "set_link",
+        json!({"updates": [{"nodeId": bad_key, "link": unsupported}]}),
+    )
+    .unwrap_err();
+    assert!(err.contains("unsafe link"), "{err}");
+    assert_eq!(stored_link(&h, bad), "");
+}
+
+#[test]
 fn mcp_set_link_empty_clears_and_undo_restores() {
     let mut h = host();
     let id = rect(&mut h, "Link");

@@ -5,6 +5,8 @@
 //! `https` or `mailto` scheme. Everything else is refused before it can reach
 //! the operating system's opener.
 
+pub mod action;
+
 /// A classified link target.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum LinkTarget {
@@ -12,6 +14,8 @@ pub enum LinkTarget {
     Page(String),
     /// External target that passed the scheme allowlist.
     External(String),
+    /// A draw.io custom action link reduced to the supported safe subset.
+    Actions(Vec<action::Action>),
     /// Anything that would be unsafe or meaningless to open.
     Unsafe(String),
 }
@@ -30,6 +34,12 @@ pub fn classify(link: &str) -> LinkTarget {
     }
     if let Some(rest) = link.strip_prefix("page:") {
         return non_empty_page(rest);
+    }
+    if let Some(json) = link.strip_prefix(action::PREFIX) {
+        return match action::parse(json) {
+            Ok(actions) => LinkTarget::Actions(actions),
+            Err(reason) => LinkTarget::Unsafe(reason),
+        };
     }
     let scheme = link
         .split_once(':')

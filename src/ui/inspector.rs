@@ -4771,6 +4771,9 @@ fn data_tab(
                 crate::link::LinkTarget::External(_) => {
                     "External link; Sketch asks before opening it.".to_string()
                 }
+                crate::link::LinkTarget::Actions(_) => {
+                    "Custom action link. Runs layer and visibility actions.".to_string()
+                }
                 crate::link::LinkTarget::Unsafe(reason) => format!("Blocked: {reason}."),
             };
             ui.label(

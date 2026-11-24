@@ -2998,7 +2998,9 @@ fn set_link(ed: &mut Editor, a: &Args) -> ToolResult {
                 return Ok(link);
             }
             match crate::link::classify(&link) {
-                crate::link::LinkTarget::Page(_) | crate::link::LinkTarget::External(_) => Ok(link),
+                crate::link::LinkTarget::Page(_)
+                | crate::link::LinkTarget::External(_)
+                | crate::link::LinkTarget::Actions(_) => Ok(link),
                 crate::link::LinkTarget::Unsafe(reason) => {
                     Err(format!("unsafe link \"{link}\": {reason}"))
                 }

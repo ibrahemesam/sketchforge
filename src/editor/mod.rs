@@ -7,6 +7,7 @@ pub mod generate_ops;
 pub mod hit;
 pub mod input;
 pub mod layers;
+pub(crate) mod link_actions;
 pub mod pages;
 pub mod registry_ops;
 pub mod shortcuts;
@@ -695,6 +696,11 @@ impl Editor {
             }
             crate::link::LinkTarget::External(url) => {
                 self.requests.push(AppRequest::OpenLink(url));
+            }
+            crate::link::LinkTarget::Actions(_) => {
+                if link_actions::run(self, link) {
+                    self.status = "Ran custom link actions.".into();
+                }
             }
             crate::link::LinkTarget::Unsafe(reason) => {
                 self.status = format!("Link blocked: {reason}.");
