@@ -1032,6 +1032,7 @@ impl Editor {
     fn pointer_down(&mut self, pos: V2, button: Button, pressure: Option<f64>, time_ms: f64) {
         let world = self.screen_to_world(pos);
         if button == Button::Middle
+            || button == Button::Secondary
             || (button == Button::Primary && (self.space_down || self.tool == Tool::Hand))
         {
             self.gesture = Gesture::Pan { last: pos };

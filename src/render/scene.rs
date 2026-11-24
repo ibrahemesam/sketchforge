@@ -785,6 +785,17 @@ fn ruler_spacing(zoom: f64) -> f64 {
     }
 }
 
+/// Screen triangle for a quick connection handle. The tip points away from the
+/// shape so a press and drag starts an arrow on that side, as in draw.io.
+fn arrow_handle(pos: V2, dir: V2) -> [V2; 3] {
+    let perp = v2(-dir.y, dir.x);
+    [
+        pos + dir * 8.0,
+        pos - dir * 2.0 + perp * 4.0,
+        pos - dir * 2.0 - perp * 4.0,
+    ]
+}
+
 /// Arrow handles, bind targets, quick-connect knobs and the laser trail.
 fn whiteboard_overlay(mb: &mut MeshBuilder, ed: &Editor, v: &View, accent: [f32; 4]) {
     let off = v.offset;
@@ -803,9 +814,15 @@ fn whiteboard_overlay(mb: &mut MeshBuilder, ed: &Editor, v: &View, accent: [f32;
         );
     }
     // Fixed attachment points as small crosses: on the shape a connector end is
-    // being dragged over, and on the hovered shape while idle.
+    // being dragged over, and on the hovered or selected shape while idle.
     if ed.doc.settings.connection_points {
-        let target = ed.bind_hover.or(if ed.is_busy() { None } else { ed.hover });
+        let target = ed.bind_hover.or_else(|| {
+            if ed.is_busy() {
+                None
+            } else {
+                ed.hover.or_else(|| ed.selection.first().copied())
+            }
+        });
         if let Some(t) = target
             && let Some(wr) = ed.doc.world_rect(t)
             && ed.doc.get(t).is_some_and(crate::connector::bindable)
@@ -830,20 +847,26 @@ fn whiteboard_overlay(mb: &mut MeshBuilder, ed: &Editor, v: &View, accent: [f32;
             mb.circle(p, 4.0, [1.0; 4]);
         }
     }
-    let mut knob = |p: V2| {
+    let mut knob = |dir: usize, p: V2| {
         let p = p + off;
-        mb.circle(p, 8.0, [accent[0], accent[1], accent[2], 0.9]);
-        mb.line(p - v2(4.0, 0.0), p + v2(4.0, 0.0), 1.6, [1.0; 4]);
-        mb.line(p - v2(0.0, 4.0), p + v2(0.0, 4.0), 1.6, [1.0; 4]);
+        let d = crate::editor::whiteboard::QUICK_DIRS[dir];
+        let pts = arrow_handle(p, d);
+        let path = MeshBuilder::polygon_path(&pts, true);
+        mb.fill_path(
+            &path,
+            [accent[0], accent[1], accent[2], 0.95],
+            FillRule::NonZero,
+        );
+        mb.stroke_path(&path, 1.0, [1.0, 1.0, 1.0, 0.9], LineCap::Round);
     };
     if ed.doc.settings.connection_arrows {
-        for (_, p) in ed.quick_knobs() {
-            knob(p);
+        for (dir, p) in ed.quick_knobs() {
+            knob(dir, p);
         }
         // Knobs on the hovered unselected shape: press and drag to connect an arrow.
         if let Some((_, knobs)) = ed.hover_knobs() {
-            for (_, p) in knobs {
-                knob(p);
+            for (dir, p) in knobs {
+                knob(dir, p);
             }
         }
     }
@@ -1179,5 +1202,91 @@ pub fn export_frame(
         camera,
         offset: V2::ZERO,
         viewport: Rect::new(0.0, 0.0, size_px.x, size_px.y),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn editor_with_shape() -> Editor {
+        let mut ed = Editor::default();
+        ed.viewport = v2(1000.0, 800.0);
+        ed.camera = Camera {
+            pan: V2::ZERO,
+            zoom: 1.0,
+        };
+        let id = ed.add_node(
+            Node::new(
+                NodeId(1),
+                NodeKind::Rect,
+                Rect::new(100.0, 100.0, 100.0, 60.0),
+            ),
+            None,
+        );
+        ed.selection = vec![id];
+        ed
+    }
+
+    fn overlay_vertices(ed: &Editor) -> Vec<(f32, f32)> {
+        let v = View {
+            doc: &ed.doc,
+            camera: ed.camera,
+            viewport: ed.viewport,
+            offset: V2::ZERO,
+        };
+        let mut mb = MeshBuilder::default();
+        whiteboard_overlay(&mut mb, ed, &v, rgba(ACCENT));
+        mb.batches
+            .into_iter()
+            .flat_map(|b| b.mesh.vertices.into_iter().map(|v| (v.pos[0], v.pos[1])))
+            .collect()
+    }
+
+    fn has_point_near(pts: &[(f32, f32)], p: V2, tolerance: f64) -> bool {
+        pts.iter().any(|(x, y)| {
+            (*x as f64 - p.x).abs() <= tolerance && (*y as f64 - p.y).abs() <= tolerance
+        })
+    }
+
+    fn has_point(pts: &[(f32, f32)], p: V2) -> bool {
+        has_point_near(pts, p, 0.2)
+    }
+
+    #[test]
+    fn selected_shape_connection_handles_are_outward_arrows() {
+        let ed = editor_with_shape();
+        let pts = overlay_vertices(&ed);
+        // The right knob sits at (222,130). Its arrow points right.
+        assert!(has_point(&pts, v2(230.0, 130.0)), "missing right arrow tip");
+        assert!(
+            has_point(&pts, v2(220.0, 126.0)),
+            "missing right arrow base"
+        );
+        assert!(
+            has_point(&pts, v2(220.0, 134.0)),
+            "missing right arrow base"
+        );
+        // The bottom knob sits at (150,182). Its arrow points down.
+        assert!(
+            has_point(&pts, v2(150.0, 190.0)),
+            "missing bottom arrow tip"
+        );
+    }
+
+    #[test]
+    fn selected_shape_shows_fixed_attachment_crosses() {
+        let ed = editor_with_shape();
+        let pts = overlay_vertices(&ed);
+        // Right edge midpoint is (200,130). Stroke vertices sit half a line
+        // width off the ideal endpoint, so allow a pixel of slack.
+        assert!(
+            has_point_near(&pts, v2(196.0, 126.0), 1.2),
+            "missing first cross arm"
+        );
+        assert!(
+            has_point_near(&pts, v2(204.0, 134.0), 1.2),
+            "missing second cross arm"
+        );
     }
 }

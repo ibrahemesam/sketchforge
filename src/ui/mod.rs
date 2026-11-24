@@ -148,7 +148,7 @@ fn welcome_copy(step: usize) -> (&'static str, &'static str, &'static str, &'sta
             "Connect",
             "Join ideas with arrows",
             "Press C and drag from one shape to another. Connections stay attached and reroute when you move either end.",
-            "Drag from a small cross to fix where the arrow meets a shape.",
+            "Drag from a small arrow or cross to fix where the arrow meets a shape.",
         ),
         2 => (
             "Export",
@@ -1328,7 +1328,7 @@ fn help(ctx: &egui::Context, st: &mut UiState, canvas: egui::Rect) {
                             });
                         });
                     ui.label(
-                        RichText::new("Space-drag pans · wheel pans · ⌘/Ctrl+wheel or pinch zooms · ⌥-drag duplicates · hold ⌥ to measure")
+                        RichText::new("Right-drag or Space-drag pans · wheel pans · ⌘/Ctrl+wheel or pinch zooms · ⌥-drag duplicates · hold ⌥ to measure")
                             .size(theme::SECONDARY)
                             .color(p.secondary),
                     );

@@ -54,6 +54,27 @@ fn drag(e: &mut Editor, from: (f64, f64), to: (f64, f64), t0: f64) {
     }
     up(e, to.0, to.1, t0 + 200.0);
 }
+fn button_drag(e: &mut Editor, from: (f64, f64), to: (f64, f64), t0: f64, button: Button) {
+    e.handle(InputEvent::PointerDown {
+        pos: v2(from.0, from.1),
+        button,
+        pressure: None,
+        time_ms: t0,
+    });
+    for i in 1..=10 {
+        let k = i as f64 / 10.0;
+        e.handle(InputEvent::PointerMove {
+            pos: v2(from.0 + (to.0 - from.0) * k, from.1 + (to.1 - from.1) * k),
+            pressure: None,
+            time_ms: t0 + i as f64 * 16.0,
+        });
+    }
+    e.handle(InputEvent::PointerUp {
+        pos: v2(to.0, to.1),
+        button,
+        time_ms: t0 + 200.0,
+    });
+}
 fn key(e: &mut Editor, k: Key, m: Modifiers) {
     e.handle(InputEvent::Modifiers(m));
     e.handle(InputEvent::KeyDown {
@@ -112,6 +133,55 @@ fn space_drag_and_hand_tool_pan() {
     press(&mut e, 'h');
     drag(&mut e, (100.0, 100.0), (90.0, 100.0), 300.0);
     assert_eq!(e.camera.pan, v2(-50.0, -40.0));
+}
+
+#[test]
+fn right_drag_pans_without_editing_the_diagram() {
+    let mut e = ed();
+    let id = e.add_node(
+        Node::new(
+            NodeId(1),
+            NodeKind::Rect,
+            Rect::new(120.0, 120.0, 80.0, 60.0),
+        ),
+        None,
+    );
+    e.selection = vec![id];
+    button_drag(
+        &mut e,
+        (500.0, 400.0),
+        (430.0, 360.0),
+        0.0,
+        Button::Secondary,
+    );
+    assert_eq!(e.camera.pan, v2(70.0, 40.0));
+    assert_eq!(e.selection, vec![id]);
+    assert_eq!(e.doc.nodes.len(), 1);
+    assert_eq!(rect_of(&e, id), Rect::new(120.0, 120.0, 80.0, 60.0));
+}
+
+#[test]
+fn right_click_does_not_change_selection_or_start_a_gesture() {
+    let mut e = ed();
+    let id = e.add_node(
+        Node::new(
+            NodeId(1),
+            NodeKind::Rect,
+            Rect::new(120.0, 120.0, 80.0, 60.0),
+        ),
+        None,
+    );
+    e.selection = vec![id];
+    button_drag(
+        &mut e,
+        (150.0, 150.0),
+        (150.0, 150.0),
+        0.0,
+        Button::Secondary,
+    );
+    assert_eq!(e.camera.pan, V2::ZERO);
+    assert_eq!(e.selection, vec![id]);
+    assert_eq!(e.doc.nodes.len(), 1);
 }
 
 #[test]
