@@ -3802,6 +3802,24 @@ fn set_stroke_color_dark(ed: &mut Editor, ids: &[NodeId], c: Color) {
 
 /// Structural actions that used to sit in the panel header: boolean
 /// operations, grouping, components, instances and path editing.
+fn has_selection_actions(ed: &Editor, ids: &[NodeId], first: &Node) -> bool {
+    if ids.len() > 1 {
+        return true;
+    }
+    if first.component
+        || ed.is_instance_root(first.id)
+        || (first.is_frame() || first.is_group())
+        || first
+            .instance
+            .as_ref()
+            .is_some_and(|l| !l.overrides.is_empty())
+        || (first.is_container() && !first.children.is_empty())
+    {
+        return true;
+    }
+    !first.is_container() || matches!(first.kind, NodeKind::Path { .. })
+}
+
 fn selection_actions(ui: &mut Ui, ed: &mut Editor, ids: &[NodeId], first: &Node) {
     if ids.len() > 1 {
         ui.horizontal_wrapped(|ui| {
@@ -4237,8 +4255,10 @@ fn arrange_section(
         ed.run(shortcuts::Action::ToggleLock);
     }
     separator(ui);
-    ui.label(title_text("Selection"));
-    selection_actions(ui, ed, ids, first);
+    if !all_connectors && has_selection_actions(ed, ids, first) {
+        ui.label(title_text("Selection"));
+        selection_actions(ui, ed, ids, first);
+    }
 
     let has_layout = first.layout.is_some() || first.parent.is_some();
     if has_layout {
@@ -6429,6 +6449,8 @@ mod tests {
         assert!(!text.contains("Autosize"), "{text}");
         assert!(!text.contains("Rotate shape only by 90°"), "{text}");
         assert!(!text.contains("Keep label upright"), "{text}");
+        assert!(!text.contains("Flatten"), "{text}");
+        assert!(!text.contains("\nSelection\n"), "{text}");
         assert!(text.contains("Flip"), "{text}");
     }
 
@@ -6512,6 +6534,8 @@ mod tests {
         assert!(text.contains("\nAlign\n"), "{text}");
         assert!(text.contains("Snap to Grid"), "{text}");
         assert!(text.contains("Flip"), "{text}");
+        assert!(text.contains("\nSelection\n"), "{text}");
+        assert!(text.contains("Flatten"), "{text}");
     }
 
     #[test]
