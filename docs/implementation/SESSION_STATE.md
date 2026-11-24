@@ -1,6 +1,6 @@
 # Sketch agent session state
 
-Last updated: 2026-11-24 (UIX-02 connector Arrange controls aligned with draw.io, committed a3b73a2 and pushed).
+Last updated: 2026-11-24 (DIA-12 custom-link layer actions verified and pushed; parity VERIFIED 195, BLOCKED 26).
 
 ## Objective
 
@@ -729,6 +729,8 @@ Round 81 (committed a4e5a4f, pushed) added simple-layout Justify support for TXT
 Round 82 (committed 9d6cac1, pushed) verified CUS-11 Shape properties dialog.
 
 Round 83 (committed 90b1680, pushed) verified CON-21 Auto-route around obstacles. Added con21_elbow_route_avoids_third_shape in src/connector.rs tests; CON-21 moved from IMPLEMENTED to VERIFIED. Parity docs record VERIFIED 194, IMPLEMENTED 8, IN_PROGRESS 1, ANALYZED 0, DISCOVERED 1 and BLOCKED 27.
+
+Round 84 (committed b4607aa and e98e2d9, pushed) implemented and verified DIA-12 safe custom-link layer actions. DIA-12 moved from BLOCKED to VERIFIED. Parity docs record VERIFIED 195, IMPLEMENTED 8, IN_PROGRESS 1, ANALYZED 0, DISCOVERED 1 and BLOCKED 26.
 
 ## Blockers
 

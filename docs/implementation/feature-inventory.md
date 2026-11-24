@@ -85,7 +85,7 @@ statuses below still describe `5de2f5b`. The working tree now has:
   select all on layer, and move the selection to a layer, each one undo step that also
   restores the layer list and next layer id. Connectors keep bindings across layers. MCP
   gets list_layers, batched layer_ops, a layer argument on create_shape, and layer
-  fields on get_node_info (see ADR-009). DIA-12 waits for custom links (M6).
+  fields on get_node_info (see ADR-009). DIA-12 now uses those custom links for safe layer actions.
 
 - Shape registry, search, quick add, and scratchpad (M4, 2026-11-05): the Library tab
   gains a fuzzy registry search with preview tiles, a scratchpad of pinned and recent
@@ -269,11 +269,11 @@ preference and is not part of the page file.
 
 | Status | Count | Meaning |
 |---|---:|---|
-| VERIFIED | 194 | Committed test or directly exercised code path proves the behavior. |
+| VERIFIED | 195 | Committed test or directly exercised code path proves the behavior. |
 | IMPLEMENTED | 8 | Code exists and the path is readable, but no focused test or this-session runtime check covers it. |
 | IN_PROGRESS | 1 | Partial code at HEAD or in the tracked working state; the acceptance criteria are not met. |
 | DISCOVERED | 1 | draw.io behavior is documented here; no code or design exists. |
-| BLOCKED | 27 | Work cannot proceed without a missing subsystem, external service, licensing decision, or explicit scope decision. |
+| BLOCKED | 26 | Work cannot proceed without a missing subsystem, external service, licensing decision, or explicit scope decision. |
 | **Total** | **231** | |
 
 | Domain | Rows | VERIFIED | IMPLEMENTED | IN_PROGRESS | ANALYZED | DISCOVERED | BLOCKED |
@@ -598,7 +598,7 @@ Non-visual data attached to shapes and pages.
 | DIA-09 | Predefined placeholders | Date, time, page number, page count, and file name placeholders update automatically. | [Predefined placeholders](https://www.drawio.com/docs/reference/predefined-placeholders/) | src/model/placeholders.rs, src/model/document.rs, src/editor/mod.rs, src/io/svg.rs | **VERIFIED** | Insert a page number placeholder on two pages and confirm each page shows its own number. | Page context supplies page name, number, count and file name, and predefined placeholders include date/time masks and page values resolved at render/export time. Placeholder unit tests and `svg_export_resolves_page_and_shape_placeholders` cover predefined value resolution. The row was stale. |
 | DIA-10 | Page animations | A multi-page diagram can animate page transitions or element actions in the viewer. | [Add actions and animations to a page via Page Setup](https://www.drawio.com/docs/manual/links-tooltips-tags/page-animations/) | src/model/settings.rs, src/io/drawio.rs, src/editor/mod.rs | **VERIFIED** | Set a fade transition between two pages and play it in a viewer. | `page_transition_round_trips_in_native_page`, `page_transition_round_trips_through_drawio`, `switching_to_a_fade_page_starts_a_transition`, `transition_ignores_a_stale_editor_clock`, `fade_transition_changes_a_rendered_frame` and `diagram_tab_exposes_page_transition_controls` cover the page setting, its playback, duration, renderer effect, round trips and Diagram tab controls. Draw.io has no page-transition attribute, so Sketch carries `fade` and the duration in `__sketchPageTransition` and `__sketchPageTransitionMs` sidecars that draw.io ignores. Element animation actions stay deferred in DIA-11. |
 | DIA-11 | Animation actions | Clicking a shape can trigger a defined animation or navigation action through a JSON action list. | [JSON technical reference for animation actions](https://www.drawio.com/docs/reference/animation-actions-json/) | None | **BLOCKED** | Attach an action to a shape, click it in the viewer, and see the target page transition. | Requires DIA-10 plus custom links and a sandboxed action interpreter. |
-| DIA-12 | Links that toggle layers | A custom link can show, hide, or select layers for interactive diagrams. | [Add actions to custom links](https://www.drawio.com/docs/manual/links-tooltips-tags/custom-links/) | None | **BLOCKED** | Link a button to a layer, click it, and confirm only that layer's visibility changes. | Blocked by ORG-13, DIA-03, and DIA-11. |
+| DIA-12 | Links that toggle layers | A custom link can show, hide, or select layers for interactive diagrams. | [Add actions to custom links](https://www.drawio.com/docs/manual/links-tooltips-tags/custom-links/) | src/link.rs, src/link/action.rs, src/editor/mod.rs, src/editor/link_actions.rs, src/io/drawio.rs, src/mcp/exec.rs, src/ui/inspector.rs | **VERIFIED** | Link a button to a layer, click it, and confirm only that layer's visibility changes. | `data:action/json,` links now parse a safe subset with `toggle`, `show`, `hide` and `select` over layers, cells and tags. `command_click_on_linked_shape_runs_its_actions` covers the click path; `custom_link_toggles_a_layer`, `custom_link_hides_and_shows_a_layer`, `custom_link_selects_a_layer` and `custom_link_empty_tag_selector_shows_every_tagged_cell` cover runtime effects. `action_link_layer_ids_survive_drawio_export_and_import` covers draw.io id mapping, and `mcp_set_link_accepts_safe_action_links_and_rejects_unsupported_effects` covers the MCP write path. `parses_empty_tags_as_all_tagged_cells` and `refuses_unsupported_effects_and_empty_lists` cover parsing. Unsupported actions are refused rather than ignored. Full animation and navigation actions stay blocked in DIA-11. |
 
 ## STO: Storage, sharing, collaboration, and integrations
 

@@ -484,6 +484,7 @@ documentation closeout completes the round.
 
 **UIX-02 increment (committed 61e783f, pushed).** Connector-only selections omit Data tab and render Data sections in Arrange so metadata stays accessible; labeled connector tab set now differs from text layer. UIX-02 remains IN_PROGRESS pending further irrelevant-control audit.
 **UIX-02 increment (committed a3b73a2, pushed).** Captured failing tests, then aligned connector Arrange with the draw.io docs: kept Flip and Reverse, hid Size/Position fields, Align and Snap to Grid. Added a shape-regression test so those controls stay available for shapes. UIX-02 remains IN_PROGRESS pending review of Selection/Layout sections.
+**DIA-12 increment (committed b4607aa and e98e2d9, pushed).** Added a safe `data:action/json,` interpreter for toggle, show, hide and select over layers, cells and tags. Unsupported effects are refused, draw.io ids are remapped on import and export, and MCP accepts these links. Click, runtime, parser, round-trip and MCP tests cover the path. DIA-12 is VERIFIED; DIA-11 remains BLOCKED for the full action set.
 
 **Scope.**
 
@@ -694,8 +695,8 @@ visibility, lock, select all on layer, and move the selection to a layer, each o
 step that also restores the layer list and next id. Connectors keep bindings across
 layers. MCP gets `list_layers`, a `layer_ops` batch tool, a layer argument on
 `create_shape`, and layer fields on `get_node_info`. The z-order Layers panel is
-untouched and told apart from the layer list. DIA-12 stays in M6: interactive layer
-toggles need custom links, which do not exist yet.
+untouched and told apart from the layer list. DIA-12 now uses custom links for
+interactive layer actions.
 
 **Dependencies.** M1 page settings and M2 label membership. The paint order change needs
 tests for hit testing, clipping, and export.
