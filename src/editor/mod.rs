@@ -156,6 +156,8 @@ enum Gesture {
     None,
     Pan {
         last: V2,
+        start: V2,
+        button: Button,
     },
     Marquee {
         start: V2,
@@ -1035,7 +1037,15 @@ impl Editor {
             || button == Button::Secondary
             || (button == Button::Primary && (self.space_down || self.tool == Tool::Hand))
         {
-            self.gesture = Gesture::Pan { last: pos };
+            if button == Button::Secondary {
+                // A drag pans; a click without movement opens the menu on release.
+                self.ui_events.push(commands::UiEvent::CloseMenu);
+            }
+            self.gesture = Gesture::Pan {
+                last: pos,
+                start: pos,
+                button,
+            };
             return;
         }
         if button != Button::Primary {
@@ -1663,10 +1673,18 @@ impl Editor {
                 };
                 self.update_measures();
             }
-            Gesture::Pan { last } => {
+            Gesture::Pan {
+                last,
+                start,
+                button,
+            } => {
                 self.camera.pan_by_screen(pos - last);
                 self.revision += 1;
-                self.gesture = Gesture::Pan { last: pos };
+                self.gesture = Gesture::Pan {
+                    last: pos,
+                    start,
+                    button,
+                };
             }
             Gesture::Press {
                 start_screen,
@@ -2217,9 +2235,23 @@ impl Editor {
 
     fn pointer_up(&mut self, pos: V2, button: Button, _time_ms: f64) {
         let world = self.screen_to_world(pos);
-        let _ = button;
         match std::mem::replace(&mut self.gesture, Gesture::None) {
-            Gesture::None | Gesture::Pan { .. } => {}
+            Gesture::None => {}
+            Gesture::Pan { start, .. } => {
+                if button == Button::Secondary && pos.dist(start) < DRAG_THRESHOLD {
+                    // A right click selects the shape under it, as draw.io does,
+                    // while a right drag only panned the camera.
+                    self.end_text_edit();
+                    let target = hit::hit_test(&self.doc, world, self.camera.zoom)
+                        .map(|id| self.click_target(id, false));
+                    match target {
+                        Some(id) if !self.selection.contains(&id) => self.select(vec![id]),
+                        Some(_) => {}
+                        None => self.selection.clear(),
+                    }
+                    self.ui_events.push(commands::UiEvent::ContextMenu { pos });
+                }
+            }
             Gesture::Press { click_select, .. } => {
                 if let Some(id) = click_select {
                     if self.mods.shift {
@@ -2674,6 +2706,7 @@ impl Editor {
                 self.tool = t;
             }
             A::Escape => {
+                self.ui_events.push(commands::UiEvent::CloseMenu);
                 if !matches!(self.gesture, Gesture::None) {
                     self.cancel_gesture();
                 } else if self.tool != Tool::Select {

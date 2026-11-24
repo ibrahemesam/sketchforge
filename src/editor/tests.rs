@@ -182,6 +182,65 @@ fn right_click_does_not_change_selection_or_start_a_gesture() {
     assert_eq!(e.camera.pan, V2::ZERO);
     assert_eq!(e.selection, vec![id]);
     assert_eq!(e.doc.nodes.len(), 1);
+    assert_eq!(
+        e.ui_events,
+        vec![
+            commands::UiEvent::CloseMenu,
+            commands::UiEvent::ContextMenu {
+                pos: v2(150.0, 150.0)
+            }
+        ]
+    );
+}
+
+#[test]
+fn right_click_selects_the_shape_under_the_pointer() {
+    let mut e = ed();
+    let id = e.add_node(
+        Node::new(
+            NodeId(1),
+            NodeKind::Rect,
+            Rect::new(120.0, 120.0, 80.0, 60.0),
+        ),
+        None,
+    );
+    button_drag(
+        &mut e,
+        (150.0, 150.0),
+        (150.0, 150.0),
+        0.0,
+        Button::Secondary,
+    );
+    assert_eq!(e.selection, vec![id]);
+    assert_eq!(
+        e.ui_events,
+        vec![
+            commands::UiEvent::CloseMenu,
+            commands::UiEvent::ContextMenu {
+                pos: v2(150.0, 150.0)
+            }
+        ]
+    );
+}
+
+#[test]
+fn right_drag_pans_without_a_context_menu() {
+    let mut e = ed();
+    button_drag(
+        &mut e,
+        (500.0, 400.0),
+        (440.0, 370.0),
+        0.0,
+        Button::Secondary,
+    );
+    assert_eq!(e.camera.pan, v2(60.0, 30.0));
+    assert!(
+        !e.ui_events
+            .iter()
+            .any(|ev| matches!(ev, commands::UiEvent::ContextMenu { .. })),
+        "right drag is a pan gesture, not a context menu: {:?}",
+        e.ui_events
+    );
 }
 
 #[test]

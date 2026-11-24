@@ -543,6 +543,36 @@ fn m6_save_load_and_export() {
 }
 
 #[test]
+fn canvas_context_menu_renders_over_the_diagram() {
+    let Some(g) = gpu() else { return };
+    let mut e = demo::showcase();
+    let mut st = UiState::default();
+    let size = [1100.0, 720.0];
+    // One pass settles the canvas rect that the popup position is relative to.
+    let _ = frame::capture(g, &mut e, &mut st, size, 1.0, |_| {});
+    st.context_menu = Some(drawio_rs::ui::ContextMenuUi {
+        pos: v2(120.0, 140.0),
+        opened_at_frame: 0,
+    });
+    let with_menu = frame::capture(g, &mut e, &mut st, size, 1.0, |_| {});
+    std::fs::create_dir_all(".artifacts/round87").unwrap();
+    with_menu
+        .save(".artifacts/round87/context-menu.png")
+        .unwrap();
+    st.context_menu = None;
+    let without_menu = frame::capture(g, &mut e, &mut st, size, 1.0, |_| {});
+    let changed = with_menu
+        .pixels()
+        .zip(without_menu.pixels())
+        .filter(|(a, b)| a != b)
+        .count();
+    assert!(
+        changed > 2_000,
+        "context menu should paint ({changed} px changed)"
+    );
+}
+
+#[test]
 fn app_full_ui_screenshot() {
     let Some(g) = gpu() else { return };
     let mut e = demo::showcase();

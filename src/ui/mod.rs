@@ -122,6 +122,16 @@ pub struct UiState {
     /// The canvas area on screen (set every frame by the layout pass); library
     /// drag-outs use it to know when the pointer is over the diagram.
     pub canvas_rect: Option<egui::Rect>,
+    /// Canvas context menu opened by a right click that did not drag.
+    pub context_menu: Option<ContextMenuUi>,
+}
+
+/// Where the canvas context menu opened. The frame guard stops the same right
+/// click that opened it from being read as a click elsewhere.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ContextMenuUi {
+    pub pos: crate::geom::V2,
+    pub opened_at_frame: u64,
 }
 
 /// State of the first-run tour. Only the step is session state; the fact that
@@ -369,8 +379,16 @@ pub fn draw(ui: &mut Ui, ed: &mut Editor, st: &mut UiState) -> egui::Rect {
                 });
                 st.quick_add_focus = true;
             }
+            UiEvent::ContextMenu { pos } => {
+                st.context_menu = Some(ContextMenuUi {
+                    pos,
+                    opened_at_frame: ui.ctx().cumulative_frame_nr(),
+                });
+            }
+            UiEvent::CloseMenu => st.context_menu = None,
         }
     }
+    context_menu(ui.ctx(), ed, st);
     if st.hide_ui {
         let canvas = ui.available_rect_before_wrap();
         palette::draw(ui.ctx(), ed, st, canvas);
@@ -492,6 +510,101 @@ fn menu_entries(ui: &mut Ui, ed: &mut Editor, entries: &[shortcuts::MenuEntry]) 
                 ui.menu_button(*label, |ui| menu_entries(ui, ed, items));
             }
         }
+    }
+}
+
+/// One row of the canvas context menu. Separators keep the grouping close to
+/// draw.io's menu without bringing over any of its assets.
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum ContextEntry {
+    Separator,
+    Item(&'static str, Action),
+}
+
+fn context_entries(ed: &Editor) -> Vec<ContextEntry> {
+    use ContextEntry::{Item, Separator};
+    if ed.selection.is_empty() {
+        return vec![
+            Item("Paste", Action::Paste),
+            Separator,
+            Item("Select All", Action::SelectAll),
+            Item("Zoom to Fit", Action::ZoomFit),
+            Item("Dot Grid", Action::ToggleGrid),
+        ];
+    }
+    let mut entries = Vec::new();
+    if ed.selection.len() == 1 {
+        entries.extend([Item("Edit…", Action::EditText), Separator]);
+    }
+    entries.extend([
+        Item("Cut", Action::Cut),
+        Item("Copy", Action::Copy),
+        Item("Paste", Action::Paste),
+        Item("Duplicate", Action::Duplicate),
+        Item("Delete", Action::Delete),
+        Separator,
+        Item("Bring to Front", Action::ToFront),
+        Item("Send to Back", Action::ToBack),
+    ]);
+    if ed.selection.len() > 1 {
+        entries.push(Item("Group", Action::Group));
+    }
+    if ed
+        .selection
+        .iter()
+        .any(|id| ed.doc.get(*id).is_some_and(|n| n.is_group()))
+    {
+        entries.push(Item("Ungroup", Action::Ungroup));
+    }
+    entries
+}
+
+/// The right-click menu on the canvas. It uses the editor's existing actions so
+/// the menu, shortcuts and toolbar cannot drift apart.
+fn context_menu(ctx: &egui::Context, ed: &mut Editor, st: &mut UiState) {
+    let Some(menu) = st.context_menu else {
+        return;
+    };
+    let entries = context_entries(ed);
+    let screen_rect = ctx.input(|i| i.viewport_rect());
+    let origin = st.canvas_rect.map(|r| r.min).unwrap_or(screen_rect.min);
+    let pos = egui::pos2(origin.x + menu.pos.x as f32, origin.y + menu.pos.y as f32);
+    let opened_here = menu.opened_at_frame == ctx.cumulative_frame_nr();
+    let mut chosen = None;
+    let response = egui::Area::new("canvas-context-menu".into())
+        .fixed_pos(pos)
+        .order(egui::Order::Foreground)
+        .constrain_to(screen_rect)
+        .show(ctx, |ui| {
+            egui::Frame::popup(ui.style()).show(ui, |ui| {
+                ui.set_min_width(190.0);
+                for entry in entries {
+                    match entry {
+                        ContextEntry::Separator => {
+                            ui.separator();
+                        }
+                        ContextEntry::Item(label, action) => {
+                            if ui
+                                .add(
+                                    egui::Button::new(label)
+                                        .shortcut_text(shortcuts::chord_text(action)),
+                                )
+                                .clicked()
+                            {
+                                chosen = Some(action);
+                            }
+                        }
+                    }
+                }
+            });
+        })
+        .response;
+    if !opened_here && response.clicked_elsewhere() {
+        st.context_menu = None;
+    }
+    if let Some(action) = chosen {
+        ed.run(action);
+        st.context_menu = None;
     }
 }
 
@@ -1403,6 +1516,92 @@ mod tests {
         );
         let text = tooltip_display_text("Owner: %owner%", &n, &doc);
         assert_eq!(text, "Owner: Ada", "{text}");
+    }
+
+    #[test]
+    fn canvas_context_menu_offers_shape_commands_for_a_selection() {
+        let mut ed = Editor::default();
+        let id = ed.add_node(
+            Node::new(
+                NodeId(1),
+                NodeKind::Rect,
+                crate::geom::Rect::new(0.0, 0.0, 20.0, 20.0),
+            ),
+            None,
+        );
+        ed.selection = vec![id];
+        let entries = context_entries(&ed);
+        let actions: Vec<Action> = entries
+            .iter()
+            .filter_map(|e| match e {
+                ContextEntry::Item(_, a) => Some(*a),
+                ContextEntry::Separator => None,
+            })
+            .collect();
+        assert!(actions.contains(&Action::EditText));
+        assert!(actions.contains(&Action::Cut));
+        assert!(actions.contains(&Action::Copy));
+        assert!(actions.contains(&Action::Paste));
+        assert!(actions.contains(&Action::Duplicate));
+        assert!(actions.contains(&Action::Delete));
+        assert!(actions.contains(&Action::ToFront));
+        assert!(actions.contains(&Action::ToBack));
+        assert!(!actions.contains(&Action::SelectAll));
+    }
+
+    #[test]
+    fn canvas_context_menu_offers_canvas_commands_without_a_selection() {
+        let ed = Editor::default();
+        let entries = context_entries(&ed);
+        let actions: Vec<Action> = entries
+            .iter()
+            .filter_map(|e| match e {
+                ContextEntry::Item(_, a) => Some(*a),
+                ContextEntry::Separator => None,
+            })
+            .collect();
+        assert_eq!(
+            actions,
+            vec![
+                Action::Paste,
+                Action::SelectAll,
+                Action::ZoomFit,
+                Action::ToggleGrid
+            ]
+        );
+    }
+
+    #[test]
+    fn context_menu_event_opens_the_popup_and_escape_closes_it() {
+        let ctx = egui::Context::default();
+        setup_style(&ctx);
+        let mut ed = Editor::default();
+        let mut st = UiState::default();
+        let input = || egui::RawInput {
+            screen_rect: Some(egui::Rect::from_min_size(
+                egui::Pos2::ZERO,
+                egui::vec2(1000.0, 800.0),
+            )),
+            ..Default::default()
+        };
+        ed.ui_events
+            .push(crate::editor::commands::UiEvent::ContextMenu {
+                pos: crate::geom::v2(20.0, 30.0),
+            });
+        let mut out = ctx.run_ui(input(), |ui| {
+            draw(ui, &mut ed, &mut st);
+        });
+        out.textures_delta.clear();
+        let opened = st.context_menu.expect("context menu should open");
+        assert_eq!(opened.pos, crate::geom::v2(20.0, 30.0));
+
+        ed.ui_events
+            .push(crate::editor::commands::UiEvent::CloseMenu);
+        let mut out = ctx.run_ui(input(), |ui| {
+            draw(ui, &mut ed, &mut st);
+        });
+        out.textures_delta.clear();
+        assert!(st.context_menu.is_none());
     }
 
     #[test]

@@ -127,6 +127,12 @@ pub enum UiEvent {
     OpenFind,
     /// Step to the next or previous find match.
     FindStep(bool),
+    /// Open the canvas context menu at a canvas-local position.
+    ContextMenu {
+        pos: crate::geom::V2,
+    },
+    /// Dismiss the canvas context menu without running an action.
+    CloseMenu,
 }
 
 impl Editor {
