@@ -1,7 +1,7 @@
 //! DIA-12: custom links that show, hide, toggle or select layers.
 
-use drawio_rs::editor::Editor;
-use drawio_rs::geom::Rect;
+use drawio_rs::editor::{Button, Editor, InputEvent, Modifiers};
+use drawio_rs::geom::{Camera, Rect, v2};
 use drawio_rs::io::drawio;
 use drawio_rs::model::{Node, NodeId, NodeKind};
 use serde_json::{Value, json};
@@ -12,7 +12,11 @@ fn action_link(action: &str, selector: &str, ids: &[String]) -> String {
 }
 
 fn rect(id: u64) -> Node {
-    Node::new(NodeId(id), NodeKind::Rect, Rect::new(0.0, 0.0, 80.0, 40.0))
+    Node::new(
+        NodeId(id),
+        NodeKind::Rect,
+        Rect::new((id - 1) as f64 * 300.0, 0.0, 80.0, 40.0),
+    )
 }
 
 fn seeded() -> (Editor, drawio_rs::model::LayerId, NodeId, NodeId) {
@@ -77,6 +81,37 @@ fn custom_link_empty_tag_selector_shows_every_tagged_cell() {
     e.activate_link(&link);
     assert!(e.doc.get(tagged).unwrap().visible, "{link}");
     assert!(!e.doc.get(untagged).unwrap().visible, "{link}");
+}
+
+#[test]
+fn command_click_on_linked_shape_runs_its_actions() {
+    let (mut e, layer, button, _) = seeded();
+    let link = action_link("hide", "layers", &[layer.0.to_string()]);
+    e.doc.nodes.get_mut(&button).unwrap().link = link.clone();
+    e.viewport = v2(1000.0, 800.0);
+    e.camera = Camera {
+        pan: v2(0.0, 0.0),
+        zoom: 1.0,
+    };
+
+    e.handle(InputEvent::Modifiers(Modifiers {
+        ctrl: true,
+        ..Modifiers::NONE
+    }));
+    e.handle(InputEvent::PointerDown {
+        pos: v2(40.0, 20.0),
+        button: Button::Primary,
+        pressure: None,
+        time_ms: 0.0,
+    });
+    e.handle(InputEvent::PointerUp {
+        pos: v2(40.0, 20.0),
+        button: Button::Primary,
+        time_ms: 10.0,
+    });
+    e.handle(InputEvent::Modifiers(Modifiers::NONE));
+
+    assert!(!e.doc.layer_by_id(layer).unwrap().visible, "{link}");
 }
 
 #[test]
