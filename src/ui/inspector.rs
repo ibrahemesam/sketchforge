@@ -3965,18 +3965,16 @@ fn arrange_section(
     {
         ed.run(shortcuts::Action::Autosize);
     }
-    if !all_connectors {
-        separator(ui);
-    }
+    separator(ui);
 
     let locked = ids.iter().any(|id| ed.doc.is_effectively_locked(*id));
     let all_locked = !ids.is_empty() && ids.iter().all(|id| ed.doc.is_effectively_locked(*id));
-    arrange_size(ui, ed, st, vis, ids, first, locked);
-    separator(ui);
-    arrange_position(ui, ed, st, vis, ids, locked);
-    separator(ui);
-
     if !all_connectors {
+        arrange_size(ui, ed, st, vis, ids, first, locked);
+        separator(ui);
+        arrange_position(ui, ed, st, vis, ids, locked);
+        separator(ui);
+
         row(ui, "Angle", |ui| {
             let values: Vec<f64> = ids
                 .iter()
@@ -4063,34 +4061,34 @@ fn arrange_section(
             });
         }
         separator(ui);
-
-        row(ui, "Flip", |ui| {
-            ui.spacing_mut().item_spacing.x = 4.0;
-            let half = (ui.available_width() - 4.0) * 0.5;
-            let h = ui
-                .add_enabled_ui(!all_locked, |ui| {
-                    ui.add_sized([half, 20.0], egui::Button::new("Horizontal"))
-                        .on_hover_text("Mirror around the element's own center")
-                })
-                .inner;
-            if all_locked {
-                h.on_disabled_hover_text("Unlock the selection to flip it.");
-            } else if h.clicked() {
-                ed.run(shortcuts::Action::FlipH);
-            }
-            let v = ui
-                .add_enabled_ui(!all_locked, |ui| {
-                    ui.add_sized([half, 20.0], egui::Button::new("Vertical"))
-                        .on_hover_text("Mirror around the element's own center")
-                })
-                .inner;
-            if all_locked {
-                v.on_disabled_hover_text("Unlock the selection to flip it.");
-            } else if v.clicked() {
-                ed.run(shortcuts::Action::FlipV);
-            }
-        });
     }
+
+    row(ui, "Flip", |ui| {
+        ui.spacing_mut().item_spacing.x = 4.0;
+        let half = (ui.available_width() - 4.0) * 0.5;
+        let h = ui
+            .add_enabled_ui(!all_locked, |ui| {
+                ui.add_sized([half, 20.0], egui::Button::new("Horizontal"))
+                    .on_hover_text("Mirror around the element's own center")
+            })
+            .inner;
+        if all_locked {
+            h.on_disabled_hover_text("Unlock the selection to flip it.");
+        } else if h.clicked() {
+            ed.run(shortcuts::Action::FlipH);
+        }
+        let v = ui
+            .add_enabled_ui(!all_locked, |ui| {
+                ui.add_sized([half, 20.0], egui::Button::new("Vertical"))
+                    .on_hover_text("Mirror around the element's own center")
+            })
+            .inner;
+        if all_locked {
+            v.on_disabled_hover_text("Unlock the selection to flip it.");
+        } else if v.clicked() {
+            ed.run(shortcuts::Action::FlipV);
+        }
+    });
     separator(ui);
 
     let connectors: Vec<NodeId> = ids
@@ -4150,29 +4148,31 @@ fn arrange_section(
         separator(ui);
     }
 
-    ui.label(title_text("Align"));
-    align_row(ui, ed, ids);
-    ui.add_space(2.0);
-    let snap = ui
-        .add_enabled_ui(!locked, |ui| {
-            ui.add_sized([vis, 20.0], egui::Button::new("Snap to Grid"))
-                .on_hover_text("Round every selected element to the nearest grid line")
-        })
-        .inner;
-    if locked {
-        snap.on_disabled_hover_text("Unlock the selection to snap it.");
-    } else if snap.clicked() {
-        let g = ed.grid_step;
-        ed.edit("Snap to grid", |tx| {
-            for id in ids {
-                if let Some(n) = tx.node_mut(*id) {
-                    n.rect.x = crate::editor::snap::grid(n.rect.x, g);
-                    n.rect.y = crate::editor::snap::grid(n.rect.y, g);
+    if !all_connectors {
+        ui.label(title_text("Align"));
+        align_row(ui, ed, ids);
+        ui.add_space(2.0);
+        let snap = ui
+            .add_enabled_ui(!locked, |ui| {
+                ui.add_sized([vis, 20.0], egui::Button::new("Snap to Grid"))
+                    .on_hover_text("Round every selected element to the nearest grid line")
+            })
+            .inner;
+        if locked {
+            snap.on_disabled_hover_text("Unlock the selection to snap it.");
+        } else if snap.clicked() {
+            let g = ed.grid_step;
+            ed.edit("Snap to grid", |tx| {
+                for id in ids {
+                    if let Some(n) = tx.node_mut(*id) {
+                        n.rect.x = crate::editor::snap::grid(n.rect.x, g);
+                        n.rect.y = crate::editor::snap::grid(n.rect.y, g);
+                    }
                 }
-            }
-        });
+            });
+        }
+        separator(ui);
     }
-    separator(ui);
 
     let r = ui
         .add_enabled_ui(ids.len() > 1, |ui| {
@@ -4270,10 +4270,6 @@ fn arrange_size(
     first: &Node,
     locked: bool,
 ) {
-    let all_connectors = !ids.is_empty()
-        && ids
-            .iter()
-            .all(|id| ed.doc.get(*id).is_some_and(|n| n.is_connector()));
     let _ = vis;
     let sizes: Vec<(f64, f64)> = ids
         .iter()
@@ -4329,17 +4325,15 @@ fn arrange_size(
             resize_many(ed, ids, dims);
         }
     });
-    if !all_connectors {
-        let mut lock = st.lock_aspect;
-        if ui
-            .checkbox(&mut lock, "Constrain Proportions")
-            .on_hover_text("Scale width and height together")
-            .changed()
-        {
-            st.lock_aspect = lock;
-            if lock && first.rect.h.abs() > 1e-9 {
-                st.aspect_ratio = first.rect.w / first.rect.h;
-            }
+    let mut lock = st.lock_aspect;
+    if ui
+        .checkbox(&mut lock, "Constrain Proportions")
+        .on_hover_text("Scale width and height together")
+        .changed()
+    {
+        st.lock_aspect = lock;
+        if lock && first.rect.h.abs() > 1e-9 {
+            st.aspect_ratio = first.rect.w / first.rect.h;
         }
     }
     if mixed {
@@ -6432,7 +6426,89 @@ mod tests {
         assert!(!text.contains("Autosize"), "{text}");
         assert!(!text.contains("Rotate shape only by 90°"), "{text}");
         assert!(!text.contains("Keep label upright"), "{text}");
-        assert!(!text.contains("Flip"), "{text}");
+        assert!(text.contains("Flip"), "{text}");
+    }
+
+    #[test]
+    fn connector_only_arrange_tab_hides_size_and_position_fields() {
+        let mut ed = Editor::default();
+        let a = ed.add_node(
+            Node::new(
+                NodeId(1),
+                NodeKind::Rect,
+                crate::geom::Rect::new(0.0, 0.0, 100.0, 60.0),
+            ),
+            None,
+        );
+        let b = ed.add_node(
+            Node::new(
+                NodeId(2),
+                NodeKind::Rect,
+                crate::geom::Rect::new(300.0, 0.0, 100.0, 60.0),
+            ),
+            None,
+        );
+        let bind = |node| crate::model::Binding {
+            node,
+            fixed: crate::geom::v2(0.5, 0.5),
+            inside: false,
+            floating: false,
+        };
+        let conn = ed.add_node(
+            Node::new(
+                NodeId(3),
+                NodeKind::Connector {
+                    points: vec![crate::geom::v2(0.0, 30.0), crate::geom::v2(400.0, 30.0)],
+                    start: Some(bind(a)),
+                    end: Some(bind(b)),
+                    route: crate::model::Route::Straight,
+                    start_head: crate::model::Head::None,
+                    end_head: crate::model::Head::Arrow,
+                    jump: crate::model::LineJump::None,
+                    jump_size: 6.0,
+                },
+                crate::geom::Rect::new(0.0, 0.0, 400.0, 60.0),
+            ),
+            None,
+        );
+        ed.selection = vec![conn];
+        let mut st = UiState {
+            inspector_tab: crate::ui::InspectorTab::Arrange,
+            ..Default::default()
+        };
+        let text = panel_text_for(&mut ed, &mut st, 320.0, 1600.0);
+        assert!(!text.contains("\nSize\n"), "{text}");
+        assert!(!text.contains("\nW \n"), "{text}");
+        assert!(!text.contains("\nH \n"), "{text}");
+        assert!(!text.contains("\nPosition\n"), "{text}");
+        assert!(!text.contains("\nX \n"), "{text}");
+        assert!(!text.contains("\nY \n"), "{text}");
+        assert!(!text.contains("\nAlign\n"), "{text}");
+        assert!(!text.contains("Snap to Grid"), "{text}");
+    }
+
+    #[test]
+    fn shape_arrange_tab_keeps_size_position_and_grid_controls() {
+        let mut ed = Editor::default();
+        let id = ed.add_node(
+            Node::new(
+                NodeId(1),
+                NodeKind::Rect,
+                crate::geom::Rect::new(0.0, 0.0, 100.0, 60.0),
+            ),
+            None,
+        );
+        ed.selection = vec![id];
+        let mut st = UiState {
+            inspector_tab: crate::ui::InspectorTab::Arrange,
+            ..Default::default()
+        };
+        let text = panel_text_for(&mut ed, &mut st, 320.0, 1600.0);
+        assert!(text.contains("\nSize\n"), "{text}");
+        assert!(text.contains("\nPosition\n"), "{text}");
+        assert!(text.contains("\nAlign\n"), "{text}");
+        assert!(text.contains("Snap to Grid"), "{text}");
+        assert!(text.contains("Flip"), "{text}");
     }
 
     #[test]
