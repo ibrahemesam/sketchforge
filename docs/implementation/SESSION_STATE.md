@@ -1,6 +1,6 @@
 # Sketch agent session state
 
-Last updated: 2026-11-24 (DIA-12 custom-link layer actions verified and pushed; parity VERIFIED 195, BLOCKED 26).
+Last updated: 2026-11-24 (UIX-02 connector Selection section audited, committed f478440 and pushed).
 
 ## Objective
 
@@ -732,6 +732,8 @@ Round 83 (committed 90b1680, pushed) verified CON-21 Auto-route around obstacles
 
 Round 84 (committed b4607aa and e98e2d9, pushed) implemented and verified DIA-12 safe custom-link layer actions. DIA-12 moved from BLOCKED to VERIFIED. Parity docs record VERIFIED 195, IMPLEMENTED 8, IN_PROGRESS 1, ANALYZED 0, DISCOVERED 1 and BLOCKED 26.
 
+Round 85 (committed f478440, pushed) removed the empty Selection section and the Flatten action from connector-only Arrange. Shape selections keep both. UIX-02 remains IN_PROGRESS pending the Layout section review.
+
 ## Blockers
 
 - No blockers. M9 collaboration remains deferred pending a server, a conflict
@@ -748,9 +750,9 @@ Round 84 (committed b4607aa and e98e2d9, pushed) implemented and verified DIA-12
 
 Continue assessing UIX-02 (still IN_PROGRESS): connector and text-layer
 selections now get different tab sets, and connector Arrange no longer shows
-size, position, Align or Snap to Grid while keeping Flip and Reverse. Review
-the remaining Selection/Layout sections against draw.io and capture a failing
-test before any further real code fix.
+size, position, Align, Snap to Grid, Selection or Flatten while keeping Flip and
+Reverse. Review the remaining Layout section combinations against draw.io and
+capture a failing test before any further real code fix.
 Assess UIX-12 for any genuine HEAD evidence (remains DISCOVERED/unaudited).
 Otherwise close or correct stale rows as evidence-only with cited HEAD
 identifiers and update verification/session docs. Do not restart completed
