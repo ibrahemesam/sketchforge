@@ -1,6 +1,6 @@
 # Sketch agent session state
 
-Last updated: 2026-11-21 (UIX-02 Arrange increment pushed; SHP-11/12/13 pushed; STY-17/18 pushed; UIX-02 connector-only tab-set/data placement improved, pending commit/push).
+Last updated: 2026-11-21 (UIX-02 Arrange increment pushed; SHP-11/12/13 pushed; STY-17/18 pushed; UIX-02 connector-only tab-set/data placement improved, committed 61e783f and pushed).
 
 ## Objective
 
