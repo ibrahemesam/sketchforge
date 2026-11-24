@@ -38,9 +38,10 @@ create releases or deploy Vercel; plain `git push` sends commits to the fork.
 
 Round 86 (code committed 54a4358) added right-drag panning and draw.io-style
 outward arrowheads for quick connections. Selected shapes now show the eight
-fixed-point crosses, and the help footer names right-drag. DIA-12 and the UIX-02
-Selection audit were pushed as 9854adf and f2245de before this round. The docs
-closeout for round 86 follows this commit.
+fixed-point crosses, and the help footer names right-drag. Its docs closeout was
+pushed as aa9ff06. Round 87 (code committed f2ad0df) added a right-click canvas
+context menu: a click selects the hit shape and opens the popup, while a drag
+still only pans. The round 87 docs closeout follows this commit.
 
 The full sidebar spec was implemented and verified in round 6 (see
 `.opencode/MEMORY.md`). Round 7 closed the transparent connector label gap.

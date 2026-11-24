@@ -185,10 +185,24 @@ statuses below still describe `5de2f5b`. The working tree now has:
   moved or resized. New arrows snap their start the same way. The CAN-15 row notes the
   working-tree implementation but keeps its baseline status.
 
-- Right-drag panning (2026-11-24): holding the right mouse button on the canvas
-  pans the camera on the same path as the middle button, Space-drag, and the hand
-  tool. A right click alone leaves the selection and document untouched. The help
-  dialog footer names right-drag as a pan gesture.
+- Right-drag panning and context menu (2026-11-24): holding the right mouse button
+  on the canvas pans the camera on the same path as the middle button, Space-drag,
+  and the hand tool. A right click without movement instead selects the shape under
+  the pointer and opens a canvas menu with cut, copy, paste, duplicate, delete and
+  arrange commands. The menu uses the existing editor actions, so it shares shortcuts
+  with the toolbar and menus. The help dialog footer names right-drag as a pan gesture.
+
+- Canvas context menu (2026-11-24): a right click on a shape selects it and opens
+  an egui popup next to the pointer. Text edit, clipboard, duplicate, delete,
+  front/back, group and ungroup actions dispatch through the editor's action table.
+  Right-clicking empty space clears the selection and offers paste, select all,
+  zoom to fit and dot grid instead. The popup closes on Escape, on a click outside,
+  or after an item runs. Tests cover the input split, item sets, popup state and a
+  headless render of the popup over the diagram: `right_click_selects_the_shape_under_the_pointer`,
+  `canvas_context_menu_offers_shape_commands_for_a_selection`,
+  `canvas_context_menu_offers_canvas_commands_without_a_selection`,
+  `context_menu_event_opens_the_popup_and_escape_closes_it` and
+  `canvas_context_menu_renders_over_the_diagram`.
 
 - Superscript and subscript (2026-11-16): a text style and each text span can carry a
   script value of normal, super, or sub. The Text tab gains x² and x₂ toggles after S;
@@ -353,7 +367,7 @@ Moving around the canvas and the alignment aids that support placement.
 
 | ID | Capability | User-visible behavior | draw.io source | Sketch modules | Status | Acceptance criteria | Limitations and evidence |
 |---|---|---|---|---|---|---|---|
-| CAN-01 | Pan the infinite canvas | Right-drag, Space-drag, the hand tool, middle-drag, and wheel panning move the camera without changing content. | [Pan and scroll](https://www.drawio.com/docs/manual/editor/pan-scroll/) | src/editor/mod.rs, src/app.rs, src/ui/mod.rs | **VERIFIED** | Pan with each method and confirm content moves exactly with the pointer while the selection and document stay unchanged. | Wheel behavior depends on the platform modifier state. Right-drag takes the same pan path as middle-drag and leaves selection and document state alone; the help footer names it. Tests: `wheel_pans_and_ctrl_wheel_zooms_about_cursor`, `space_drag_and_hand_tool_pan`, `right_drag_pans_without_editing_the_diagram`, `right_click_does_not_change_selection_or_start_a_gesture`. |
+| CAN-01 | Pan the infinite canvas | Right-drag, Space-drag, the hand tool, middle-drag, and wheel panning move the camera without changing content. | [Pan and scroll](https://www.drawio.com/docs/manual/editor/pan-scroll/) | src/editor/mod.rs, src/app.rs, src/ui/mod.rs | **VERIFIED** | Pan with each method and confirm content moves exactly with the pointer while the selection and document stay unchanged. | Wheel behavior depends on the platform modifier state. A right drag takes the same pan path as a middle drag and leaves selection and document state alone; the help footer names it. A right click without movement selects the shape under the pointer and opens the context menu instead. Tests: `wheel_pans_and_ctrl_wheel_zooms_about_cursor`, `space_drag_and_hand_tool_pan`, `right_drag_pans_without_editing_the_diagram`, `right_drag_pans_without_a_context_menu`, `right_click_does_not_change_selection_or_start_a_gesture`, `right_click_selects_the_shape_under_the_pointer`. |
 | CAN-02 | Zoom about the pointer | Ctrl or Command plus wheel zooms around the cursor; pinch zooms on trackpads. | [Change the zoom level](https://www.drawio.com/docs/manual/editor/zoom/) | src/editor/mod.rs, src/app.rs | **VERIFIED** | Zoom in and out at a point and confirm the world point under the cursor stays fixed. | Zoom is clamped by the camera. Test: `wheel_pans_and_ctrl_wheel_zooms_about_cursor`. |
 | CAN-03 | Zoom commands and fit | Zoom in, zoom out, 100%, fit page, and fit selection are available from shortcuts and the palette. | [Change the zoom level](https://www.drawio.com/docs/manual/editor/zoom/) | src/editor/mod.rs, src/editor/shortcuts.rs | **VERIFIED** | Each command lands on the expected camera or frame the expected bounds. | Fit selection falls back to the page when the selection is empty. Test: `zoom_shortcuts`, `m1_infinite_canvas_pan_and_zoom`. |
 | CAN-04 | Adaptive grid display | A square grid is drawn under content and its spacing multiplies at low zoom so lines do not become dense. | [Change the diagram editor grid](https://www.drawio.com/docs/manual/editor/panels/editor-grid-change/) | src/render/scene.rs | **VERIFIED** | At 25%, 100%, and 400% zoom the grid remains legible and does not shimmer. | The inspector label says Dot grid while the renderer draws square lines. There is no grid color control at HEAD. |

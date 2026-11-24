@@ -489,6 +489,8 @@ documentation closeout completes the round.
 
 **Round 86 (code committed 54a4358).** Added right-drag canvas panning on the existing pan path and replaced the plus-circle quick-connect knobs with outward blue arrowheads. Selected shapes now show the eight fixed-point crosses as well as the arrows, and the help footer names right-drag. Failing mesh and input tests were captured first; CAN-01, CAN-14 and CAN-15 keep VERIFIED status with updated evidence.
 
+**Round 87 (code committed f2ad0df).** A right click without movement now selects the shape under the pointer and opens a canvas context menu; a right drag still only pans. The popup uses the editor action table for edit, clipboard, duplicate, delete, arrange, group and ungroup commands, and a smaller set on empty canvas. Escape, an outside click or a chosen command closes it. Failing input tests were captured before the fix, and a headless render confirms the popup paints over the diagram. CAN-01 keeps VERIFIED status with updated evidence.
+
 **Scope.**
 
 - A selection context resolver that classifies the current selection as document, single
