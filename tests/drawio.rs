@@ -1961,7 +1961,7 @@ fn flowchart_document2_stencil_imports_as_native_shape() {
 }
 
 #[test]
-fn native_document2_exports_with_drawio_stencil() {
+fn native_document_exports_with_drawio_palette_style() {
     let def = drawio_rs::registry::by_id("document").expect("registry Document shape");
     let mut node =
         drawio_rs::registry::build(def, Rect::new(0.0, 0.0, def.size.0, def.size.1), None);
@@ -1987,7 +1987,9 @@ fn native_document2_exports_with_drawio_stencil() {
     export::write(&spec, &items, &out, None).unwrap();
     let text = std::fs::read_to_string(&out).unwrap();
     assert!(
-        text.contains("shape=mxgraph.flowchart.document2;"),
+        text.contains(
+            "strokeWidth=2;html=1;shape=mxgraph.flowchart.document2;whiteSpace=wrap;size=0.25;"
+        ),
         "{text}"
     );
 
