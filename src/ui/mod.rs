@@ -817,13 +817,13 @@ fn layers(ui: &mut Ui, ed: &mut Editor, st: &mut UiState) {
             ui.spacing_mut().item_spacing.x = 0.0;
             let some = !ed.selection.is_empty();
             ui.add_enabled_ui(some, |ui| {
-                if theme::icon_button(ui, Icon::ChevronDown, 20.0, false)
+                if theme::icon_button_labeled(ui, Icon::ChevronDown, 20.0, false, "Send backward")
                     .on_hover_text("Send backward")
                     .clicked()
                 {
                     ed.run(Action::Backward);
                 }
-                if theme::icon_button(ui, Icon::ChevronUp, 20.0, false)
+                if theme::icon_button_labeled(ui, Icon::ChevronUp, 20.0, false, "Bring forward")
                     .on_hover_text("Bring forward")
                     .clicked()
                 {
@@ -1604,6 +1604,50 @@ mod tests {
             assert!(r.has_focus(), "Tab should focus the icon button");
         });
         second.textures_delta.clear();
+    }
+
+    #[test]
+    fn layer_order_buttons_expose_their_actions_to_accesskit() {
+        let ctx = egui::Context::default();
+        theme::install_fonts(&ctx);
+        ctx.enable_accesskit();
+        let mut ed = Editor::default();
+        let id = ed.add_node(
+            Node::new(
+                NodeId(1),
+                NodeKind::Rect,
+                crate::geom::Rect::new(0.0, 0.0, 20.0, 20.0),
+            ),
+            None,
+        );
+        ed.selection = vec![id];
+        let mut st = UiState::default();
+        let mut out = ctx.run_ui(
+            egui::RawInput {
+                screen_rect: Some(egui::Rect::from_min_size(
+                    egui::Pos2::ZERO,
+                    egui::vec2(300.0, 500.0),
+                )),
+                ..Default::default()
+            },
+            |ui| layers(ui, &mut ed, &mut st),
+        );
+        out.textures_delta.clear();
+        let update = out
+            .platform_output
+            .accesskit_update
+            .expect("sidebar should register an accessibility node");
+        let labels: Vec<String> = update
+            .nodes
+            .iter()
+            .filter_map(|(_, node)| node.label().map(str::to_string))
+            .collect();
+        for expected in ["Send backward", "Bring forward"] {
+            assert!(
+                labels.iter().any(|label| label == expected),
+                "expected a {expected} label, got {labels:?}"
+            );
+        }
     }
 
     #[test]
