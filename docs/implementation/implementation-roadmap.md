@@ -543,6 +543,8 @@ documentation closeout completes the round.
 
 **User redirect, draw.io UML actor and class (code committed 2ebe8f9).** Draw.io's `shape=umlActor` now exports with the palette's label styles. Composite cells with `attributes` and `operations` children import as the native Class shape, and native Class exports with the draw.io swimlane style and both children. Both integration tests failed before the fix and pass after it. THIRD_PARTY.md records the added UML port.
 
+**User redirect, draw.io pie slice (code committed f221136).** Draw.io's basic pie stencil now imports as the native Pie Slice, and native Pie Slice exports with quarter-turn angles. Imports with other angles report an approximation. Both integration tests failed before the fix and pass after it. THIRD_PARTY.md records Sidebar-Basic.js and mxBasic.js.
+
 **Scope.**
 
 - A selection context resolver that classifies the current selection as document, single

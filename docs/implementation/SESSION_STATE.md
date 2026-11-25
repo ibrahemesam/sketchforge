@@ -1,6 +1,6 @@
 # Sketch agent session state
 
-Last updated: 2026-11-25 (draw.io UML actor and class support, code committed 2ebe8f9; docs closeout follows).
+Last updated: 2026-11-25 (draw.io pie slice support, code committed f221136; docs closeout follows).
 
 ## Objective
 
@@ -88,12 +88,15 @@ shapes export with the matching stencil styles. Network shapes followed as 3b80e
 Database shapes, and native network shapes export with the matching stencil styles. Person
 support followed as 1ebf465, with docs as 4446cd6: draw.io's mermaid person stencil imports
 as the native Person shape, and native Person exports with that stencil and perimeter. UML
-actor and class support followed as 2ebe8f9: `shape=umlActor` exports with the palette's
-label styles, composite cells with `attributes` and `operations` children import as Class,
-and native Class exports with the draw.io swimlane style and both children. This closeout
-records the draw.io source port, the ADR-006 amendment, the BPMN aliases, the C4 properties,
-the SysML markers, the flowchart aliases, the ER flags, the UML aliases, the floorplan
-aliases, the network aliases, the mermaid person stencil and the UML actor and class port.
+actor and class support followed as 2ebe8f9, with docs as 9f0a3ac: `shape=umlActor`
+exports with the palette's label styles, composite cells with `attributes` and `operations`
+children import as Class, and native Class exports with the draw.io swimlane style and both
+children. Pie slice support followed as f221136: draw.io's basic pie stencil imports as the
+native Pie Slice, native Pie Slice exports with quarter-turn angles, and imports with other
+angles report an approximation. This closeout records the draw.io source port, the ADR-006
+amendment, the BPMN aliases, the C4 properties, the SysML markers, the flowchart aliases,
+the ER flags, the UML aliases, the floorplan aliases, the network aliases, the mermaid person
+stencil, the UML actor and class port and the basic pie stencil.
 
 The full sidebar spec was implemented and verified in round 6 (see
 `.opencode/MEMORY.md`). Round 7 closed the transparent connector label gap.
