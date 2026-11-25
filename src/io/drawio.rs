@@ -1632,10 +1632,50 @@ fn registry_for_shape(shape: &str) -> Option<&'static str> {
     Some(id)
 }
 
+// BPMN aliases and their style keys are ported from draw.io's
+// `src/main/webapp/js/diagramly/sidebar/Sidebar-BPMN.js` and
+// `src/main/webapp/shapes/bpmn/mxBpmnShape2.js`, Copyright (c) JGraph Holdings
+// Ltd / draw.io AG, Apache-2.0. See `THIRD_PARTY.md`.
+fn bpmn_registry_for_shape(shape: &str, st: &ParsedStyle) -> Option<&'static str> {
+    match shape.to_ascii_lowercase().as_str() {
+        "mxgraph.bpmn.event" | "mxgraph.bpmn.shape" => {
+            if shape.eq_ignore_ascii_case("mxgraph.bpmn.shape")
+                && st.get("background") == Some("gateway")
+            {
+                return Some("bpmn-gateway");
+            }
+            let outline = st.get("outline").unwrap_or("").to_ascii_lowercase();
+            Some(match outline.as_str() {
+                "end" => "bpmn-end",
+                "catching" | "throwing" | "boundint" | "boundnonint" => "bpmn-intermediate",
+                _ => "bpmn-start",
+            })
+        }
+        "mxgraph.bpmn.task" | "mxgraph.bpmn.task2" => Some("bpmn-task"),
+        "mxgraph.bpmn.gateway" | "mxgraph.bpmn.gateway2" => Some("bpmn-gateway"),
+        _ => None,
+    }
+}
+
+fn registry_vertex(reg: &str, st: &ParsedStyle, rect: Rect, value: &str) -> Option<Node> {
+    let def = crate::registry::by_id(reg)?;
+    let mut n = crate::registry::build(def, rect, None);
+    apply_style(&mut n, st, StyleTarget::Registry);
+    n.name = def.name.into();
+    n.label = value.to_string();
+    apply_label_style(&mut n, st);
+    Some(n)
+}
+
 fn build_vertex(cell: &RawCell, st: &ParsedStyle, rect: Rect) -> (Node, Option<String>) {
     let value = plain_text(&cell.value);
     let mut approximation = None;
     let shape = shape_name(st);
+    if let Some(reg) = shape.and_then(|s| bpmn_registry_for_shape(s, st))
+        && let Some(n) = registry_vertex(reg, st, rect, &value)
+    {
+        return (n, approximation);
+    }
     let mut node = if is_group_style(st) {
         let mut n = Node::new(NodeId(0), NodeKind::Group, rect);
         apply_style(&mut n, st, StyleTarget::Group);
@@ -1712,17 +1752,12 @@ fn build_vertex(cell: &RawCell, st: &ParsedStyle, rect: Rect) -> (Node, Option<S
         }
         n
     } else if let Some(reg) = shape.map(leaves).and_then(registry_for_shape) {
-        let Some(def) = crate::registry::by_id(reg) else {
-            let mut n = Node::new(NodeId(0), NodeKind::Rect, rect);
-            apply_style(&mut n, st, StyleTarget::Shape);
-            n.name = first_line(&value);
+        if let Some(n) = registry_vertex(reg, st, rect, &value) {
             return (n, approximation);
-        };
-        let mut n = crate::registry::build(def, rect, None);
-        apply_style(&mut n, st, StyleTarget::Registry);
-        n.name = def.name.into();
-        n.label = value.clone();
-        apply_label_style(&mut n, st);
+        }
+        let mut n = Node::new(NodeId(0), NodeKind::Rect, rect);
+        apply_style(&mut n, st, StyleTarget::Shape);
+        n.name = first_line(&value);
         return (n, approximation);
     } else {
         let kind = match shape.map(leaves).unwrap_or("") {
@@ -2548,30 +2583,39 @@ fn emit_geometry(out: &mut String, doc: &Document, n: &Node, parent: Option<Node
 
 fn shape_style(n: &Node, _doc: &Document) -> String {
     let mut style = String::new();
-    match &n.kind {
-        NodeKind::Group => style.push_str("group;"),
-        NodeKind::Frame { .. } => style.push_str("swimlane;startSize=26;html=1;"),
-        NodeKind::Text { .. } => style.push_str("text;html=1;"),
-        NodeKind::Sticky { .. } => style.push_str("shape=note;whiteSpace=wrap;html=1;"),
-        NodeKind::Ellipse => style.push_str("ellipse;whiteSpace=wrap;html=1;"),
-        NodeKind::Polygon { sides: 4, .. } => style.push_str("rhombus;whiteSpace=wrap;html=1;"),
-        NodeKind::Polygon { sides: 3, .. } => style.push_str("triangle;whiteSpace=wrap;html=1;"),
-        NodeKind::Polygon { sides: 6, .. } => style.push_str("hexagon;whiteSpace=wrap;html=1;"),
-        NodeKind::Polygon { .. } => style.push_str("rhombus;whiteSpace=wrap;html=1;"),
-        NodeKind::Star { .. } => style.push_str("shape=star;whiteSpace=wrap;html=1;"),
-        NodeKind::Path { .. } => {
-            if let Some(def) = crate::registry::all().iter().find(|d| d.name == n.name) {
-                style.push_str(drawio_shape_for_registry(def.id).unwrap_or("rounded=0;"));
-            } else {
-                style.push_str("rounded=0;whiteSpace=wrap;html=1;");
+    let bpmn = crate::registry::all()
+        .iter()
+        .find(|d| d.name == n.name && d.id.starts_with("bpmn-"));
+    if let Some(def) = bpmn {
+        style.push_str(drawio_shape_for_registry(def.id).unwrap_or("rounded=0;"));
+    } else {
+        match &n.kind {
+            NodeKind::Group => style.push_str("group;"),
+            NodeKind::Frame { .. } => style.push_str("swimlane;startSize=26;html=1;"),
+            NodeKind::Text { .. } => style.push_str("text;html=1;"),
+            NodeKind::Sticky { .. } => style.push_str("shape=note;whiteSpace=wrap;html=1;"),
+            NodeKind::Ellipse => style.push_str("ellipse;whiteSpace=wrap;html=1;"),
+            NodeKind::Polygon { sides: 4, .. } => style.push_str("rhombus;whiteSpace=wrap;html=1;"),
+            NodeKind::Polygon { sides: 3, .. } => {
+                style.push_str("triangle;whiteSpace=wrap;html=1;")
             }
-        }
-        NodeKind::Line { .. } => style.push_str("line;html=1;"),
-        NodeKind::Connector { .. } => {
-            style.push_str("html=1;");
-        }
-        NodeKind::Rect | NodeKind::Stroke { .. } => {
-            style.push_str("rounded=0;whiteSpace=wrap;html=1;")
+            NodeKind::Polygon { sides: 6, .. } => style.push_str("hexagon;whiteSpace=wrap;html=1;"),
+            NodeKind::Polygon { .. } => style.push_str("rhombus;whiteSpace=wrap;html=1;"),
+            NodeKind::Star { .. } => style.push_str("shape=star;whiteSpace=wrap;html=1;"),
+            NodeKind::Path { .. } => {
+                if let Some(def) = crate::registry::all().iter().find(|d| d.name == n.name) {
+                    style.push_str(drawio_shape_for_registry(def.id).unwrap_or("rounded=0;"));
+                } else {
+                    style.push_str("rounded=0;whiteSpace=wrap;html=1;");
+                }
+            }
+            NodeKind::Line { .. } => style.push_str("line;html=1;"),
+            NodeKind::Connector { .. } => {
+                style.push_str("html=1;");
+            }
+            NodeKind::Rect | NodeKind::Stroke { .. } => {
+                style.push_str("rounded=0;whiteSpace=wrap;html=1;")
+            }
         }
     }
     if n.style.corner_radius > 0.0
@@ -2874,6 +2918,19 @@ fn drawio_shape_for_registry(id: &str) -> Option<&'static str> {
         "window" => "shape=window;whiteSpace=wrap;html=1;",
         "stairs" => "shape=stairs;whiteSpace=wrap;html=1;",
         "person" => "shape=person;whiteSpace=wrap;html=1;",
+        "bpmn-start" => {
+            "shape=mxgraph.bpmn.event;outline=standard;symbol=general;perimeter=ellipsePerimeter;aspect=fixed;whiteSpace=wrap;html=1;"
+        }
+        "bpmn-intermediate" => {
+            "shape=mxgraph.bpmn.event;outline=catching;symbol=general;perimeter=ellipsePerimeter;aspect=fixed;whiteSpace=wrap;html=1;"
+        }
+        "bpmn-end" => {
+            "shape=mxgraph.bpmn.event;outline=end;symbol=terminate2;perimeter=ellipsePerimeter;aspect=fixed;whiteSpace=wrap;html=1;"
+        }
+        "bpmn-task" => "shape=mxgraph.bpmn.task2;rectStyle=rounded;size=10;whiteSpace=wrap;html=1;",
+        "bpmn-gateway" => {
+            "shape=mxgraph.bpmn.gateway2;outline=none;symbol=none;gwType=exclusive;perimeter=rhombusPerimeter;whiteSpace=wrap;html=1;"
+        }
         _ => return None,
     })
 }

@@ -512,3 +512,132 @@ fn scheme_name_round_trips_through_drawio() {
     let again = import::import_detailed(&out).unwrap();
     assert_eq!(again.pages[0].doc.settings.scheme.as_deref(), Some("Teal"));
 }
+
+#[test]
+fn bpmn_drawio_shapes_import_as_native_shapes() {
+    let cells = [
+        (
+            "start",
+            "shape=mxgraph.bpmn.event;outline=standard;symbol=general;html=1;",
+            "Start",
+        ),
+        (
+            "wait",
+            "shape=mxgraph.bpmn.event;outline=catching;symbol=message;html=1;",
+            "Wait",
+        ),
+        (
+            "done",
+            "shape=mxgraph.bpmn.event;outline=end;symbol=terminate2;html=1;",
+            "Done",
+        ),
+        (
+            "work",
+            "shape=mxgraph.bpmn.task2;html=1;whiteSpace=wrap;container=1;expand=0;collapsible=0;",
+            "Work",
+        ),
+        (
+            "branch",
+            "shape=mxgraph.bpmn.gateway2;outline=none;symbol=none;gwType=exclusive;html=1;",
+            "Branch",
+        ),
+    ];
+    let mut body = String::new();
+    for (id, style, label) in cells {
+        body.push_str(&format!(
+            r#"<mxCell id="{id}" value="{label}" style="{style}" vertex="1" parent="1"><mxGeometry x="0" y="0" width="50" height="50" as="geometry"/></mxCell>"#
+        ));
+    }
+    let xml = format!(
+        r#"<mxfile><diagram id="d" name="BPMN"><mxGraphModel><root><mxCell id="0"/><mxCell id="1" parent="0"/>{body}</root></mxGraphModel></diagram></mxfile>"#
+    );
+    let (pages, _) = drawio::import_str(&xml).unwrap();
+    let names: Vec<&str> = pages[0]
+        .doc
+        .nodes
+        .values()
+        .map(|n| n.name.as_str())
+        .collect();
+    for expected in [
+        "Start Event",
+        "Intermediate Event",
+        "End Event",
+        "Task",
+        "Gateway",
+    ] {
+        assert!(
+            names.contains(&expected),
+            "{expected} missing from {names:?}"
+        );
+    }
+}
+
+#[test]
+fn native_bpmn_shapes_export_with_drawio_styles() {
+    let defs = [
+        (1, "bpmn-start", "Start"),
+        (2, "bpmn-intermediate", "Wait"),
+        (3, "bpmn-end", "Done"),
+        (4, "bpmn-task", "Work"),
+        (5, "bpmn-gateway", "Branch"),
+    ];
+    let mut nodes = Vec::new();
+    let mut root = Vec::new();
+    for (id, def_id, label) in defs {
+        let def = drawio_rs::registry::by_id(def_id).expect("registry BPMN shape");
+        let mut node =
+            drawio_rs::registry::build(def, Rect::new(0.0, 0.0, def.size.0, def.size.1), None);
+        node.id = NodeId(id);
+        node.label = label.into();
+        root.push(node.id);
+        nodes.push((node.id, node));
+    }
+    let doc = Document {
+        name: "BPMN export".into(),
+        nodes: nodes.into_iter().collect(),
+        root,
+        ..Document::default()
+    };
+    let items = vec![export::Item {
+        name: doc.name.clone(),
+        doc: &doc,
+        roots: doc.layered_root(),
+    }];
+    let spec = Spec {
+        format: Format::Drawio,
+        scope: Scope::AllPages,
+        ..Spec::default()
+    };
+    let out = tmp("bpmn-export").join("bpmn.drawio");
+    export::write(&spec, &items, &out, None).unwrap();
+    let text = std::fs::read_to_string(&out).unwrap();
+    for needle in [
+        "shape=mxgraph.bpmn.event;outline=standard",
+        "shape=mxgraph.bpmn.event;outline=catching",
+        "shape=mxgraph.bpmn.event;outline=end",
+        "shape=mxgraph.bpmn.task2",
+        "shape=mxgraph.bpmn.gateway2",
+    ] {
+        assert!(text.contains(needle), "{needle} missing from {text}");
+    }
+
+    let (pages, _) = drawio::import_str(&text).unwrap();
+    let names: Vec<&str> = pages[0]
+        .doc
+        .nodes
+        .values()
+        .map(|n| n.name.as_str())
+        .collect();
+    for expected in [
+        "Start Event",
+        "Intermediate Event",
+        "End Event",
+        "Task",
+        "Gateway",
+    ] {
+        assert!(
+            names.contains(&expected),
+            "{expected} missing from {names:?}"
+        );
+    }
+}
