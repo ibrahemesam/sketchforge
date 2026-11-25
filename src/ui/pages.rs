@@ -78,6 +78,8 @@ fn page_row(ui: &mut Ui, ed: &mut Editor, st: &mut UiState, i: usize, top: f32) 
         egui::vec2(ui.available_width(), ROW_H),
         egui::Sense::click_and_drag(),
     );
+    let label = format!("Switch to {}", ed.pages[i].name);
+    resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, true, label.as_str()));
     if active {
         ui.painter().rect_filled(row, 6.0, p.pressed);
     } else if resp.hovered() {
@@ -248,4 +250,42 @@ pub fn bottom_tabs(ui: &mut Ui, ed: &mut Editor, st: &mut UiState) {
             ed.add_page();
         }
     });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn sidebar_page_rows_expose_switch_actions_to_accesskit() {
+        let ctx = egui::Context::default();
+        crate::theme::install_fonts(&ctx);
+        ctx.enable_accesskit();
+        let mut ed = Editor::default();
+        let mut st = UiState::default();
+        let mut out = ctx.run_ui(
+            egui::RawInput {
+                screen_rect: Some(egui::Rect::from_min_size(
+                    egui::Pos2::ZERO,
+                    egui::vec2(260.0, 200.0),
+                )),
+                ..Default::default()
+            },
+            |ui| panel(ui, &mut ed, &mut st),
+        );
+        out.textures_delta.clear();
+        let update = out
+            .platform_output
+            .accesskit_update
+            .expect("pages panel should register accessibility nodes");
+        let labels: Vec<String> = update
+            .nodes
+            .iter()
+            .filter_map(|(_, node)| node.label().map(str::to_string))
+            .collect();
+        assert!(
+            labels.iter().any(|label| label == "Switch to Page 1"),
+            "expected a Switch to Page 1 label, got {labels:?}"
+        );
+    }
 }
