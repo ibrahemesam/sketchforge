@@ -2486,3 +2486,47 @@ fn native_database_exports_with_drawio_palette_style() {
         .collect();
     assert!(names.contains(&"Database"), "{names:?}");
 }
+
+#[test]
+fn native_on_page_exports_with_drawio_palette_style() {
+    let def =
+        drawio_rs::registry::by_id("on-page-connector").expect("registry On-Page Connector shape");
+    let mut node =
+        drawio_rs::registry::build(def, Rect::new(0.0, 0.0, def.size.0, def.size.1), None);
+    node.id = NodeId(13);
+    node.label = "Reference".into();
+    let doc = Document {
+        name: "On-Page export".into(),
+        nodes: [(node.id, node)].into_iter().collect(),
+        root: vec![NodeId(13)],
+        ..Document::default()
+    };
+    let items = vec![export::Item {
+        name: doc.name.clone(),
+        doc: &doc,
+        roots: doc.layered_root(),
+    }];
+    let spec = Spec {
+        format: Format::Drawio,
+        scope: Scope::AllPages,
+        ..Spec::default()
+    };
+    let out = tmp("on-page-export").join("flow.drawio");
+    export::write(&spec, &items, &out, None).unwrap();
+    let text = std::fs::read_to_string(&out).unwrap();
+    assert!(
+        text.contains(
+            "verticalLabelPosition=bottom;verticalAlign=top;html=1;shape=mxgraph.flowchart.on-page_reference;perimeter=ellipsePerimeter;"
+        ) && !text.contains("perimeter=ellipsePerimeter;whiteSpace=wrap;"),
+        "{text}"
+    );
+
+    let (pages, _) = drawio::import_str(&text).unwrap();
+    let names: Vec<&str> = pages[0]
+        .doc
+        .nodes
+        .values()
+        .map(|n| n.name.as_str())
+        .collect();
+    assert!(names.contains(&"On-Page Connector"), "{names:?}");
+}

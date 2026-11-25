@@ -3345,8 +3345,12 @@ fn drawio_shape_for_registry(id: &str) -> Option<&'static str> {
         "attribute" => "ellipse;whiteSpace=wrap;html=1;",
         "derived-attribute" => "ellipse;whiteSpace=wrap;html=1;align=center;dashed=1;",
         "key-attribute" => "ellipse;whiteSpace=wrap;html=1;align=center;fontStyle=4;",
+        // Draw.io's flowchart palette writes On-Page Reference without a wrap flag.
+        // Ported from `src/main/webapp/js/diagramly/sidebar/Sidebar-Flowchart.js`,
+        // Copyright (c) 2020-2025 JGraph Holdings Ltd / draw.io AG, Apache-2.0.
+        // See `THIRD_PARTY.md`.
         "on-page-connector" => {
-            "verticalLabelPosition=bottom;verticalAlign=top;html=1;shape=mxgraph.flowchart.on-page_reference;perimeter=ellipsePerimeter;whiteSpace=wrap;"
+            "verticalLabelPosition=bottom;verticalAlign=top;html=1;shape=mxgraph.flowchart.on-page_reference;perimeter=ellipsePerimeter;"
         }
         // Draw.io's flowchart palette writes Database with this stencil.
         // Ported from `src/main/webapp/js/diagramly/sidebar/Sidebar-Flowchart.js`,
