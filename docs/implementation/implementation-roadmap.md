@@ -583,6 +583,8 @@ documentation closeout completes the round.
 
 **User redirect, draw.io On-Page palette style (code committed b3e84b5).** Native On-Page Connector now writes draw.io's palette style without the duplicate wrap flag and reimports as the same registry shape. The focused export test failed before the fix and passes after it. THIRD_PARTY.md records the palette flag.
 
+**User redirect, draw.io UML Actor palette style (code committed c81574c).** Native Actor now writes draw.io's UML palette style without the wrap flag and reimports as the same registry shape. The focused export test failed before the fix and passes after it. THIRD_PARTY.md records the flag.
+
 **Scope.**
 
 - A selection context resolver that classifies the current selection as document, single
