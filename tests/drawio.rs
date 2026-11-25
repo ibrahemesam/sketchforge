@@ -2304,3 +2304,64 @@ fn native_off_page_exports_with_drawio_palette_style() {
         .collect();
     assert!(names.contains(&"Off-Page Connector"), "{names:?}");
 }
+
+#[test]
+fn flowchart_process_palette_style_imports_as_native_shape() {
+    let xml = r#"<mxfile><diagram id="d" name="Flow"><mxGraphModel><root>
+        <mxCell id="0"/><mxCell id="1" parent="0"/>
+        <mxCell id="process" value="Task" vertex="1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;absoluteArcSize=1;arcSize=14;strokeWidth=2;roundedPerimeter=1;">
+          <mxGeometry x="0" y="0" width="160" height="80" as="geometry"/>
+        </mxCell>
+      </root></mxGraphModel></diagram></mxfile>"#;
+    let (pages, _) = drawio::import_str(xml).unwrap();
+    let names: Vec<&str> = pages[0]
+        .doc
+        .nodes
+        .values()
+        .map(|n| n.name.as_str())
+        .collect();
+    assert!(names.contains(&"Process"), "{names:?}");
+}
+
+#[test]
+fn native_process_exports_with_drawio_palette_style() {
+    let def = drawio_rs::registry::by_id("process").expect("registry Process shape");
+    let mut node =
+        drawio_rs::registry::build(def, Rect::new(0.0, 0.0, def.size.0, def.size.1), None);
+    node.id = NodeId(11);
+    node.label = "Task".into();
+    let doc = Document {
+        name: "Process export".into(),
+        nodes: [(node.id, node)].into_iter().collect(),
+        root: vec![NodeId(11)],
+        ..Document::default()
+    };
+    let items = vec![export::Item {
+        name: doc.name.clone(),
+        doc: &doc,
+        roots: doc.layered_root(),
+    }];
+    let spec = Spec {
+        format: Format::Drawio,
+        scope: Scope::AllPages,
+        ..Spec::default()
+    };
+    let out = tmp("process-export").join("flow.drawio");
+    export::write(&spec, &items, &out, None).unwrap();
+    let text = std::fs::read_to_string(&out).unwrap();
+    assert!(
+        text.contains(
+            "rounded=1;whiteSpace=wrap;html=1;absoluteArcSize=1;arcSize=14;strokeWidth=2;roundedPerimeter=1;"
+        ),
+        "{text}"
+    );
+
+    let (pages, _) = drawio::import_str(&text).unwrap();
+    let names: Vec<&str> = pages[0]
+        .doc
+        .nodes
+        .values()
+        .map(|n| n.name.as_str())
+        .collect();
+    assert!(names.contains(&"Process"), "{names:?}");
+}

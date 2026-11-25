@@ -1728,6 +1728,18 @@ fn flowchart_registry_for_shape(shape: &str) -> Option<&'static str> {
     }
 }
 
+// Draw.io's Process palette entry has no `shape` key. The rounded rectangle
+// flags identify it. Ported from
+// `src/main/webapp/js/diagramly/sidebar/Sidebar-Flowchart.js`,
+// Copyright (c) 2020-2025 JGraph Holdings Ltd / draw.io AG, Apache-2.0.
+// See `THIRD_PARTY.md`.
+fn is_process_palette_style(st: &ParsedStyle) -> bool {
+    st.flag("rounded")
+        && st.flag("absoluteArcSize")
+        && st.flag("roundedPerimeter")
+        && st.num("arcSize") == Some(14.0)
+}
+
 // Draw.io's ER palette builds Chen notation from style flags rather than
 // dedicated shape aliases. The same styles are written on export. Ported from
 // `src/main/webapp/js/diagramly/sidebar/Sidebar-ER.js`, Copyright (c) 2020-2025
@@ -1985,6 +1997,12 @@ fn build_vertex(cell: &RawCell, st: &ParsedStyle, rect: Rect) -> (Node, Option<S
             ))
         };
         return (n, loss);
+    }
+    if shape.is_none()
+        && is_process_palette_style(st)
+        && let Some(n) = registry_vertex("process", st, rect, &value)
+    {
+        return (n, approximation);
     }
     let mut node = if is_group_style(st) {
         let mut n = Node::new(NodeId(0), NodeKind::Group, rect);
@@ -2943,6 +2961,7 @@ fn shape_style(n: &Node, _doc: &Document) -> String {
                     | "database"
                     | "terminator"
                     | "decision"
+                    | "process"
             )
     });
     let er = crate::registry::all().iter().find(|d| {
@@ -3294,7 +3313,14 @@ fn c4_type_for_registry(id: &str) -> Option<&'static str> {
 
 fn drawio_shape_for_registry(id: &str) -> Option<&'static str> {
     Some(match id {
-        "process" | "entity" => "rounded=0;whiteSpace=wrap;html=1;",
+        // Draw.io's flowchart palette writes Process as a rounded rectangle.
+        // Ported from `src/main/webapp/js/diagramly/sidebar/Sidebar-Flowchart.js`,
+        // Copyright (c) 2020-2025 JGraph Holdings Ltd / draw.io AG, Apache-2.0.
+        // See `THIRD_PARTY.md`.
+        "process" => {
+            "rounded=1;whiteSpace=wrap;html=1;absoluteArcSize=1;arcSize=14;strokeWidth=2;roundedPerimeter=1;"
+        }
+        "entity" => "rounded=0;whiteSpace=wrap;html=1;",
         // Draw.io's flowchart palette writes Decision as a stencil. Ported from
         // `src/main/webapp/js/diagramly/sidebar/Sidebar-Flowchart.js`,
         // Copyright (c) 2020-2025 JGraph Holdings Ltd / draw.io AG, Apache-2.0.
