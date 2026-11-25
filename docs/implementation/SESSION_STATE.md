@@ -1,6 +1,6 @@
 # Sketch agent session state
 
-Last updated: 2026-11-25 (draw.io Delay stencil, code committed d7f7d9d; docs closeout follows).
+Last updated: 2026-11-25 (draw.io Document stencil, code committed 4aad462; docs closeout follows).
 
 ## Objective
 
@@ -102,13 +102,15 @@ approximate the combined markers. Hexagon aliases followed as 3dfafa7, with docs
 native shape's export. Terminator stencils followed as c4cfa54, with docs as 6eaf5d5: native Terminator
 exports with draw.io's flowchart stencil and reimports as the same shape. Decision stencils
 followed as 8f1026c, with docs as 8b816d8: native Decision exports with draw.io's flowchart stencil and reimports
-as the same shape. Delay stencils followed as d7f7d9d: native Delay exports with
-draw.io's flowchart stencil and reimports as the same shape. This closeout records
+as the same shape. Delay stencils followed as d7f7d9d, with docs as bd5212a: native Delay exports with
+draw.io's flowchart stencil and reimports as the same shape. Document stencils followed
+as 4aad462: native Document exports with draw.io's `document2` stencil and reimports
+as the same shape. This closeout records
 the draw.io source port, the ADR-006 amendment, the BPMN aliases, the C4 properties,
 the SysML markers, the flowchart aliases,
 the ER flags and cardinality, the UML aliases, the floorplan aliases, the network aliases,
 the mermaid person stencil, the UML actor and class port, the basic pie stencil, the use
-case actor aliases, the hexagon alias, the Terminator stencil, the Decision stencil and the Delay stencil.
+case actor aliases, the hexagon alias, the Terminator stencil, the Decision stencil, the Delay stencil and the Document stencil.
 
 The full sidebar spec was implemented and verified in round 6 (see
 `.opencode/MEMORY.md`). Round 7 closed the transparent connector label gap.

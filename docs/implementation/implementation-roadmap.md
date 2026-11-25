@@ -557,6 +557,8 @@ documentation closeout completes the round.
 
 **User redirect, draw.io Delay stencil (code committed d7f7d9d).** Native Delay now exports with draw.io's `shape=mxgraph.flowchart.delay;` stencil and reimports as the same registry shape. The import test already passed; the export test failed before the fix and passes after it. THIRD_PARTY.md records the added flowchart stencil.
 
+**User redirect, draw.io Document stencil (code committed 4aad462).** Native Document now exports with draw.io's `shape=mxgraph.flowchart.document2;` stencil and reimports as the same registry shape. The import test already passed; the export test failed before the fix and passes after it. THIRD_PARTY.md records the added flowchart stencil.
+
 **Scope.**
 
 - A selection context resolver that classifies the current selection as document, single
