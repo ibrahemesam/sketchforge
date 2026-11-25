@@ -4260,7 +4260,9 @@ fn arrange_section(
         selection_actions(ui, ed, ids, first);
     }
 
-    let has_layout = first.layout.is_some() || first.parent.is_some();
+    // Connectors can sit inside a frame but draw.io never gives them auto-layout
+    // sizing or frame constraints. Keep Layout for shapes and mixed selections.
+    let has_layout = !all_connectors && (first.layout.is_some() || first.parent.is_some());
     if has_layout {
         separator(ui);
         ui.label(title_text("Layout"));
@@ -6536,6 +6538,79 @@ mod tests {
         assert!(text.contains("Flip"), "{text}");
         assert!(text.contains("\nSelection\n"), "{text}");
         assert!(text.contains("Flatten"), "{text}");
+    }
+
+    #[test]
+    fn connector_only_arrange_tab_hides_layout_section() {
+        let mut ed = Editor::default();
+        let frame = ed.add_node(
+            Node::new(
+                NodeId(0),
+                NodeKind::Frame { clip: false },
+                crate::geom::Rect::new(0.0, 0.0, 500.0, 200.0),
+            ),
+            None,
+        );
+        let bind = |node| crate::model::Binding {
+            node,
+            fixed: crate::geom::v2(0.5, 0.5),
+            inside: false,
+            floating: false,
+        };
+        let conn = ed.add_node(
+            Node::new(
+                NodeId(1),
+                NodeKind::Connector {
+                    points: vec![crate::geom::v2(20.0, 100.0), crate::geom::v2(480.0, 100.0)],
+                    start: Some(bind(frame)),
+                    end: Some(bind(frame)),
+                    route: crate::model::Route::Straight,
+                    start_head: crate::model::Head::None,
+                    end_head: crate::model::Head::Arrow,
+                    jump: crate::model::LineJump::None,
+                    jump_size: 6.0,
+                },
+                crate::geom::Rect::new(0.0, 0.0, 500.0, 200.0),
+            ),
+            Some(frame),
+        );
+        ed.selection = vec![conn];
+        let mut st = UiState {
+            inspector_tab: crate::ui::InspectorTab::Arrange,
+            ..Default::default()
+        };
+        let text = panel_text_for(&mut ed, &mut st, 320.0, 1600.0);
+        assert!(!text.contains("\nLayout\n"), "{text}");
+        assert!(!text.contains("Constraints"), "{text}");
+    }
+
+    #[test]
+    fn shape_in_frame_arrange_tab_keeps_layout_section() {
+        let mut ed = Editor::default();
+        let frame = ed.add_node(
+            Node::new(
+                NodeId(0),
+                NodeKind::Frame { clip: false },
+                crate::geom::Rect::new(0.0, 0.0, 500.0, 200.0),
+            ),
+            None,
+        );
+        let shape = ed.add_node(
+            Node::new(
+                NodeId(1),
+                NodeKind::Rect,
+                crate::geom::Rect::new(20.0, 40.0, 80.0, 60.0),
+            ),
+            Some(frame),
+        );
+        ed.selection = vec![shape];
+        let mut st = UiState {
+            inspector_tab: crate::ui::InspectorTab::Arrange,
+            ..Default::default()
+        };
+        let text = panel_text_for(&mut ed, &mut st, 320.0, 1600.0);
+        assert!(text.contains("\nLayout\n"), "{text}");
+        assert!(text.contains("Constraints"), "{text}");
     }
 
     #[test]
