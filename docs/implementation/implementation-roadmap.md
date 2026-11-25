@@ -529,6 +529,8 @@ documentation closeout completes the round.
 
 **User redirect, draw.io SysML shapes (code committed 3311f08).** Draw.io's `mxgraph.sysml.port*` aliases now import as the native SysML port. Block and requirement composite templates are recognised by their `<<block>>` and `<<requirement>>` child cells instead of becoming plain rectangles. Native SysML shapes export with draw.io's port alias and the composite parent style with the same child markers. Both integration tests failed before the fix and pass after it. THIRD_PARTY.md now lists Sidebar-Sysml.js and mxSysML.js.
 
+**User redirect, draw.io flowchart shapes (code committed fb9c602).** Draw.io's `mxgraph.flowchart.document2`, `manual_input`, `manual_operation`, `on-page_reference`, `sequential_data` and `stored_data` aliases now import as native flowchart shapes. Native document, manual input, manual operation, on-page connector, data and database shapes export with the matching draw.io styles. Both integration tests failed before the fix and pass after it. THIRD_PARTY.md now lists Sidebar-Flowchart.js.
+
 **Scope.**
 
 - A selection context resolver that classifies the current selection as document, single
