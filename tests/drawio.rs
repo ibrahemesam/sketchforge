@@ -1252,3 +1252,101 @@ fn native_floorplan_shapes_export_with_drawio_styles() {
         );
     }
 }
+
+#[test]
+fn network_drawio_shapes_import_as_native_shapes() {
+    let xml = r#"<mxfile><diagram id="d" name="Network"><mxGraphModel><root>
+        <mxCell id="0"/><mxCell id="1" parent="0"/>
+        <mxCell id="server" value="Mail relay" vertex="1" parent="1" style="html=1;shape=mxgraph.networks.mail_server;">
+          <mxGeometry x="0" y="0" width="105" height="105" as="geometry"/>
+        </mxCell>
+        <mxCell id="host" value="Workstation" vertex="1" parent="1" style="html=1;shape=mxgraph.networks.pc;">
+          <mxGeometry x="140" y="0" width="100" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="storage" value="Archive" vertex="1" parent="1" style="html=1;shape=mxgraph.networks.storage;">
+          <mxGeometry x="280" y="0" width="100" height="100" as="geometry"/>
+        </mxCell>
+        <mxCell id="firewall" value="Edge filter" vertex="1" parent="1" style="html=1;shape=mxgraph.networks.firewall;">
+          <mxGeometry x="0" y="140" width="100" height="100" as="geometry"/>
+        </mxCell>
+        <mxCell id="cloud" value="Private cloud" vertex="1" parent="1" style="html=1;shape=mxgraph.networks.cloud;">
+          <mxGeometry x="140" y="140" width="90" height="50" as="geometry"/>
+        </mxCell>
+      </root></mxGraphModel></diagram></mxfile>"#;
+    let (pages, _) = drawio::import_str(xml).unwrap();
+    let names: Vec<&str> = pages[0]
+        .doc
+        .nodes
+        .values()
+        .map(|n| n.name.as_str())
+        .collect();
+    for expected in ["Server", "Host", "Database", "Firewall", "Cloud"] {
+        assert!(
+            names.contains(&expected),
+            "{expected} missing from {names:?}"
+        );
+    }
+}
+
+#[test]
+fn native_network_shapes_export_with_drawio_styles() {
+    let defs = [
+        (1, "server", "Mail relay"),
+        (2, "host", "Workstation"),
+        (3, "database", "Archive"),
+        (4, "firewall", "Edge filter"),
+        (5, "cloud", "Private cloud"),
+    ];
+    let mut nodes = Vec::new();
+    let mut root = Vec::new();
+    for (id, def_id, label) in defs {
+        let def = drawio_rs::registry::by_id(def_id).expect("registry network shape");
+        let mut node =
+            drawio_rs::registry::build(def, Rect::new(0.0, 0.0, def.size.0, def.size.1), None);
+        node.id = NodeId(id);
+        node.label = label.into();
+        root.push(node.id);
+        nodes.push((node.id, node));
+    }
+    let doc = Document {
+        name: "Network export".into(),
+        nodes: nodes.into_iter().collect(),
+        root,
+        ..Document::default()
+    };
+    let items = vec![export::Item {
+        name: doc.name.clone(),
+        doc: &doc,
+        roots: doc.layered_root(),
+    }];
+    let spec = Spec {
+        format: Format::Drawio,
+        scope: Scope::AllPages,
+        ..Spec::default()
+    };
+    let out = tmp("network-export").join("network.drawio");
+    export::write(&spec, &items, &out, None).unwrap();
+    let text = std::fs::read_to_string(&out).unwrap();
+    for needle in [
+        "shape=mxgraph.networks.server;",
+        "shape=mxgraph.networks.pc;",
+        "shape=mxgraph.networks.firewall;",
+        "shape=mxgraph.networks.cloud;",
+    ] {
+        assert!(text.contains(needle), "{needle} missing from {text}");
+    }
+
+    let (pages, _) = drawio::import_str(&text).unwrap();
+    let names: Vec<&str> = pages[0]
+        .doc
+        .nodes
+        .values()
+        .map(|n| n.name.as_str())
+        .collect();
+    for expected in ["Server", "Host", "Firewall", "Cloud"] {
+        assert!(
+            names.contains(&expected),
+            "{expected} missing from {names:?}"
+        );
+    }
+}

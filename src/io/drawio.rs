@@ -1735,6 +1735,24 @@ fn floorplan_registry_for_shape(shape: Option<&str>) -> Option<&'static str> {
     }
 }
 
+// Draw.io's network palette uses several stencil aliases for each native
+// server, host and storage shape. Ported from
+// `src/main/webapp/js/diagramly/sidebar/Sidebar-Network.js`, Copyright (c)
+// 2020-2025 JGraph Holdings Ltd / draw.io AG, Apache-2.0. See `THIRD_PARTY.md`.
+fn network_registry_for_shape(shape: Option<&str>) -> Option<&'static str> {
+    let lower = shape?.to_ascii_lowercase();
+    let alias = lower.strip_prefix("mxgraph.networks.")?;
+    match alias {
+        "server" | "mail_server" | "proxy_server" | "web_server" | "virtual_server"
+        | "server_storage" | "mainframe" | "supercomputer" => Some("server"),
+        "pc" | "desktop_pc" | "laptop" | "monitor" | "terminal" | "virtual_pc" => Some("host"),
+        "storage" | "external_storage" | "nas_filer" | "tape_storage" => Some("database"),
+        "firewall" => Some("firewall"),
+        "cloud" => Some("cloud"),
+        _ => None,
+    }
+}
+
 fn registry_vertex(reg: &str, st: &ParsedStyle, rect: Rect, value: &str) -> Option<Node> {
     let def = crate::registry::by_id(reg)?;
     let mut n = crate::registry::build(def, rect, None);
@@ -1832,6 +1850,11 @@ fn build_vertex(cell: &RawCell, st: &ParsedStyle, rect: Rect) -> (Node, Option<S
         return (n, approximation);
     }
     if let Some(reg) = floorplan_registry_for_shape(shape)
+        && let Some(n) = registry_vertex(reg, st, rect, &value)
+    {
+        return (n, approximation);
+    }
+    if let Some(reg) = network_registry_for_shape(shape)
         && let Some(n) = registry_vertex(reg, st, rect, &value)
     {
         return (n, approximation);
@@ -3135,10 +3158,18 @@ fn drawio_shape_for_registry(id: &str) -> Option<&'static str> {
         "package" => {
             "shape=folder;fontStyle=1;tabWidth=80;tabHeight=30;tabPosition=left;html=1;boundedLbl=1;whiteSpace=wrap;"
         }
-        "cloud" => "shape=cloud;whiteSpace=wrap;html=1;",
-        "host" => "shape=host;whiteSpace=wrap;html=1;",
-        "server" => "shape=server;whiteSpace=wrap;html=1;",
-        "firewall" => "shape=firewall;whiteSpace=wrap;html=1;",
+        "cloud" => {
+            "html=1;outlineConnect=0;fillColor=#CCCCCC;strokeColor=#6881B3;gradientColor=none;gradientDirection=north;strokeWidth=2;shape=mxgraph.networks.cloud;whiteSpace=wrap;"
+        }
+        "host" => {
+            "fontColor=#0066CC;verticalAlign=top;verticalLabelPosition=bottom;labelPosition=center;align=center;html=1;outlineConnect=0;fillColor=#CCCCCC;strokeColor=#6881B3;gradientColor=none;gradientDirection=north;strokeWidth=2;shape=mxgraph.networks.pc;whiteSpace=wrap;"
+        }
+        "server" => {
+            "fontColor=#0066CC;verticalAlign=top;verticalLabelPosition=bottom;labelPosition=center;align=center;html=1;outlineConnect=0;fillColor=#CCCCCC;strokeColor=#6881B3;gradientColor=none;gradientDirection=north;strokeWidth=2;shape=mxgraph.networks.server;whiteSpace=wrap;"
+        }
+        "firewall" => {
+            "fontColor=#0066CC;verticalAlign=top;verticalLabelPosition=bottom;labelPosition=center;align=center;html=1;outlineConnect=0;fillColor=#CCCCCC;strokeColor=#6881B3;gradientColor=none;gradientDirection=north;strokeWidth=2;shape=mxgraph.networks.firewall;whiteSpace=wrap;"
+        }
         "actor" => "shape=actor;whiteSpace=wrap;html=1;",
         "class" => "shape=class;whiteSpace=wrap;html=1;",
         "weak-entity" => "shape=ext;double=1;margin=3;whiteSpace=wrap;html=1;align=center;",
