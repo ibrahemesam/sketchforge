@@ -573,6 +573,8 @@ documentation closeout completes the round.
 
 **User redirect, draw.io Document palette style (code committed 624e141).** Native Document now writes draw.io's `strokeWidth` and `size` flags with the `document2` stencil and reimports as Document. The import fixture already used the full palette style; the export test failed before the fix and passes after it. THIRD_PARTY.md records the palette flag.
 
+**User redirect, draw.io Terminator palette style (code committed 4658c80).** Native Terminator now writes `strokeWidth=2` with the flowchart stencil and reimports as Terminator. The import fixture already used the full palette style; the export test failed before the fix and passes after it. THIRD_PARTY.md records the stroke width flag.
+
 **Scope.**
 
 - A selection context resolver that classifies the current selection as document, single
