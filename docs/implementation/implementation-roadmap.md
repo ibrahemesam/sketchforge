@@ -537,6 +537,8 @@ documentation closeout completes the round.
 
 **User redirect, draw.io floorplan shapes (code committed 03bee77).** Draw.io's `mxgraph.floorplan.*` door, window and stair variants now import as the native Door, Window and Stairs shapes. Native shapes export with the matching stencil styles, so they reimport with their native names. Both integration tests failed before the fix and pass after it. THIRD_PARTY.md now lists Sidebar-Floorplan.js.
 
+**User redirect, draw.io network shapes (code committed 3b80e76).** Draw.io's `mxgraph.networks.*` server, PC and storage aliases now import as the native Server, Host and Database shapes. Native host, server, firewall and cloud shapes export with the matching stencil styles. Both integration tests failed before the fix and pass after it. THIRD_PARTY.md now lists Sidebar-Network.js.
+
 **Scope.**
 
 - A selection context resolver that classifies the current selection as document, single

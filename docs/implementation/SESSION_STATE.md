@@ -1,6 +1,6 @@
 # Sketch agent session state
 
-Last updated: 2026-11-25 (draw.io floorplan shape support, code committed 03bee77; docs closeout follows).
+Last updated: 2026-11-25 (draw.io network shape support, code committed 3b80e76; docs closeout follows).
 
 ## Objective
 
@@ -81,11 +81,14 @@ notation followed as 9e98c71, with docs as adcf58f: the `double=1` flag on `ext`
 `rhombus` cells, plus underlined and dashed ellipses, import as native ER shapes, and
 exports write the same style flags. UML shapes followed as 40aa938, with docs as d0d3f56:
 draw.io's `shape=note2` and `shape=folder` import as native Note and Package shapes, and
-native shapes export with the UML palette styles. Floorplan shapes followed as 03bee77:
-draw.io's `mxgraph.floorplan.*` door, window and stair aliases import as native shapes,
-and native shapes export with the matching stencil styles. This closeout records the
-draw.io source port, the ADR-006 amendment, the BPMN aliases, the C4 properties, the SysML
-markers, the flowchart aliases, the ER flags, the UML aliases and the floorplan aliases.
+native shapes export with the UML palette styles. Floorplan shapes followed as 03bee77, with docs as d04f611: draw.io's
+`mxgraph.floorplan.*` door, window and stair aliases import as native shapes, and native
+shapes export with the matching stencil styles. Network shapes followed as 3b80e76:
+`mxgraph.networks.*` server, PC and storage aliases import as native Server, Host and
+Database shapes, and native network shapes export with the matching stencil styles. This
+closeout records the draw.io source port, the ADR-006 amendment, the BPMN aliases, the C4
+properties, the SysML markers, the flowchart aliases, the ER flags, the UML aliases, the
+floorplan aliases and the network aliases.
 
 The full sidebar spec was implemented and verified in round 6 (see
 `.opencode/MEMORY.md`). Round 7 closed the transparent connector label gap.
