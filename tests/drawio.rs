@@ -641,3 +641,123 @@ fn native_bpmn_shapes_export_with_drawio_styles() {
         );
     }
 }
+
+#[test]
+fn c4_drawio_shapes_import_as_native_shapes() {
+    let cells = [
+        (
+            "person",
+            "Person",
+            "Ada",
+            "shape=mxgraph.c4.person2;html=1;",
+        ),
+        ("system", "Software System", "Orders", "rounded=1;html=1;"),
+        ("container", "Container", "API", "rounded=1;html=1;"),
+        ("component", "Component", "Cart", "rounded=1;html=1;"),
+        (
+            "boundary",
+            "SystemScopeBoundary",
+            "Scope",
+            "rounded=1;dashed=1;html=1;",
+        ),
+    ];
+    let mut body = String::new();
+    for (id, c4_type, label, style) in cells {
+        body.push_str(&format!(
+            r#"<UserObject id="{id}" label="{label}" c4Type="{c4_type}" placeholders="1"><mxCell id="cell-{id}" style="{style}" vertex="1" parent="1"><mxGeometry x="0" y="0" width="100" height="60" as="geometry"/></mxCell></UserObject>"#
+        ));
+    }
+    let xml = format!(
+        r#"<mxfile><diagram id="d" name="C4"><mxGraphModel><root><mxCell id="0"/><mxCell id="1" parent="0"/>{body}</root></mxGraphModel></diagram></mxfile>"#
+    );
+    let (pages, _) = drawio::import_str(&xml).unwrap();
+    let names: Vec<&str> = pages[0]
+        .doc
+        .nodes
+        .values()
+        .map(|n| n.name.as_str())
+        .collect();
+    for expected in [
+        "C4 Person",
+        "C4 Software System",
+        "C4 Container",
+        "C4 Component",
+        "C4 Boundary",
+    ] {
+        assert!(
+            names.contains(&expected),
+            "{expected} missing from {names:?}"
+        );
+    }
+}
+
+#[test]
+fn native_c4_shapes_export_with_drawio_styles() {
+    let defs = [
+        (1, "c4-person", "Person"),
+        (2, "c4-system", "System"),
+        (3, "c4-container", "Container"),
+        (4, "c4-component", "Component"),
+        (5, "c4-boundary", "Boundary"),
+    ];
+    let mut nodes = Vec::new();
+    let mut root = Vec::new();
+    for (id, def_id, label) in defs {
+        let def = drawio_rs::registry::by_id(def_id).expect("registry C4 shape");
+        let mut node =
+            drawio_rs::registry::build(def, Rect::new(0.0, 0.0, def.size.0, def.size.1), None);
+        node.id = NodeId(id);
+        node.label = label.into();
+        root.push(node.id);
+        nodes.push((node.id, node));
+    }
+    let doc = Document {
+        name: "C4 export".into(),
+        nodes: nodes.into_iter().collect(),
+        root,
+        ..Document::default()
+    };
+    let items = vec![export::Item {
+        name: doc.name.clone(),
+        doc: &doc,
+        roots: doc.layered_root(),
+    }];
+    let spec = Spec {
+        format: Format::Drawio,
+        scope: Scope::AllPages,
+        ..Spec::default()
+    };
+    let out = tmp("c4-export").join("c4.drawio");
+    export::write(&spec, &items, &out, None).unwrap();
+    let text = std::fs::read_to_string(&out).unwrap();
+    for needle in [
+        "shape=mxgraph.c4.person2",
+        "c4Type=\"Person\"",
+        "c4Type=\"Software System\"",
+        "c4Type=\"Container\"",
+        "c4Type=\"Component\"",
+        "c4Type=\"SystemScopeBoundary\"",
+    ] {
+        assert!(text.contains(needle), "{needle} missing from {text}");
+    }
+
+    let (pages, _) = drawio::import_str(&text).unwrap();
+    let names: Vec<&str> = pages[0]
+        .doc
+        .nodes
+        .values()
+        .map(|n| n.name.as_str())
+        .collect();
+    for expected in [
+        "C4 Person",
+        "C4 Software System",
+        "C4 Container",
+        "C4 Component",
+        "C4 Boundary",
+    ] {
+        assert!(
+            names.contains(&expected),
+            "{expected} missing from {names:?}"
+        );
+    }
+}

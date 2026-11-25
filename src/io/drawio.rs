@@ -1667,11 +1667,41 @@ fn registry_vertex(reg: &str, st: &ParsedStyle, rect: Rect, value: &str) -> Opti
     Some(n)
 }
 
+// C4 shapes and their `c4Type` property follow draw.io's
+// `src/main/webapp/js/diagramly/sidebar/Sidebar-C4.js`, Copyright (c) JGraph
+// Holdings Ltd / draw.io AG, Apache-2.0. See `THIRD_PARTY.md`.
+fn c4_registry_for_cell(cell: &RawCell, st: &ParsedStyle) -> Option<&'static str> {
+    if let Some(c4_type) = cell.metadata.get("c4Type") {
+        let key = c4_type.to_ascii_lowercase().replace([' ', '_', '-'], "");
+        return Some(match key.as_str() {
+            "person" => "c4-person",
+            "softwaresystem" => "c4-system",
+            "container" => "c4-container",
+            "component" => "c4-component",
+            "systemscopeboundary" | "containerscopeboundary" => "c4-boundary",
+            _ => return None,
+        });
+    }
+    let shape = shape_name(st).unwrap_or("").to_ascii_lowercase();
+    match shape.as_str() {
+        "mxgraph.c4.person" | "mxgraph.c4.person2" => Some("c4-person"),
+        "mxgraph.c4.webbrowsercontainer"
+        | "mxgraph.c4.webbrowsercontainer2"
+        | "mxgraph.c4.mobiledevicecontainer" => Some("c4-container"),
+        _ => None,
+    }
+}
+
 fn build_vertex(cell: &RawCell, st: &ParsedStyle, rect: Rect) -> (Node, Option<String>) {
     let value = plain_text(&cell.value);
     let mut approximation = None;
     let shape = shape_name(st);
     if let Some(reg) = shape.and_then(|s| bpmn_registry_for_shape(s, st))
+        && let Some(n) = registry_vertex(reg, st, rect, &value)
+    {
+        return (n, approximation);
+    }
+    if let Some(reg) = c4_registry_for_cell(cell, st)
         && let Some(n) = registry_vertex(reg, st, rect, &value)
     {
         return (n, approximation);
@@ -2383,18 +2413,31 @@ fn emit_node(out: &mut String, doc: &Document, id: NodeId, parent: Option<NodeId
         NodeKind::Connector { .. } => n.label.clone(),
         _ => n.label.clone(),
     };
+    let c4_type = crate::registry::all()
+        .iter()
+        .find(|d| d.name == n.name && d.id.starts_with("c4-"))
+        .and_then(|d| c4_type_for_registry(d.id));
     let has_data = !n.metadata.is_empty()
         || !n.link.is_empty()
         || !n.tooltip.is_empty()
         || !n.tags.is_empty()
         || n.connector_default.is_some()
-        || n.style.label_upright;
+        || n.style.label_upright
+        || c4_type.is_some();
     if has_data {
         out.push_str("        <UserObject id=\"");
         out.push_str(&node_cell(id));
         out.push_str("\" label=\"");
         attr(out, &value);
         out.push('"');
+        if c4_type.is_some() {
+            out.push_str(" placeholders=\"1\"");
+        }
+        if let Some(c4_type) = c4_type.filter(|_| !n.metadata.contains_key("c4Type")) {
+            out.push_str(" c4Type=\"");
+            attr(out, c4_type);
+            out.push('"');
+        }
         if !n.link.is_empty() {
             let link = crate::link::action::remap_ids(
                 &n.link,
@@ -2583,12 +2626,15 @@ fn emit_geometry(out: &mut String, doc: &Document, n: &Node, parent: Option<Node
 
 fn shape_style(n: &Node, _doc: &Document) -> String {
     let mut style = String::new();
+    let c4 = crate::registry::all()
+        .iter()
+        .find(|d| d.name == n.name && d.id.starts_with("c4-"));
     let bpmn = crate::registry::all()
         .iter()
         .find(|d| d.name == n.name && d.id.starts_with("bpmn-"));
     if let Some(def) = bpmn {
         style.push_str(drawio_shape_for_registry(def.id).unwrap_or("rounded=0;"));
-    } else {
+    } else if c4.is_none() {
         match &n.kind {
             NodeKind::Group => style.push_str("group;"),
             NodeKind::Frame { .. } => style.push_str("swimlane;startSize=26;html=1;"),
@@ -2784,6 +2830,9 @@ fn shape_style(n: &Node, _doc: &Document) -> String {
             );
         }
     }
+    if let Some(def) = c4 {
+        style.push_str(drawio_shape_for_registry(def.id).unwrap_or("rounded=0;"));
+    }
     style
 }
 
@@ -2888,6 +2937,17 @@ fn head_name(h: Head) -> &'static str {
     }
 }
 
+fn c4_type_for_registry(id: &str) -> Option<&'static str> {
+    Some(match id {
+        "c4-person" => "Person",
+        "c4-system" => "Software System",
+        "c4-container" => "Container",
+        "c4-component" => "Component",
+        "c4-boundary" => "SystemScopeBoundary",
+        _ => return None,
+    })
+}
+
 fn drawio_shape_for_registry(id: &str) -> Option<&'static str> {
     Some(match id {
         "process" | "entity" => "rounded=0;whiteSpace=wrap;html=1;",
@@ -2930,6 +2990,21 @@ fn drawio_shape_for_registry(id: &str) -> Option<&'static str> {
         "bpmn-task" => "shape=mxgraph.bpmn.task2;rectStyle=rounded;size=10;whiteSpace=wrap;html=1;",
         "bpmn-gateway" => {
             "shape=mxgraph.bpmn.gateway2;outline=none;symbol=none;gwType=exclusive;perimeter=rhombusPerimeter;whiteSpace=wrap;html=1;"
+        }
+        "c4-person" => {
+            "shape=mxgraph.c4.person2;html=1;dashed=0;whiteSpace=wrap;fillColor=#083F75;strokeColor=#06315C;fontColor=#ffffff;align=center;resizable=0;roundedPerimeter=0;"
+        }
+        "c4-system" => {
+            "rounded=1;whiteSpace=wrap;html=1;labelBackgroundColor=none;fillColor=#1061B0;fontColor=#ffffff;align=center;arcSize=10;strokeColor=#0D5091;resizable=0;roundedPerimeter=1;"
+        }
+        "c4-container" => {
+            "rounded=1;whiteSpace=wrap;html=1;fontSize=11;labelBackgroundColor=none;fillColor=#23A2D9;fontColor=#ffffff;align=center;arcSize=10;strokeColor=#0E7DAD;resizable=0;roundedPerimeter=1;"
+        }
+        "c4-component" => {
+            "rounded=1;whiteSpace=wrap;html=1;labelBackgroundColor=none;fillColor=#63BEF2;fontColor=#ffffff;align=center;arcSize=6;strokeColor=#2086C9;resizable=0;roundedPerimeter=1;"
+        }
+        "c4-boundary" => {
+            "rounded=1;fontSize=11;whiteSpace=wrap;html=1;dashed=1;arcSize=20;fillColor=none;strokeColor=#666666;fontColor=#333333;labelBackgroundColor=none;align=left;verticalAlign=bottom;dashPattern=8 4;resizable=0;perimeter=rectanglePerimeter;absoluteArcSize=1;"
         }
         _ => return None,
     })
