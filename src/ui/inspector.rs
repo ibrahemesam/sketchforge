@@ -2358,11 +2358,17 @@ fn style_palette(ui: &mut Ui, ed: &mut Editor, st: &mut UiState, ids: &[NodeId])
         .map(|n| fill_color_of(n, ed));
     let mut clicked = None;
     ui.horizontal(|ui| {
-        if ui
+        let prev = ui
             .add_enabled(st.palette_page > 0, egui::Button::new("‹").frame(false))
-            .on_hover_text("Previous swatches")
-            .clicked()
-        {
+            .on_hover_text("Previous swatches");
+        prev.widget_info(|| {
+            egui::WidgetInfo::labeled(
+                egui::WidgetType::Button,
+                st.palette_page > 0,
+                "Previous swatches",
+            )
+        });
+        if prev.clicked() {
             st.palette_page -= 1;
         }
         egui::Grid::new("style-palette")
@@ -2402,14 +2408,20 @@ fn style_palette(ui: &mut Ui, ed: &mut Editor, st: &mut UiState, ids: &[NodeId])
                     }
                 }
             });
-        if ui
+        let next = ui
             .add_enabled(
                 st.palette_page + 1 < pages,
                 egui::Button::new("›").frame(false),
             )
-            .on_hover_text("More swatches")
-            .clicked()
-        {
+            .on_hover_text("More swatches");
+        next.widget_info(|| {
+            egui::WidgetInfo::labeled(
+                egui::WidgetType::Button,
+                st.palette_page + 1 < pages,
+                "More swatches",
+            )
+        });
+        if next.clicked() {
             st.palette_page += 1;
         }
     });
@@ -2418,6 +2430,14 @@ fn style_palette(ui: &mut Ui, ed: &mut Editor, st: &mut UiState, ids: &[NodeId])
         for p in 0..pages {
             let (r, resp) = ui.allocate_exact_size(egui::vec2(10.0, 10.0), egui::Sense::click());
             let on = p == st.palette_page;
+            resp.widget_info(|| {
+                egui::WidgetInfo::selected(
+                    egui::WidgetType::Button,
+                    true,
+                    on,
+                    format!("Swatch page {}", p + 1),
+                )
+            });
             ui.painter().circle_filled(
                 r.center(),
                 if on { 3.5 } else { 2.5 },
@@ -5596,7 +5616,7 @@ mod tests {
     use super::{
         AdaptiveColors, Color, Node, NodeId, NodeKind, Paint, STICKY_COLORS, SectionGuard, apply,
         filter_matches, layers_dialog, normalize_query, panel, parse_tags, replace_row_filter,
-        row_visible, section_open, set_section_open, swatches,
+        row_visible, section_open, set_section_open, style_palette, swatches,
     };
     use crate::editor::Editor;
     use crate::ui::UiState;
@@ -5685,6 +5705,47 @@ mod tests {
             "Select every shape on this layer",
             "Hide Background",
             "Move this layer up one spot",
+        ] {
+            assert!(
+                labels.iter().any(|label| label == expected),
+                "expected an {expected} label, got {labels:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn style_palette_pager_exposes_accesskit_names() {
+        let ctx = egui::Context::default();
+        crate::theme::install_fonts(&ctx);
+        ctx.enable_accesskit();
+        let mut ed = Editor::default();
+        let mut st = UiState::default();
+        let mut out = ctx.run_ui(
+            egui::RawInput {
+                screen_rect: Some(egui::Rect::from_min_size(
+                    egui::Pos2::ZERO,
+                    egui::vec2(400.0, 260.0),
+                )),
+                ..Default::default()
+            },
+            |ui| style_palette(ui, &mut ed, &mut st, &[]),
+        );
+        out.textures_delta.clear();
+        let update = out
+            .platform_output
+            .accesskit_update
+            .expect("style palette should register accessibility nodes");
+        let labels: Vec<String> = update
+            .nodes
+            .iter()
+            .filter_map(|(_, node)| node.label().map(str::to_string))
+            .collect();
+        for expected in [
+            "Previous swatches",
+            "More swatches",
+            "Swatch page 1",
+            "Swatch page 2",
+            "Swatch page 3",
         ] {
             assert!(
                 labels.iter().any(|label| label == expected),
