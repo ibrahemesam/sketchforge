@@ -949,7 +949,7 @@ fn native_flowchart_shapes_export_with_drawio_styles() {
     export::write(&spec, &items, &out, None).unwrap();
     let text = std::fs::read_to_string(&out).unwrap();
     for needle in [
-        "shape=document;",
+        "shape=mxgraph.flowchart.document2;",
         "shape=manualInput;",
         "shape=trapezoid;",
         "shape=mxgraph.flowchart.on-page_reference;",
@@ -1938,4 +1938,63 @@ fn native_delay_exports_with_drawio_stencil() {
         .map(|n| n.name.as_str())
         .collect();
     assert!(names.contains(&"Delay"), "{names:?}");
+}
+
+#[test]
+fn flowchart_document2_stencil_imports_as_native_shape() {
+    let xml = r#"<mxfile><diagram id="d" name="Flow"><mxGraphModel><root>
+        <mxCell id="0"/><mxCell id="1" parent="0"/>
+        <mxCell id="doc" value="Report" vertex="1" parent="1" style="strokeWidth=2;html=1;shape=mxgraph.flowchart.document2;whiteSpace=wrap;size=0.25;">
+          <mxGeometry x="0" y="0" width="160" height="80" as="geometry"/>
+        </mxCell>
+      </root></mxGraphModel></diagram></mxfile>"#;
+    let (pages, _) = drawio::import_str(xml).unwrap();
+    let names: Vec<&str> = pages[0]
+        .doc
+        .nodes
+        .values()
+        .map(|n| n.name.as_str())
+        .collect();
+    assert!(names.contains(&"Document"), "{names:?}");
+}
+
+#[test]
+fn native_document2_exports_with_drawio_stencil() {
+    let def = drawio_rs::registry::by_id("document").expect("registry Document shape");
+    let mut node =
+        drawio_rs::registry::build(def, Rect::new(0.0, 0.0, def.size.0, def.size.1), None);
+    node.id = NodeId(5);
+    node.label = "Report".into();
+    let doc = Document {
+        name: "Document export".into(),
+        nodes: [(node.id, node)].into_iter().collect(),
+        root: vec![NodeId(5)],
+        ..Document::default()
+    };
+    let items = vec![export::Item {
+        name: doc.name.clone(),
+        doc: &doc,
+        roots: doc.layered_root(),
+    }];
+    let spec = Spec {
+        format: Format::Drawio,
+        scope: Scope::AllPages,
+        ..Spec::default()
+    };
+    let out = tmp("document2-export").join("flow.drawio");
+    export::write(&spec, &items, &out, None).unwrap();
+    let text = std::fs::read_to_string(&out).unwrap();
+    assert!(
+        text.contains("shape=mxgraph.flowchart.document2;"),
+        "{text}"
+    );
+
+    let (pages, _) = drawio::import_str(&text).unwrap();
+    let names: Vec<&str> = pages[0]
+        .doc
+        .nodes
+        .values()
+        .map(|n| n.name.as_str())
+        .collect();
+    assert!(names.contains(&"Document"), "{names:?}");
 }

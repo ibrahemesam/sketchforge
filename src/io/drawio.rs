@@ -3315,7 +3315,11 @@ fn drawio_shape_for_registry(id: &str) -> Option<&'static str> {
             "verticalLabelPosition=bottom;verticalAlign=top;html=1;shape=mxgraph.flowchart.on-page_reference;perimeter=ellipsePerimeter;whiteSpace=wrap;"
         }
         "database" => "shape=cylinder3;whiteSpace=wrap;html=1;",
-        "document" => "shape=document;whiteSpace=wrap;html=1;",
+        // Draw.io's flowchart palette writes Document as a stencil. Ported from
+        // `src/main/webapp/js/diagramly/sidebar/Sidebar-Flowchart.js`,
+        // Copyright (c) 2020-2025 JGraph Holdings Ltd / draw.io AG, Apache-2.0.
+        // See `THIRD_PARTY.md`.
+        "document" => "shape=mxgraph.flowchart.document2;whiteSpace=wrap;html=1;",
         "data" => "shape=parallelogram;whiteSpace=wrap;html=1;",
         "manual-input" => "shape=manualInput;whiteSpace=wrap;html=1;",
         "manual-operation" => "shape=trapezoid;whiteSpace=wrap;html=1;",
