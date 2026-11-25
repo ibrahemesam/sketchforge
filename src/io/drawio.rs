@@ -1699,6 +1699,24 @@ fn er_registry_for_shape(shape: Option<&str>, st: &ParsedStyle) -> Option<&'stat
     }
 }
 
+// Draw.io's UML palette uses `note2` for comments and `folder` for packages.
+// Both stay registry shapes even when draw.io marks the package as a container.
+// Ported from `src/main/webapp/js/diagramly/sidebar/Sidebar-UML25.js`,
+// Copyright (c) 2020-2025 JGraph Holdings Ltd / draw.io AG, Apache-2.0. See
+// `THIRD_PARTY.md`.
+fn uml_registry_for_shape(shape: Option<&str>) -> Option<&'static str> {
+    match shape
+        .map(leaves)
+        .unwrap_or("")
+        .to_ascii_lowercase()
+        .as_str()
+    {
+        "note2" => Some("note"),
+        "folder" => Some("package"),
+        _ => None,
+    }
+}
+
 fn registry_vertex(reg: &str, st: &ParsedStyle, rect: Rect, value: &str) -> Option<Node> {
     let def = crate::registry::by_id(reg)?;
     let mut n = crate::registry::build(def, rect, None);
@@ -1786,6 +1804,11 @@ fn build_vertex(cell: &RawCell, st: &ParsedStyle, rect: Rect) -> (Node, Option<S
         return (n, approximation);
     }
     if let Some(reg) = sysml_registry_for_cell(cell, st)
+        && let Some(n) = registry_vertex(reg, st, rect, &value)
+    {
+        return (n, approximation);
+    }
+    if let Some(reg) = uml_registry_for_shape(shape)
         && let Some(n) = registry_vertex(reg, st, rect, &value)
     {
         return (n, approximation);
@@ -3083,8 +3106,12 @@ fn drawio_shape_for_registry(id: &str) -> Option<&'static str> {
         "delay" => "shape=delay;whiteSpace=wrap;html=1;",
         "off-page" => "shape=offPageConnector;whiteSpace=wrap;html=1;",
         "queue" => "shape=queue;whiteSpace=wrap;html=1;",
-        "note" => "shape=note;whiteSpace=wrap;html=1;",
-        "package" => "shape=package;whiteSpace=wrap;html=1;",
+        "note" => {
+            "shape=note2;boundedLbl=1;whiteSpace=wrap;html=1;size=25;verticalAlign=top;align=center;"
+        }
+        "package" => {
+            "shape=folder;fontStyle=1;tabWidth=80;tabHeight=30;tabPosition=left;html=1;boundedLbl=1;whiteSpace=wrap;"
+        }
         "cloud" => "shape=cloud;whiteSpace=wrap;html=1;",
         "host" => "shape=host;whiteSpace=wrap;html=1;",
         "server" => "shape=server;whiteSpace=wrap;html=1;",
