@@ -1,6 +1,6 @@
 # Sketch agent session state
 
-Last updated: 2026-11-25 (draw.io BPMN shape support, code committed f6b7f69; docs closeout follows).
+Last updated: 2026-11-25 (draw.io C4 shape support, code committed e5faf5c; docs closeout follows).
 
 ## Objective
 
@@ -67,9 +67,12 @@ buttons. Its docs closeout was pushed as 647fa6f. The user then redirected work 
 draw.io colors, panel resize and shape support. The panel fix was committed and pushed
 as e2663ad. The draw.io color import and export fix was committed and pushed as
 21c0b68. The draw.io attribution docs closeout followed as ca39123. BPMN shape import and
-export were then committed as f6b7f69: draw.io event, task and gateway aliases now map to
-native BPMN registry shapes, and native BPMN shapes export with draw.io styles. This
-closeout records the draw.io source port, the ADR-006 amendment and the BPMN aliases.
+export were then committed as f6b7f69, with docs as 57cf906: draw.io event, task and
+gateway aliases now map to native BPMN registry shapes, and native BPMN shapes export with
+draw.io styles. C4 shapes followed as e5faf5c: `c4Type` properties and `mxgraph.c4`
+aliases import as native C4 shapes, and exports write the C4 property and palette styles.
+This closeout records the draw.io source port, the ADR-006 amendment, the BPMN aliases and
+the C4 properties.
 
 The full sidebar spec was implemented and verified in round 6 (see
 `.opencode/MEMORY.md`). Round 7 closed the transparent connector label gap.

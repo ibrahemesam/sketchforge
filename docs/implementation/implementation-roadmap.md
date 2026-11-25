@@ -525,6 +525,8 @@ documentation closeout completes the round.
 
 **User redirect, draw.io BPMN shapes (code committed f6b7f69).** BPMN event, task and gateway aliases now import as native registry shapes instead of generic ellipses, rectangles and frames. The `outline` key selects start, intermediate or end events, task cells with `container=1` still become tasks, and native BPMN shapes export with draw.io's `mxgraph.bpmn` styles. Both integration tests failed before the fix and pass after it. THIRD_PARTY.md now lists the BPMN sources alongside the earlier draw.io port.
 
+**User redirect, draw.io C4 shapes (code committed e5faf5c).** Draw.io's `c4Type` property now maps `UserObject` cells to native C4 person, software system, container, component and boundary shapes. `mxgraph.c4` shape aliases cover cells without the property. Native C4 shapes export with the draw.io C4 palette styles and a `c4Type` property, so the two integration tests pass after first failing. THIRD_PARTY.md now lists Sidebar-C4.js.
+
 **Scope.**
 
 - A selection context resolver that classifies the current selection as document, single
