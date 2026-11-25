@@ -1,6 +1,6 @@
 # Sketch agent session state
 
-Last updated: 2026-11-25 (Library shape tile names, code committed faf817d).
+Last updated: 2026-11-25 (Home sidebar row names, code committed 1f17c9f).
 
 ## Objective
 
@@ -60,8 +60,9 @@ code commit 8af5f2d names the sidebar page rows. Its docs closeout was pushed as
 c044836. Round 97 code commit d661af8 names the command palette result rows. Its
 docs closeout was pushed as f319bab. Round 98 code commit 570ad49 names the
 sidebar layer rows. Its docs closeout was pushed as de61997. Round 99 code commit
-faf817d names the library shape tiles. The round 99 docs closeout follows this
-commit.
+faf817d names the library shape tiles. Its docs closeout was pushed as f00fe6e.
+Round 100 code commit 1f17c9f names the home sidebar rows. The round 100 docs
+closeout follows this commit.
 
 The full sidebar spec was implemented and verified in round 6 (see
 `.opencode/MEMORY.md`). Round 7 closed the transparent connector label gap.
@@ -789,6 +790,8 @@ Round 98 (committed 570ad49) names sidebar layer rows with their select action. 
 
 Round 99 (committed faf817d) names library shape tiles with their insert action. A library panel render test found no Insert Decision label before the fix. UIX-12 stays IN_PROGRESS.
 
+Round 100 (committed 1f17c9f) names home sidebar rows with their view switch action. A home screen render test found no Switch to Recents label before the fix. UIX-12 stays IN_PROGRESS.
+
 ## Blockers
 
 - No blockers. M9 collaboration remains deferred pending a server, a conflict
@@ -805,13 +808,14 @@ Round 99 (committed faf817d) names library shape tiles with their insert action.
 
 Audit UIX-12 beyond icon buttons, sidebar order buttons, sticky swatches,
 Layers dialog actions, the Style palette pager, sidebar layer controls, page rows,
-command palette results, layer rows and library tiles. It is IN_PROGRESS, not
-VERIFIED. A concrete candidate is the home sidebar navigation rows in
-`src/ui/home.rs`, whose click targets have no widget info. Visible focus and the
-absent canvas accessibility tree are still open too. Capture a failing test before
-any real code fix. Otherwise close or correct stale rows as evidence-only with
-cited HEAD identifiers and update verification/session docs. Do not restart
-completed rounds. Keep blocked/deferred items blocked. No release, tag, or PR.
+command palette results, layer rows, library tiles and home sidebar rows. It is
+IN_PROGRESS, not VERIFIED. A concrete candidate is the layer-row disclosure
+chevron in `src/ui/mod.rs`, whose click target has no widget info. Visible focus
+and the absent canvas accessibility tree are still open too. Capture a failing
+test before any real code fix. Otherwise close or correct stale rows as
+evidence-only with cited HEAD identifiers and update verification/session docs.
+Do not restart completed rounds. Keep blocked/deferred items blocked. No release,
+tag, or PR.
 
 ## Commands
 

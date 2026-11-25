@@ -515,6 +515,8 @@ documentation closeout completes the round.
 
 **Round 99 (code committed faf817d).** Library shape tiles now say Insert <shape> in the accessibility tree. A library panel render test found no Insert Decision label before the fix. UIX-12 stays IN_PROGRESS.
 
+**Round 100 (code committed 1f17c9f).** Home sidebar rows now say Switch to <view> in the accessibility tree. A home screen render test found no Switch to Recents label before the fix. UIX-12 stays IN_PROGRESS.
+
 **Scope.**
 
 - A selection context resolver that classifies the current selection as document, single
