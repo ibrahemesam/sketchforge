@@ -571,6 +571,8 @@ documentation closeout completes the round.
 
 **User redirect, draw.io Process palette style (code committed f0b6489).** Draw.io's rounded rectangle flags now import as native Process, and native Process writes the same flags and reimports as Process. Both tests failed before the fix and pass after it. THIRD_PARTY.md records the palette flags.
 
+**User redirect, draw.io Document palette style (code committed 624e141).** Native Document now writes draw.io's `strokeWidth` and `size` flags with the `document2` stencil and reimports as Document. The import fixture already used the full palette style; the export test failed before the fix and passes after it. THIRD_PARTY.md records the palette flag.
+
 **Scope.**
 
 - A selection context resolver that classifies the current selection as document, single

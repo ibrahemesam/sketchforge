@@ -1,6 +1,6 @@
 # Sketch agent session state
 
-Last updated: 2026-11-25 (draw.io Process palette style, code committed f0b6489; docs closeout follows).
+Last updated: 2026-11-25 (draw.io Document palette style, code committed 624e141; docs closeout follows).
 
 ## Objective
 
@@ -113,12 +113,13 @@ Manual Operation writes draw.io's trapezoid and label flags. Preparation palette
 c46d91b, with docs as 26c53a0: native Preparation writes draw.io's hexagon perimeter and size flags.
 Off-Page palette flags followed as 550b3cc, with docs as 59ce112: native Off-Page Connector writes
 draw.io's connector size and label flags. Process palette flags followed as f0b6489: native Process
-writes draw.io's rounded rectangle flags and reimports as Process. This closeout records
+writes draw.io's rounded rectangle flags and reimports as Process. Document palette flags followed as
+624e141: native Document writes draw.io's `strokeWidth` and `size` flags with the stencil. This closeout records
 the draw.io source port, the ADR-006 amendment, the BPMN aliases, the C4 properties,
 the SysML markers, the flowchart aliases,
 the ER flags and cardinality, the UML aliases, the floorplan aliases, the network aliases,
 the mermaid person stencil, the UML actor and class port, the basic pie stencil, the use
-case actor aliases, the hexagon alias, the Terminator stencil, the Decision stencil, the Delay stencil, the Document stencil, the Data palette flags, the Manual Input palette flags, the Manual Operation palette flags, the Preparation palette flags, the Off-Page palette flags and the Process palette flags.
+case actor aliases, the hexagon alias, the Terminator stencil, the Decision stencil, the Delay stencil, the Document stencil, the Data palette flags, the Manual Input palette flags, the Manual Operation palette flags, the Preparation palette flags, the Off-Page palette flags, the Process palette flags and the Document palette flags.
 
 The full sidebar spec was implemented and verified in round 6 (see
 `.opencode/MEMORY.md`). Round 7 closed the transparent connector label gap.
