@@ -1,6 +1,6 @@
 # Sketch agent session state
 
-Last updated: 2026-11-25 (draw.io Document stencil, code committed 4aad462; docs closeout follows).
+Last updated: 2026-11-25 (draw.io Data palette style, code committed 99190d2; docs closeout follows).
 
 ## Objective
 
@@ -104,13 +104,14 @@ exports with draw.io's flowchart stencil and reimports as the same shape. Decisi
 followed as 8f1026c, with docs as 8b816d8: native Decision exports with draw.io's flowchart stencil and reimports
 as the same shape. Delay stencils followed as d7f7d9d, with docs as bd5212a: native Delay exports with
 draw.io's flowchart stencil and reimports as the same shape. Document stencils followed
-as 4aad462: native Document exports with draw.io's `document2` stencil and reimports
-as the same shape. This closeout records
+as 4aad462, with docs as 79bc01d: native Document exports with draw.io's `document2` stencil and reimports
+as the same shape. Data palette flags followed as 99190d2: native Data writes
+draw.io's parallelogram perimeter, corner and size flags. This closeout records
 the draw.io source port, the ADR-006 amendment, the BPMN aliases, the C4 properties,
 the SysML markers, the flowchart aliases,
 the ER flags and cardinality, the UML aliases, the floorplan aliases, the network aliases,
 the mermaid person stencil, the UML actor and class port, the basic pie stencil, the use
-case actor aliases, the hexagon alias, the Terminator stencil, the Decision stencil, the Delay stencil and the Document stencil.
+case actor aliases, the hexagon alias, the Terminator stencil, the Decision stencil, the Delay stencil, the Document stencil and the Data palette flags.
 
 The full sidebar spec was implemented and verified in round 6 (see
 `.opencode/MEMORY.md`). Round 7 closed the transparent connector label gap.

@@ -559,6 +559,8 @@ documentation closeout completes the round.
 
 **User redirect, draw.io Document stencil (code committed 4aad462).** Native Document now exports with draw.io's `shape=mxgraph.flowchart.document2;` stencil and reimports as the same registry shape. The import test already passed; the export test failed before the fix and passes after it. THIRD_PARTY.md records the added flowchart stencil.
 
+**User redirect, draw.io Data palette style (code committed 99190d2).** Native Data now writes draw.io's parallelogram perimeter, corner and size flags and reimports as the same registry shape. The import test already passed; the export test failed before the fix and passes after it. THIRD_PARTY.md records the palette flags.
+
 **Scope.**
 
 - A selection context resolver that classifies the current selection as document, single
