@@ -356,7 +356,12 @@ fn layers_dialog(ctx: &egui::Context, ed: &mut Editor, st: &mut UiState) {
                         .map(|(rid, _)| *rid == id)
                         .unwrap_or(false);
                     // Eye: visibility.
-                    let eye = theme::icon_button(
+                    let eye_label = if layer.visible {
+                        format!("Hide {}", layer.name)
+                    } else {
+                        format!("Show {}", layer.name)
+                    };
+                    let eye = theme::icon_button_labeled(
                         ui,
                         if layer.visible {
                             theme::Icon::Eye
@@ -365,17 +370,19 @@ fn layers_dialog(ctx: &egui::Context, ed: &mut Editor, st: &mut UiState) {
                         },
                         20.0,
                         !layer.visible,
+                        &eye_label,
                     );
                     if eye.clicked() {
                         ed.layer_set_visible(id, !layer.visible);
                     }
-                    eye.on_hover_text(if layer.visible {
-                        format!("Hide {}", layer.name)
-                    } else {
-                        format!("Show {}", layer.name)
-                    });
+                    eye.on_hover_text(eye_label);
                     // Padlock: lock.
-                    let lock = theme::icon_button(
+                    let lock_label = if layer.locked {
+                        format!("Unlock {}", layer.name)
+                    } else {
+                        format!("Lock {}", layer.name)
+                    };
+                    let lock = theme::icon_button_labeled(
                         ui,
                         if layer.locked {
                             theme::Icon::Lock
@@ -384,15 +391,12 @@ fn layers_dialog(ctx: &egui::Context, ed: &mut Editor, st: &mut UiState) {
                         },
                         20.0,
                         layer.locked,
+                        &lock_label,
                     );
                     if lock.clicked() {
                         ed.layer_set_locked(id, !layer.locked);
                     }
-                    lock.on_hover_text(if layer.locked {
-                        format!("Unlock {}", layer.name)
-                    } else {
-                        format!("Lock {}", layer.name)
-                    });
+                    lock.on_hover_text(lock_label);
                     if editing {
                         let Some((_, text)) = dlg.rename.as_mut() else {
                             return;
@@ -434,36 +438,68 @@ fn layers_dialog(ctx: &egui::Context, ed: &mut Editor, st: &mut UiState) {
                         }
                     }
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        let delete_label = format!("Delete {} with its shapes", layer.name);
                         if layers.len() > 1
-                            && theme::icon_button(ui, theme::Icon::Trash, 20.0, false)
-                                .on_hover_text(format!("Delete {} with its shapes", layer.name))
-                                .clicked()
+                            && theme::icon_button_labeled(
+                                ui,
+                                theme::Icon::Trash,
+                                20.0,
+                                false,
+                                &delete_label,
+                            )
+                            .on_hover_text(delete_label)
+                            .clicked()
                         {
                             ed.layer_delete(id);
                         }
-                        if theme::icon_button(ui, theme::Icon::Duplicate, 20.0, false)
-                            .on_hover_text(format!("Duplicate {} with its shapes", layer.name))
-                            .clicked()
+                        let duplicate_label = format!("Duplicate {} with its shapes", layer.name);
+                        if theme::icon_button_labeled(
+                            ui,
+                            theme::Icon::Duplicate,
+                            20.0,
+                            false,
+                            &duplicate_label,
+                        )
+                        .on_hover_text(duplicate_label)
+                        .clicked()
                         {
                             ed.layer_duplicate(id);
                         }
                         if pos + 1 < layers.len()
-                            && theme::icon_button(ui, theme::Icon::ChevronUp, 20.0, false)
-                                .on_hover_text("Move this layer up one spot")
-                                .clicked()
+                            && theme::icon_button_labeled(
+                                ui,
+                                theme::Icon::ChevronUp,
+                                20.0,
+                                false,
+                                "Move this layer up one spot",
+                            )
+                            .on_hover_text("Move this layer up one spot")
+                            .clicked()
                         {
                             ed.layer_reorder(id, pos + 1);
                         }
                         if pos > 0
-                            && theme::icon_button(ui, theme::Icon::ChevronDown, 20.0, false)
-                                .on_hover_text("Move this layer down one spot")
-                                .clicked()
+                            && theme::icon_button_labeled(
+                                ui,
+                                theme::Icon::ChevronDown,
+                                20.0,
+                                false,
+                                "Move this layer down one spot",
+                            )
+                            .on_hover_text("Move this layer down one spot")
+                            .clicked()
                         {
                             ed.layer_reorder(id, pos - 1);
                         }
-                        if theme::icon_button(ui, theme::Icon::SelectAll, 20.0, false)
-                            .on_hover_text("Select every shape on this layer")
-                            .clicked()
+                        if theme::icon_button_labeled(
+                            ui,
+                            theme::Icon::SelectAll,
+                            20.0,
+                            false,
+                            "Select every shape on this layer",
+                        )
+                        .on_hover_text("Select every shape on this layer")
+                        .clicked()
                         {
                             let ids: Vec<NodeId> = ed
                                 .doc
@@ -478,9 +514,15 @@ fn layers_dialog(ctx: &egui::Context, ed: &mut Editor, st: &mut UiState) {
                             ed.select(ids);
                         }
                         if !sel.is_empty()
-                            && theme::icon_button(ui, theme::Icon::ArrowRight, 20.0, false)
-                                .on_hover_text("Move the selection to this layer")
-                                .clicked()
+                            && theme::icon_button_labeled(
+                                ui,
+                                theme::Icon::ArrowRight,
+                                20.0,
+                                false,
+                                "Move the selection to this layer",
+                            )
+                            .on_hover_text("Move the selection to this layer")
+                            .clicked()
                         {
                             ed.move_selection_to_layer(&sel, id);
                         }
@@ -5553,8 +5595,8 @@ fn text_tab(
 mod tests {
     use super::{
         AdaptiveColors, Color, Node, NodeId, NodeKind, Paint, STICKY_COLORS, SectionGuard, apply,
-        filter_matches, normalize_query, panel, parse_tags, replace_row_filter, row_visible,
-        section_open, set_section_open, swatches,
+        filter_matches, layers_dialog, normalize_query, panel, parse_tags, replace_row_filter,
+        row_visible, section_open, set_section_open, swatches,
     };
     use crate::editor::Editor;
     use crate::ui::UiState;
@@ -5599,6 +5641,54 @@ mod tests {
             assert!(
                 labels.iter().any(|label| label == &hex),
                 "expected a {hex} label, got {labels:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn layers_dialog_actions_expose_accesskit_labels() {
+        let ctx = egui::Context::default();
+        crate::theme::install_fonts(&ctx);
+        ctx.enable_accesskit();
+        let mut ed = Editor::default();
+        ed.layer_add();
+        let mut st = UiState {
+            layers_dialog: Some(Default::default()),
+            ..Default::default()
+        };
+        let mut out = ctx.run_ui(
+            egui::RawInput {
+                screen_rect: Some(egui::Rect::from_min_size(
+                    egui::Pos2::ZERO,
+                    egui::vec2(900.0, 700.0),
+                )),
+                ..Default::default()
+            },
+            |ui| layers_dialog(ui.ctx(), &mut ed, &mut st),
+        );
+        out.textures_delta.clear();
+        let update = out
+            .platform_output
+            .accesskit_update
+            .expect("layers dialog should register accessibility nodes");
+        let labels: Vec<String> = update
+            .nodes
+            .iter()
+            .filter_map(|(_, node)| node.label().map(str::to_string))
+            .collect();
+        for expected in [
+            "Hide Layer 2",
+            "Lock Layer 2",
+            "Delete Layer 2 with its shapes",
+            "Duplicate Layer 2 with its shapes",
+            "Move this layer down one spot",
+            "Select every shape on this layer",
+            "Hide Background",
+            "Move this layer up one spot",
+        ] {
+            assert!(
+                labels.iter().any(|label| label == expected),
+                "expected an {expected} label, got {labels:?}"
             );
         }
     }
