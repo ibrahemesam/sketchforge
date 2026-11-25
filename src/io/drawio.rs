@@ -3341,7 +3341,13 @@ fn drawio_shape_for_registry(id: &str) -> Option<&'static str> {
         "manual-operation" => {
             "verticalLabelPosition=middle;verticalAlign=middle;html=1;shape=trapezoid;perimeter=trapezoidPerimeter;whiteSpace=wrap;size=0.23;arcSize=10;flipV=1;labelPosition=center;align=center;"
         }
-        "preparation" => "shape=hexagon;whiteSpace=wrap;html=1;",
+        // Draw.io's flowchart palette uses these hexagon flags. Ported from
+        // `src/main/webapp/js/diagramly/sidebar/Sidebar-Flowchart.js`,
+        // Copyright (c) 2020-2025 JGraph Holdings Ltd / draw.io AG, Apache-2.0.
+        // See `THIRD_PARTY.md`.
+        "preparation" => {
+            "verticalLabelPosition=bottom;verticalAlign=top;html=1;shape=hexagon;perimeter=hexagonPerimeter2;arcSize=6;size=0.27;"
+        }
         // Draw.io's flowchart palette writes Delay as a stencil. Ported from
         // `src/main/webapp/js/diagramly/sidebar/Sidebar-Flowchart.js`,
         // Copyright (c) 2020-2025 JGraph Holdings Ltd / draw.io AG, Apache-2.0.
