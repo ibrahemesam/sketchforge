@@ -509,6 +509,8 @@ documentation closeout completes the round.
 
 **Round 96 (code committed 8af5f2d).** Sidebar page rows now say Switch to <page name> in the accessibility tree. A panel render test found only Add and Collapse labels before the fix. UIX-12 stays IN_PROGRESS.
 
+**Round 97 (code committed d661af8).** Command palette result rows now say Run <command> in the accessibility tree. A palette render test found no labels before the fix. UIX-12 stays IN_PROGRESS.
+
 **Scope.**
 
 - A selection context resolver that classifies the current selection as document, single

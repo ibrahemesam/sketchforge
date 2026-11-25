@@ -1,6 +1,6 @@
 # Sketch agent session state
 
-Last updated: 2026-11-25 (Sidebar page row names, code committed 8af5f2d).
+Last updated: 2026-11-25 (Command palette result names, code committed d661af8).
 
 ## Objective
 
@@ -56,8 +56,9 @@ button in the Layers dialog. Its docs closeout was pushed as 33305e0. Round 94
 code commit 489e7a6 names the Style palette arrows and page dots. Its docs
 closeout was pushed as 1c7123e. Round 95 code commit bacbe2f names the sidebar
 layer eye and lock controls. Its docs closeout was pushed as 02a5545. Round 96
-code commit 8af5f2d names the sidebar page rows. The round 96 docs closeout follows
-this commit.
+code commit 8af5f2d names the sidebar page rows. Its docs closeout was pushed as
+c044836. Round 97 code commit d661af8 names the command palette result rows. The
+round 97 docs closeout follows this commit.
 
 The full sidebar spec was implemented and verified in round 6 (see
 `.opencode/MEMORY.md`). Round 7 closed the transparent connector label gap.
@@ -779,6 +780,8 @@ Round 95 (committed bacbe2f) names the sidebar eye and lock click regions. A hid
 
 Round 96 (committed 8af5f2d) names sidebar page rows with their switch action. A panel render test found only Add and Collapse labels before the fix. UIX-12 stays IN_PROGRESS.
 
+Round 97 (committed d661af8) names command palette result rows with their run action. A palette render test found no labels before the fix. UIX-12 stays IN_PROGRESS.
+
 ## Blockers
 
 - No blockers. M9 collaboration remains deferred pending a server, a conflict
@@ -794,14 +797,14 @@ Round 96 (committed 8af5f2d) names sidebar page rows with their switch action. A
 ## Exact next task
 
 Audit UIX-12 beyond icon buttons, sidebar order buttons, sticky swatches,
-Layers dialog actions, the Style palette pager, sidebar layer controls and page
-rows. It is IN_PROGRESS, not VERIFIED. A concrete candidate is the command palette
-result rows in `src/ui/palette.rs`, whose click regions have no widget info.
-Visible focus and the absent canvas accessibility tree are still open too. Capture
-a failing test before any real code fix. Otherwise close or correct stale rows as
-evidence-only with cited HEAD identifiers and update verification/session docs.
-Do not restart completed rounds. Keep blocked/deferred items blocked. No release,
-tag, or PR.
+Layers dialog actions, the Style palette pager, sidebar layer controls, page rows
+and command palette results. It is IN_PROGRESS, not VERIFIED. A concrete candidate
+is the sidebar layer row itself in `src/ui/mod.rs`, whose click target has no
+widget info. Visible focus and the absent canvas accessibility tree are still
+open too. Capture a failing test before any real code fix. Otherwise close or
+correct stale rows as evidence-only with cited HEAD identifiers and update
+verification/session docs. Do not restart completed rounds. Keep blocked/deferred
+items blocked. No release, tag, or PR.
 
 ## Commands
 
