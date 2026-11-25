@@ -1,6 +1,6 @@
 # Sketch agent session state
 
-Last updated: 2026-11-25 (draw.io pie slice support, code committed f221136; docs closeout follows).
+Last updated: 2026-11-25 (draw.io use case actor aliases, code committed c343695; docs closeout follows).
 
 ## Objective
 
@@ -91,12 +91,14 @@ as the native Person shape, and native Person exports with that stencil and peri
 actor and class support followed as 2ebe8f9, with docs as 9f0a3ac: `shape=umlActor`
 exports with the palette's label styles, composite cells with `attributes` and `operations`
 children import as Class, and native Class exports with the draw.io swimlane style and both
-children. Pie slice support followed as f221136: draw.io's basic pie stencil imports as the
-native Pie Slice, native Pie Slice exports with quarter-turn angles, and imports with other
-angles report an approximation. This closeout records the draw.io source port, the ADR-006
+children. Pie slice support followed as f221136, with docs as 0f26ab3: draw.io's basic pie stencil
+imports as the native Pie Slice, native Pie Slice exports with quarter-turn angles, and
+imports with other angles report an approximation. Use case actors followed as c343695:
+draw.io's `mermaidUsecaseActor` variants import as the native Actor, with approximations for
+hollow and silhouette types. This closeout records the draw.io source port, the ADR-006
 amendment, the BPMN aliases, the C4 properties, the SysML markers, the flowchart aliases,
 the ER flags, the UML aliases, the floorplan aliases, the network aliases, the mermaid person
-stencil, the UML actor and class port and the basic pie stencil.
+stencil, the UML actor and class port, the basic pie stencil and the use case actor aliases.
 
 The full sidebar spec was implemented and verified in round 6 (see
 `.opencode/MEMORY.md`). Round 7 closed the transparent connector label gap.

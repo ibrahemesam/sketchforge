@@ -545,6 +545,8 @@ documentation closeout completes the round.
 
 **User redirect, draw.io pie slice (code committed f221136).** Draw.io's basic pie stencil now imports as the native Pie Slice, and native Pie Slice exports with quarter-turn angles. Imports with other angles report an approximation. Both integration tests failed before the fix and pass after it. THIRD_PARTY.md records Sidebar-Basic.js and mxBasic.js.
 
+**User redirect, draw.io use case actor aliases (code committed c343695).** Draw.io's `mermaidUsecaseActor` variants now import as the native Actor. Hollow and silhouette types report a shape approximation, while native Actor export keeps the existing `umlActor` style. The integration test failed before the fix and passes after it. THIRD_PARTY.md records the added basic palette aliases.
+
 **Scope.**
 
 - A selection context resolver that classifies the current selection as document, single
