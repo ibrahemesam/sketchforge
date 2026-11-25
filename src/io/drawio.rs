@@ -378,10 +378,15 @@ fn parse_cell(node: XmlNode<'_, '_>, wrapper: Option<XmlNode<'_, '_>>, order: us
             }
         }
     }
+    let style = node
+        .attribute("style")
+        .or_else(|| wrapper.and_then(|w| w.attribute("style")))
+        .unwrap_or("")
+        .to_string();
     RawCell {
         id,
         value,
-        style: node.attribute("style").unwrap_or("").to_string(),
+        style,
         parent,
         vertex,
         edge,
@@ -401,7 +406,7 @@ fn parse_cell(node: XmlNode<'_, '_>, wrapper: Option<XmlNode<'_, '_>>, order: us
 fn is_reserved_wrapper_attr(name: &str) -> bool {
     matches!(
         name,
-        "id" | "label" | "link" | "tooltip" | "tags" | "placeholders" | "sketch-data"
+        "id" | "label" | "link" | "tooltip" | "tags" | "style" | "placeholders" | "sketch-data"
     ) || name.starts_with("xmlns")
 }
 
@@ -774,7 +779,9 @@ fn import_model(
         node.label = plain_text(&cell.value);
         if !node.label.is_empty() {
             node.label_size = Some(st.num("fontSize").unwrap_or(11.0));
-            let font_pair = st.color_pair("fontColor").unwrap_or((Color::BLACK, None));
+            let font_pair = st
+                .color_pair_filled("fontColor")
+                .unwrap_or((Color::BLACK, None));
             node.label_color = Some(font_pair.0);
             node.label_color_dark = font_pair.1;
         }
@@ -1006,28 +1013,86 @@ fn refit_connector(doc: &mut Document, id: NodeId) {
 
 // --------------------------------------------------------------------------------- styles
 
+type ColorPair = (Color, Option<Color>);
+
+const DEFAULT_FOREGROUND: ColorPair = (Color::BLACK, Some(Color::WHITE));
+const DEFAULT_BACKGROUND: ColorPair = (Color::WHITE, Some(Color::rgb(0x12, 0x12, 0x12)));
+const BACKGROUND_COLOR_KEYS: &[&str] = &[
+    "fillColor",
+    "swimlaneFillColor",
+    "labelBackgroundColor",
+    "imageBackground",
+];
+
+// The default color roles and `default<Key>=invert` follow draw.io's
+// `js/grapheditor/Editor.js` (getShapeForegroundColor / getShapeBackgroundColor)
+// and `js/grapheditor/Graph.js` (replaceDefaultColors / getDefaultColor),
+// Copyright (c) jGraph Ltd, Apache-2.0. This is a Rust port, not upstream code.
 struct ParsedStyle {
     map: HashMap<String, String>,
+    inverted_defaults: HashSet<String>,
+}
+
+fn insert_style_part(map: &mut HashMap<String, String>, part: &str) {
+    let part = part.trim();
+    if part.is_empty() {
+        return;
+    }
+    match part.split_once('=') {
+        Some((k, v)) => {
+            map.insert(k.trim().to_string(), v.trim().to_string());
+        }
+        None => {
+            map.insert(part.to_string(), String::new());
+        }
+    }
 }
 
 impl ParsedStyle {
     fn parse(s: &str) -> ParsedStyle {
         let mut map = HashMap::new();
-        for part in s.split(';') {
-            let part = part.trim();
-            if part.is_empty() {
-                continue;
-            }
-            match part.split_once('=') {
-                Some((k, v)) => {
-                    map.insert(k.trim().to_string(), v.trim().to_string());
+        let mut start = 0usize;
+        let mut depth = 0usize;
+        let mut data_uri = false;
+        let mut data_comma = false;
+        let bytes = s.as_bytes();
+        for i in 0..bytes.len() {
+            match bytes[i] {
+                b'(' => depth += 1,
+                b')' => depth = depth.saturating_sub(1),
+                b'=' if depth == 0 && !data_uri => {
+                    if s[i + 1..].trim_start().starts_with("data:") {
+                        data_uri = true;
+                        data_comma = false;
+                    }
                 }
-                None => {
-                    map.insert(part.to_string(), String::new());
+                b',' if data_uri => data_comma = true,
+                b';' if depth == 0 && !(data_uri && !data_comma) => {
+                    insert_style_part(&mut map, &s[start..i]);
+                    start = i + 1;
+                    data_uri = false;
+                    data_comma = false;
                 }
+                _ => {}
             }
         }
-        ParsedStyle { map }
+        insert_style_part(&mut map, &s[start..]);
+
+        let mut inverted_defaults = HashSet::new();
+        for (key, value) in &map {
+            if value.eq_ignore_ascii_case("invert")
+                && let Some(rest) = key.strip_prefix("default")
+                && !rest.is_empty()
+            {
+                let mut chars = rest.chars();
+                let first = chars.next().unwrap().to_ascii_lowercase();
+                inverted_defaults.insert(format!("{first}{}", chars.as_str()));
+            }
+        }
+        ParsedStyle {
+            map,
+            inverted_defaults,
+        }
     }
 
     fn get(&self, key: &str) -> Option<&str> {
@@ -1048,46 +1113,61 @@ impl ParsedStyle {
         self.get(key).is_some_and(|v| v == "1" || v == "true")
     }
 
-    fn color_pair(&self, key: &str) -> Option<(Color, Option<Color>)> {
-        let v = self.get(key)?;
-        if v.eq_ignore_ascii_case("none") {
+    /// draw.io's role-based default, with `default<Key>=invert` applied.
+    fn default_color_pair(&self, key: &str) -> ColorPair {
+        let pair = if BACKGROUND_COLOR_KEYS.contains(&key) {
+            DEFAULT_BACKGROUND
+        } else {
+            DEFAULT_FOREGROUND
+        };
+        if self.inverted_defaults.contains(key) {
+            let (light, dark) = pair;
+            (light.inverse(), Some(dark.unwrap_or(light).inverse()))
+        } else {
+            pair
+        }
+    }
+
+    /// An explicit color, or `default` / `inherit` resolved to its role default.
+    /// `none` stays empty so callers can drop the paint.
+    fn color_pair(&self, key: &str) -> Option<ColorPair> {
+        let raw = self.get(key)?;
+        if raw.eq_ignore_ascii_case("none") {
             return None;
         }
-        parse_color_pair(v)
+        let pair = if raw.eq_ignore_ascii_case("default") || raw.eq_ignore_ascii_case("inherit") {
+            self.default_color_pair(key)
+        } else {
+            parse_color_pair(raw).unwrap_or_else(|| self.default_color_pair(key))
+        };
+        Some(pair)
+    }
+
+    /// Like [`Self::color_pair`], but a missing key takes the draw.io default.
+    fn color_pair_filled(&self, key: &str) -> Option<ColorPair> {
+        if self.has(key) {
+            self.color_pair(key)
+        } else {
+            Some(self.default_color_pair(key))
+        }
     }
 }
 
 /// A `light-dark(light,dark)` value, or a fixed light color with no dark variant.
-fn parse_color_pair(s: &str) -> Option<(Color, Option<Color>)> {
+fn parse_color_pair(s: &str) -> Option<ColorPair> {
     let s = s.trim();
-    let inner = s
-        .get(..11)
-        .filter(|p| p.eq_ignore_ascii_case("light-dark("))
-        .and_then(|_| s.get(11..))
-        .and_then(|rest| rest.strip_suffix(')'));
-    let Some(inner) = inner else {
+    let Some(inner) = function_args(s, "light-dark") else {
         return parse_color(s).map(|c| (c, None));
     };
-    let mut depth = 0usize;
-    let mut split = None;
-    for (i, ch) in inner.char_indices() {
-        match ch {
-            '(' => depth += 1,
-            ')' => depth = depth.saturating_sub(1),
-            ',' if depth == 0 => {
-                split = Some(i);
-                break;
-            }
-            _ => {}
-        }
-    }
-    let (light, dark) = split.map_or((inner, ""), |i| (&inner[..i], &inner[i + 1..]));
-    let light = if light.trim().eq_ignore_ascii_case("none") {
+    let parts = split_top_level(inner, ',');
+    let light = parts.first().copied().unwrap_or("").trim();
+    let dark = parts.get(1).copied().unwrap_or("").trim();
+    let light = if light.is_empty() || light.eq_ignore_ascii_case("none") {
         None
     } else {
         Some(parse_color(light)?)
     };
-    let dark = if dark.trim().is_empty() || dark.trim().eq_ignore_ascii_case("none") {
+    let dark = if dark.is_empty() || dark.eq_ignore_ascii_case("none") {
         None
     } else {
         Some(parse_color(dark)?)
@@ -1109,39 +1189,358 @@ fn solid_pair((light, dark): (Color, Option<Color>)) -> Paint {
     }
 }
 
+/// CSS color syntax accepted by draw.io styles: hex, `rgb()`, `hsl()`, `var()`
+/// fallbacks, `light-dark()` and named colors.
 fn parse_color(s: &str) -> Option<Color> {
     let s = s.trim();
+    if let Some(inner) = function_args(s, "var") {
+        let parts = split_top_level(inner, ',');
+        return parts.get(1).and_then(|p| parse_color(p));
+    }
+    if let Some(inner) = function_args(s, "light-dark") {
+        let parts = split_top_level(inner, ',');
+        return parts.first().and_then(|p| parse_color(p));
+    }
+    if let Some(inner) = function_args(s, "rgb") {
+        return parse_rgb_args(inner, false);
+    }
+    if let Some(inner) = function_args(s, "rgba") {
+        return parse_rgb_args(inner, true);
+    }
+    if let Some(inner) = function_args(s, "hsl") {
+        return parse_hsl_args(inner, false);
+    }
+    if let Some(inner) = function_args(s, "hsla") {
+        return parse_hsl_args(inner, true);
+    }
     if let Some(hex) = s.strip_prefix('#') {
-        let p = |i: usize| u8::from_str_radix(hex.get(i..i + 2)?, 16).ok();
+        let nibble = |i: usize| {
+            u8::from_str_radix(hex.get(i..i + 1)?, 16)
+                .ok()
+                .map(|v| v * 17)
+        };
+        let byte = |i: usize| u8::from_str_radix(hex.get(i..i + 2)?, 16).ok();
         return match hex.len() {
-            6 => Some(Color::rgb(p(0)?, p(2)?, p(4)?)),
-            8 => Some(Color::rgba(p(0)?, p(2)?, p(4)?, p(6)?)),
-            3 => {
-                let d = |i: usize| {
-                    u8::from_str_radix(hex.get(i..i + 1)?, 16)
-                        .ok()
-                        .map(|v| v * 17)
-                };
-                Some(Color::rgb(d(0)?, d(1)?, d(2)?))
-            }
+            3 => Some(Color::rgb(nibble(0)?, nibble(1)?, nibble(2)?)),
+            4 => Some(Color::rgba(nibble(0)?, nibble(1)?, nibble(2)?, nibble(3)?)),
+            6 => Some(Color::rgb(byte(0)?, byte(2)?, byte(4)?)),
+            8 => Some(Color::rgba(byte(0)?, byte(2)?, byte(4)?, byte(6)?)),
             _ => None,
         };
     }
-    let lower = s.to_ascii_lowercase();
-    let (r, g, b) = match lower.as_str() {
-        "white" => (255, 255, 255),
-        "black" => (0, 0, 0),
-        "red" => (255, 0, 0),
-        "green" => (0, 128, 0),
-        "blue" => (0, 0, 255),
-        "yellow" => (255, 255, 0),
-        "orange" => (255, 165, 0),
-        "gray" | "grey" => (128, 128, 128),
-        "lightgray" | "lightgrey" => (211, 211, 211),
-        "darkgray" | "darkgrey" => (169, 169, 169),
-        _ => return None,
+    named_color(s)
+}
+
+fn function_args<'a>(s: &'a str, name: &str) -> Option<&'a str> {
+    let s = s.trim();
+    let prefix_len = name.len() + 1;
+    if s.len() < prefix_len + 1 {
+        return None;
+    }
+    if !s
+        .get(..prefix_len)?
+        .eq_ignore_ascii_case(&format!("{name}("))
+    {
+        return None;
+    }
+    let rest = s.get(prefix_len..)?;
+    rest.strip_suffix(')')
+}
+
+fn split_top_level(s: &str, sep: char) -> Vec<&str> {
+    let mut depth = 0usize;
+    let mut start = 0usize;
+    let mut parts = Vec::new();
+    for (i, ch) in s.char_indices() {
+        match ch {
+            '(' => depth += 1,
+            ')' => depth = depth.saturating_sub(1),
+            c if c == sep && depth == 0 => {
+                parts.push(&s[start..i]);
+                start = i + c.len_utf8();
+            }
+            _ => {}
+        }
+    }
+    parts.push(&s[start..]);
+    parts
+}
+
+fn split_color_alpha(s: &str) -> (&str, Option<&str>) {
+    let parts = split_top_level(s, '/');
+    if parts.len() == 2 {
+        (parts[0].trim(), Some(parts[1].trim()))
+    } else {
+        (s.trim(), None)
+    }
+}
+
+fn css_channel(value: &str, max: u8) -> Option<u8> {
+    let value = value.trim();
+    let n = if let Some(percent) = value.strip_suffix('%') {
+        percent.parse::<f64>().ok()? / 100.0 * max as f64
+    } else {
+        value.parse::<f64>().ok()?
     };
-    Some(Color::rgb(r, g, b))
+    Some(n.round().clamp(0.0, max as f64) as u8)
+}
+
+fn css_alpha(value: &str) -> Option<u8> {
+    let value = value.trim();
+    let n = if let Some(percent) = value.strip_suffix('%') {
+        percent.parse::<f64>().ok()? / 100.0 * 255.0
+    } else {
+        let n = value.parse::<f64>().ok()?;
+        if n <= 1.0 { n * 255.0 } else { n }
+    };
+    Some(n.round().clamp(0.0, 255.0) as u8)
+}
+
+fn css_unit(value: &str) -> Option<f64> {
+    let value = value.trim();
+    let n = if let Some(percent) = value.strip_suffix('%') {
+        percent.parse::<f64>().ok()? / 100.0
+    } else {
+        value.parse::<f64>().ok()?
+    };
+    Some(n.clamp(0.0, 1.0))
+}
+
+fn css_hue(value: &str) -> Option<f64> {
+    let lower = value.trim().to_ascii_lowercase();
+    let (number, factor) = if let Some(v) = lower.strip_suffix("deg") {
+        (v, 1.0)
+    } else if let Some(v) = lower.strip_suffix("grad") {
+        (v, 0.9)
+    } else if let Some(v) = lower.strip_suffix("rad") {
+        (v, 180.0 / std::f64::consts::PI)
+    } else if let Some(v) = lower.strip_suffix("turn") {
+        (v, 360.0)
+    } else {
+        (lower.as_str(), 1.0)
+    };
+    Some((number.trim().parse::<f64>().ok()? * factor).rem_euclid(360.0))
+}
+
+fn parse_rgb_args(s: &str, alpha_allowed: bool) -> Option<Color> {
+    let (base, slash_alpha) = split_color_alpha(s);
+    let parts: Vec<&str> = if base.contains(',') {
+        split_top_level(base, ',')
+    } else {
+        base.split_whitespace().collect()
+    };
+    if !(3..=4).contains(&parts.len()) || (parts.len() == 4 && !alpha_allowed) {
+        return None;
+    }
+    let r = css_channel(parts[0], 255)?;
+    let g = css_channel(parts[1], 255)?;
+    let b = css_channel(parts[2], 255)?;
+    let alpha = slash_alpha
+        .or_else(|| parts.get(3).copied())
+        .and_then(css_alpha)
+        .unwrap_or(255);
+    Some(Color::rgba(r, g, b, alpha))
+}
+
+fn parse_hsl_args(s: &str, alpha_allowed: bool) -> Option<Color> {
+    let (base, slash_alpha) = split_color_alpha(s);
+    let parts: Vec<&str> = if base.contains(',') {
+        split_top_level(base, ',')
+    } else {
+        base.split_whitespace().collect()
+    };
+    if !(3..=4).contains(&parts.len()) || (parts.len() == 4 && !alpha_allowed) {
+        return None;
+    }
+    let h = css_hue(parts[0])?;
+    let saturation = css_unit(parts[1])?;
+    let lightness = css_unit(parts[2])?;
+    let alpha = slash_alpha
+        .or_else(|| parts.get(3).copied())
+        .and_then(css_alpha)
+        .unwrap_or(255);
+    Some(hsl_to_color(h, saturation, lightness, alpha))
+}
+
+fn hsl_to_color(h: f64, s: f64, l: f64, a: u8) -> Color {
+    let c = (1.0 - (2.0 * l - 1.0).abs()) * s;
+    let hp = h / 60.0;
+    let x = c * (1.0 - ((hp % 2.0) - 1.0).abs());
+    let (r, g, b) = match (hp.floor() as i32).rem_euclid(6) {
+        0 => (c, x, 0.0),
+        1 => (x, c, 0.0),
+        2 => (0.0, c, x),
+        3 => (0.0, x, c),
+        4 => (x, 0.0, c),
+        _ => (c, 0.0, x),
+    };
+    let m = l - c / 2.0;
+    let channel = |v: f64| ((v + m) * 255.0).round().clamp(0.0, 255.0) as u8;
+    Color::rgba(channel(r), channel(g), channel(b), a)
+}
+
+fn named_color(s: &str) -> Option<Color> {
+    const NAMED: &[(&str, u8, u8, u8)] = &[
+        ("aliceblue", 240, 248, 255),
+        ("antiquewhite", 250, 235, 215),
+        ("aqua", 0, 255, 255),
+        ("aquamarine", 127, 255, 212),
+        ("azure", 240, 255, 255),
+        ("beige", 245, 245, 220),
+        ("bisque", 255, 228, 196),
+        ("black", 0, 0, 0),
+        ("blanchedalmond", 255, 235, 205),
+        ("blue", 0, 0, 255),
+        ("blueviolet", 138, 43, 226),
+        ("brown", 165, 42, 42),
+        ("burlywood", 222, 184, 135),
+        ("cadetblue", 95, 158, 160),
+        ("chartreuse", 127, 255, 0),
+        ("chocolate", 210, 105, 30),
+        ("coral", 255, 127, 80),
+        ("cornflowerblue", 100, 149, 237),
+        ("cornsilk", 255, 248, 220),
+        ("crimson", 220, 20, 60),
+        ("cyan", 0, 255, 255),
+        ("darkblue", 0, 0, 139),
+        ("darkcyan", 0, 139, 139),
+        ("darkgoldenrod", 184, 134, 11),
+        ("darkgray", 169, 169, 169),
+        ("darkgreen", 0, 100, 0),
+        ("darkgrey", 169, 169, 169),
+        ("darkkhaki", 189, 183, 107),
+        ("darkmagenta", 139, 0, 139),
+        ("darkolivegreen", 85, 107, 47),
+        ("darkorange", 255, 140, 0),
+        ("darkorchid", 153, 50, 204),
+        ("darkred", 139, 0, 0),
+        ("darksalmon", 233, 150, 122),
+        ("darkseagreen", 143, 188, 143),
+        ("darkslateblue", 72, 61, 139),
+        ("darkslategray", 47, 79, 79),
+        ("darkslategrey", 47, 79, 79),
+        ("darkturquoise", 0, 206, 209),
+        ("darkviolet", 148, 0, 211),
+        ("deeppink", 255, 20, 147),
+        ("deepskyblue", 0, 191, 255),
+        ("dimgray", 105, 105, 105),
+        ("dimgrey", 105, 105, 105),
+        ("dodgerblue", 30, 144, 255),
+        ("firebrick", 178, 34, 34),
+        ("floralwhite", 255, 250, 240),
+        ("forestgreen", 34, 139, 34),
+        ("fuchsia", 255, 0, 255),
+        ("gainsboro", 220, 220, 220),
+        ("ghostwhite", 248, 248, 255),
+        ("gold", 255, 215, 0),
+        ("goldenrod", 218, 165, 32),
+        ("gray", 128, 128, 128),
+        ("green", 0, 128, 0),
+        ("greenyellow", 173, 255, 47),
+        ("grey", 128, 128, 128),
+        ("honeydew", 240, 255, 240),
+        ("hotpink", 255, 105, 180),
+        ("indianred", 205, 92, 92),
+        ("indigo", 75, 0, 130),
+        ("ivory", 255, 255, 240),
+        ("khaki", 240, 230, 140),
+        ("lavender", 230, 230, 250),
+        ("lavenderblush", 255, 240, 245),
+        ("lawngreen", 124, 252, 0),
+        ("lemonchiffon", 255, 250, 205),
+        ("lightblue", 173, 216, 230),
+        ("lightcoral", 240, 128, 128),
+        ("lightcyan", 224, 255, 255),
+        ("lightgoldenrodyellow", 250, 250, 210),
+        ("lightgray", 211, 211, 211),
+        ("lightgreen", 144, 238, 144),
+        ("lightgrey", 211, 211, 211),
+        ("lightpink", 255, 182, 193),
+        ("lightsalmon", 255, 160, 122),
+        ("lightseagreen", 32, 178, 170),
+        ("lightskyblue", 135, 206, 250),
+        ("lightslategray", 119, 136, 153),
+        ("lightslategrey", 119, 136, 153),
+        ("lightsteelblue", 176, 196, 222),
+        ("lightyellow", 255, 255, 224),
+        ("lime", 0, 255, 0),
+        ("limegreen", 50, 205, 50),
+        ("linen", 250, 240, 230),
+        ("magenta", 255, 0, 255),
+        ("maroon", 128, 0, 0),
+        ("mediumaquamarine", 102, 205, 170),
+        ("mediumblue", 0, 0, 205),
+        ("mediumorchid", 186, 85, 211),
+        ("mediumpurple", 147, 112, 219),
+        ("mediumseagreen", 60, 179, 113),
+        ("mediumslateblue", 123, 104, 238),
+        ("mediumspringgreen", 0, 250, 154),
+        ("mediumturquoise", 72, 209, 204),
+        ("mediumvioletred", 199, 21, 133),
+        ("midnightblue", 25, 25, 112),
+        ("mintcream", 245, 255, 250),
+        ("mistyrose", 255, 228, 225),
+        ("moccasin", 255, 228, 181),
+        ("navajowhite", 255, 222, 173),
+        ("navy", 0, 0, 128),
+        ("oldlace", 253, 245, 230),
+        ("olive", 128, 128, 0),
+        ("olivedrab", 107, 142, 35),
+        ("orange", 255, 165, 0),
+        ("orangered", 255, 69, 0),
+        ("orchid", 218, 112, 214),
+        ("palegoldenrod", 238, 232, 170),
+        ("palegreen", 152, 251, 152),
+        ("paleturquoise", 175, 238, 238),
+        ("palevioletred", 219, 112, 147),
+        ("papayawhip", 255, 239, 213),
+        ("peachpuff", 255, 218, 185),
+        ("peru", 205, 133, 63),
+        ("pink", 255, 192, 203),
+        ("plum", 221, 160, 221),
+        ("powderblue", 176, 224, 230),
+        ("purple", 128, 0, 128),
+        ("rebeccapurple", 102, 51, 153),
+        ("red", 255, 0, 0),
+        ("rosybrown", 188, 143, 143),
+        ("royalblue", 65, 105, 225),
+        ("saddlebrown", 139, 69, 19),
+        ("salmon", 250, 128, 114),
+        ("sandybrown", 244, 164, 96),
+        ("seagreen", 46, 139, 87),
+        ("seashell", 255, 245, 238),
+        ("sienna", 160, 82, 45),
+        ("silver", 192, 192, 192),
+        ("skyblue", 135, 206, 235),
+        ("slateblue", 106, 90, 205),
+        ("slategray", 112, 128, 144),
+        ("slategrey", 112, 128, 144),
+        ("snow", 255, 250, 250),
+        ("springgreen", 0, 255, 127),
+        ("steelblue", 70, 130, 180),
+        ("tan", 210, 180, 140),
+        ("teal", 0, 128, 128),
+        ("thistle", 216, 191, 216),
+        ("tomato", 255, 99, 71),
+        ("transparent", 0, 0, 0),
+        ("turquoise", 64, 224, 208),
+        ("violet", 238, 130, 238),
+        ("wheat", 245, 222, 179),
+        ("white", 255, 255, 255),
+        ("whitesmoke", 245, 245, 245),
+        ("yellow", 255, 255, 0),
+        ("yellowgreen", 154, 205, 50),
+    ];
+    let lower = s.to_ascii_lowercase();
+    let found = NAMED
+        .iter()
+        .find(|(name, _, _, _)| *name == lower.as_str())?;
+    let (_, r, g, b) = *found;
+    if lower == "transparent" {
+        Some(Color::TRANSPARENT)
+    } else {
+        Some(Color::rgb(r, g, b))
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -1391,7 +1790,9 @@ fn apply_style(n: &mut Node, st: &ParsedStyle, target: StyleTarget) {
     };
     match target {
         StyleTarget::Text => {
-            let pair = st.color_pair("fontColor").unwrap_or((Color::BLACK, None));
+            let pair = st
+                .color_pair_filled("fontColor")
+                .unwrap_or((Color::BLACK, None));
             n.style.fills = vec![solid_pair(pair)];
             n.style.fill_enabled = true;
             n.style.fill_auto = false;
@@ -1426,48 +1827,73 @@ fn apply_style(n: &mut Node, st: &ParsedStyle, target: StyleTarget) {
         StyleTarget::Edge => {
             n.style.fills.clear();
             n.style.fill_enabled = false;
-            let pair = st.color_pair("strokeColor").unwrap_or((Color::BLACK, None));
-            n.style.stroke = Some(pair.0);
-            n.style.stroke_dark = pair.1;
-            n.style.stroke_enabled = true;
+            match st.color_pair_filled("strokeColor") {
+                Some(pair) => {
+                    n.style.stroke = Some(pair.0);
+                    n.style.stroke_dark = pair.1;
+                    n.style.stroke_enabled = true;
+                }
+                None => {
+                    n.style.stroke = None;
+                    n.style.stroke_dark = None;
+                    n.style.stroke_enabled = false;
+                }
+            }
             n.style.stroke_width = width;
             n.style.dash = dash;
             n.style.opacity = opacity;
             n.style.corner_radius = 0.0;
         }
         StyleTarget::Registry => {
-            if st.has("fillColor") {
-                match st.color_pair("fillColor") {
-                    Some(pair) => {
-                        n.style.fills = vec![solid_pair(pair)];
-                        n.style.fill_enabled = true;
-                    }
-                    None => {
-                        n.style.fills.clear();
-                        n.style.fill_enabled = false;
-                    }
+            match st.color_pair_filled("fillColor") {
+                Some(pair) => {
+                    n.style.fills = vec![solid_pair(pair)];
+                    n.style.fill_enabled = true;
                 }
-                n.style.fill_auto = false;
+                None => {
+                    n.style.fills.clear();
+                    n.style.fill_enabled = false;
+                }
             }
-            if st.has("strokeColor") {
-                let pair = st.color_pair("strokeColor");
-                n.style.stroke = pair.map(|(c, _)| c);
-                n.style.stroke_dark = pair.and_then(|(_, d)| d);
-                n.style.stroke_enabled = n.style.stroke.is_some();
-                n.style.stroke_width = width;
+            n.style.fill_auto = false;
+            match st.color_pair_filled("strokeColor") {
+                Some(pair) => {
+                    n.style.stroke = Some(pair.0);
+                    n.style.stroke_dark = pair.1;
+                    n.style.stroke_enabled = true;
+                }
+                None => {
+                    n.style.stroke = None;
+                    n.style.stroke_dark = None;
+                    n.style.stroke_enabled = false;
+                }
             }
+            n.style.stroke_width = width;
             n.style.dash = dash;
             n.style.opacity = opacity;
         }
         StyleTarget::Shape | StyleTarget::Frame => {
-            let fill_pair = if st.has("fillColor") {
-                st.color_pair("fillColor")
+            // A swimlane's `fillColor` paints its title band; the body uses
+            // `swimlaneFillColor` when draw.io supplies one.
+            let fill_key = if matches!(target, StyleTarget::Frame) && st.has("swimlaneFillColor") {
+                "swimlaneFillColor"
             } else {
-                Some((Color::WHITE, None))
+                "fillColor"
             };
-            if let (Some((from, from_dark)), Some((to, to_dark))) =
-                (fill_pair, st.color_pair("gradientColor"))
-            {
+            let fill_pair = st.color_pair_filled(fill_key);
+            let gradient_enabled = st
+                .get("gradient")
+                .is_none_or(|v| v != "0" && !v.eq_ignore_ascii_case("false"));
+            let gradient_pair = if !gradient_enabled {
+                None
+            } else if st.has("gradientColor") {
+                st.color_pair("gradientColor")
+            } else if st.get("gradient").is_some() {
+                Some(st.default_color_pair("gradientColor"))
+            } else {
+                None
+            };
+            if let (Some((from, from_dark)), Some((to, to_dark))) = (fill_pair, gradient_pair) {
                 let (a, b) = match st.get("gradientDirection").unwrap_or("south") {
                     "east" => (v2(0.0, 0.5), v2(1.0, 0.5)),
                     "west" => (v2(1.0, 0.5), v2(0.0, 0.5)),
@@ -1496,10 +1922,18 @@ fn apply_style(n: &mut Node, st: &ParsedStyle, target: StyleTarget) {
                 n.style.fill_enabled = fill_pair.is_some();
             }
             n.style.fill_auto = false;
-            let stroke_pair = st.color_pair("strokeColor").unwrap_or((Color::BLACK, None));
-            n.style.stroke = Some(stroke_pair.0);
-            n.style.stroke_dark = stroke_pair.1;
-            n.style.stroke_enabled = true;
+            match st.color_pair_filled("strokeColor") {
+                Some(pair) => {
+                    n.style.stroke = Some(pair.0);
+                    n.style.stroke_dark = pair.1;
+                    n.style.stroke_enabled = true;
+                }
+                None => {
+                    n.style.stroke = None;
+                    n.style.stroke_dark = None;
+                    n.style.stroke_enabled = false;
+                }
+            }
             n.style.stroke_width = width;
             n.style.dash = dash;
             n.style.opacity = opacity;
@@ -1553,7 +1987,9 @@ fn apply_label_style(n: &mut Node, st: &ParsedStyle) {
         return;
     }
     n.label_size = Some(st.num("fontSize").unwrap_or(11.0));
-    let font_pair = st.color_pair("fontColor").unwrap_or((Color::BLACK, None));
+    let font_pair = st
+        .color_pair_filled("fontColor")
+        .unwrap_or((Color::BLACK, None));
     n.label_color = Some(font_pair.0);
     n.label_color_dark = font_pair.1;
     if let Some(align) = st.get("align") {
@@ -2175,13 +2611,17 @@ fn shape_style(n: &Node, _doc: &Document) -> String {
             if stops.len() >= 2 {
                 let _ = write!(
                     style,
-                    "fillColor={};gradientColor={};",
+                    "fillColor={};gradientColor={};gradient=1;",
                     color_value(stops[0].color, stops[0].dark),
                     color_value(stops[1].color, stops[1].dark)
                 );
             }
         } else if let Some((light, dark)) = n.style.fill_pair() {
-            let _ = write!(style, "fillColor={};", color_value(light, dark));
+            let value = color_value(light, dark);
+            let _ = write!(style, "fillColor={value};");
+            if matches!(n.kind, NodeKind::Frame { .. }) {
+                let _ = write!(style, "swimlaneFillColor={value};");
+            }
         }
     }
     if matches!(n.kind, NodeKind::Connector { .. }) || !n.is_group() {
@@ -2498,6 +2938,179 @@ mod tests {
     use crate::model::{Node, NodeKind};
 
     const TWO_PAGES: &str = include_str!("../../tests/fixtures/drawio/two-pages.drawio");
+
+    #[test]
+    fn imports_swimlane_fill_color_from_drawio_style() {
+        let xml = r#"<mxGraphModel><root>
+            <mxCell id="0"/><mxCell id="1" parent="0"/>
+            <mxCell id="lane" value="Lane"
+              style="swimlane;fillColor=#1a1a1a;swimlaneFillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#1c1c1e;"
+              vertex="1" parent="1">
+              <mxGeometry x="0" y="0" width="200" height="120" as="geometry"/>
+            </mxCell>
+        </root></mxGraphModel>"#;
+        let (pages, _) = import_str(xml).unwrap();
+        let lane = pages[0]
+            .doc
+            .nodes
+            .values()
+            .find(|n| n.name == "Lane")
+            .expect("lane");
+        assert_eq!(lane.style.fill(), Some(Color::rgb(0xda, 0xe8, 0xfc)));
+    }
+
+    #[test]
+    fn imports_drawio_default_vertex_colors() {
+        let xml = r#"<mxGraphModel><root>
+            <mxCell id="0"/><mxCell id="1" parent="0"/>
+            <mxCell id="box" value="Box" style="rounded=1;html=1;" vertex="1" parent="1">
+              <mxGeometry x="0" y="0" width="100" height="60" as="geometry"/>
+            </mxCell>
+        </root></mxGraphModel>"#;
+        let (pages, _) = import_str(xml).unwrap();
+        let n = pages[0]
+            .doc
+            .nodes
+            .values()
+            .find(|n| n.name == "Box")
+            .expect("box");
+        assert_eq!(n.style.fill(), Some(Color::WHITE));
+        assert_eq!(
+            n.style.fills[0],
+            Paint::solid_pair(Color::WHITE, Color::rgb(0x12, 0x12, 0x12))
+        );
+        assert_eq!(n.style.stroke, Some(Color::BLACK));
+        assert_eq!(n.style.stroke_dark, Some(Color::WHITE));
+        assert_eq!(n.label_color, Some(Color::BLACK));
+        assert_eq!(n.label_color_dark, Some(Color::WHITE));
+    }
+
+    #[test]
+    fn imports_css_color_syntax_from_drawio_style() {
+        let xml = r#"<mxGraphModel><root>
+            <mxCell id="0"/><mxCell id="1" parent="0"/>
+            <mxCell id="css" value="CSS"
+              style="rounded=1;fillColor=rgb(1, 2, 3);strokeColor=hsl(120, 100%, 50%);fontColor=red;labelBackgroundColor=rgba(4, 5, 6, 0.5);"
+              vertex="1" parent="1">
+              <mxGeometry x="0" y="0" width="100" height="60" as="geometry"/>
+            </mxCell>
+        </root></mxGraphModel>"#;
+        let (pages, _) = import_str(xml).unwrap();
+        let n = pages[0]
+            .doc
+            .nodes
+            .values()
+            .find(|n| n.name == "CSS")
+            .expect("css");
+        assert_eq!(n.style.fill(), Some(Color::rgb(1, 2, 3)));
+        assert_eq!(n.style.stroke, Some(Color::rgb(0, 255, 0)));
+        assert_eq!(n.label_color, Some(Color::rgb(255, 0, 0)));
+        assert_eq!(n.text_bg, Some(Color::rgba(4, 5, 6, 128)));
+    }
+
+    #[test]
+    fn style_parser_keeps_data_uri_and_later_keys() {
+        let st = ParsedStyle::parse("image=data:image/svg+xml;base64,QUJD;fillColor=#ff0000;");
+        assert_eq!(st.get("image"), Some("data:image/svg+xml;base64,QUJD"));
+        assert_eq!(st.get("fillColor"), Some("#ff0000"));
+    }
+
+    #[test]
+    fn imports_style_from_a_drawio_object_wrapper() {
+        let xml = r#"<mxGraphModel><root>
+            <mxCell id="0"/><mxCell id="1" parent="0"/>
+            <UserObject id="wrapper" label="Wrapped" style="rounded=1;fillColor=#123456;">
+              <mxCell id="inner" vertex="1" parent="1">
+                <mxGeometry x="0" y="0" width="100" height="60" as="geometry"/>
+              </mxCell>
+            </UserObject>
+        </root></mxGraphModel>"#;
+        let (pages, _) = import_str(xml).unwrap();
+        let n = pages[0]
+            .doc
+            .nodes
+            .values()
+            .find(|n| n.name == "Wrapped")
+            .expect("wrapped node");
+        assert_eq!(n.style.fill(), Some(Color::rgb(0x12, 0x34, 0x56)));
+        assert!(!n.metadata.contains_key("style"));
+    }
+
+    #[test]
+    fn gradient_zero_keeps_a_solid_fill() {
+        let xml = r#"<mxGraphModel><root>
+            <mxCell id="0"/><mxCell id="1" parent="0"/>
+            <mxCell id="flat" value="Flat"
+              style="rounded=1;fillColor=#ffffff;gradientColor=#000000;gradient=0;"
+              vertex="1" parent="1">
+              <mxGeometry x="0" y="0" width="100" height="60" as="geometry"/>
+            </mxCell>
+        </root></mxGraphModel>"#;
+        let (pages, _) = import_str(xml).unwrap();
+        let n = pages[0]
+            .doc
+            .nodes
+            .values()
+            .find(|n| n.name == "Flat")
+            .expect("flat node");
+        assert!(
+            matches!(n.style.fills.first(), Some(Paint::Solid { .. })),
+            "expected a solid fill, got {:?}",
+            n.style.fills
+        );
+    }
+
+    #[test]
+    fn gradient_one_without_gradient_color_uses_the_default_foreground() {
+        let xml = r#"<mxGraphModel><root>
+            <mxCell id="0"/><mxCell id="1" parent="0"/>
+            <mxCell id="shade" value="Shade"
+              style="rounded=1;fillColor=#ffffff;gradient=1;" vertex="1" parent="1">
+              <mxGeometry x="0" y="0" width="100" height="60" as="geometry"/>
+            </mxCell>
+        </root></mxGraphModel>"#;
+        let (pages, _) = import_str(xml).unwrap();
+        let n = pages[0]
+            .doc
+            .nodes
+            .values()
+            .find(|n| n.name == "Shade")
+            .expect("shade node");
+        let Some(Paint::Linear { stops, .. }) = n.style.fills.first() else {
+            panic!("expected a gradient, got {:?}", n.style.fills);
+        };
+        assert_eq!(stops[1].color, Color::BLACK);
+        assert_eq!(stops[1].dark, Some(Color::WHITE));
+    }
+
+    #[test]
+    fn default_invert_swaps_the_resolved_color_pair() {
+        let xml = r#"<mxGraphModel><root>
+            <mxCell id="0"/><mxCell id="1" parent="0"/>
+            <mxCell id="inverted" value="Inverted"
+              style="rounded=1;fillColor=default;strokeColor=default;defaultFillColor=invert;defaultStrokeColor=invert;"
+              vertex="1" parent="1">
+              <mxGeometry x="0" y="0" width="100" height="60" as="geometry"/>
+            </mxCell>
+        </root></mxGraphModel>"#;
+        let (pages, _) = import_str(xml).unwrap();
+        let n = pages[0]
+            .doc
+            .nodes
+            .values()
+            .find(|n| n.name == "Inverted")
+            .expect("inverted node");
+        assert_eq!(n.style.fill(), Some(Color::WHITE.inverse()));
+        assert_eq!(
+            n.style.fills[0],
+            Paint::solid_pair(
+                Color::WHITE.inverse(),
+                Color::rgb(0x12, 0x12, 0x12).inverse()
+            )
+        );
+        assert_eq!(n.style.stroke, Some(Color::BLACK.inverse()));
+        assert_eq!(n.style.stroke_dark, Some(Color::WHITE.inverse()));
+    }
 
     #[test]
     fn imports_two_pages_in_order() {

@@ -402,6 +402,83 @@ fn adaptive_colors_round_trip_through_drawio() {
 }
 
 #[test]
+fn life_drawio_keeps_its_explicit_shape_colors() {
+    let source = Path::new(env!("CARGO_MANIFEST_DIR")).join("Life.drawio");
+    let xml = std::fs::read_to_string(&source).unwrap();
+    let (pages, _) = drawio::import_str(&xml).unwrap();
+    let fills: Vec<Color> = pages
+        .iter()
+        .flat_map(|page| page.doc.nodes.values())
+        .filter_map(|n| n.style.fill())
+        .collect();
+    let strokes: Vec<Color> = pages
+        .iter()
+        .flat_map(|page| page.doc.nodes.values())
+        .filter_map(|n| n.style.stroke)
+        .collect();
+    assert!(
+        fills.contains(&Color::rgb(0x60, 0xa9, 0x17)),
+        "green fill was lost: {fills:?}"
+    );
+    assert!(
+        fills.contains(&Color::rgb(0xd8, 0x00, 0x73)),
+        "magenta fill was lost: {fills:?}"
+    );
+    assert!(
+        strokes.contains(&Color::rgb(0x2d, 0x76, 0x00)),
+        "green stroke was lost: {strokes:?}"
+    );
+    assert!(
+        strokes.contains(&Color::rgb(0xa5, 0x00, 0x40)),
+        "magenta stroke was lost: {strokes:?}"
+    );
+}
+
+#[test]
+fn exporting_a_gradient_marks_it_for_drawio() {
+    let id = NodeId(1);
+    let mut n = Node::new(id, NodeKind::Rect, Rect::new(0.0, 0.0, 120.0, 80.0));
+    n.label = "Gradient".into();
+    n.style.fills = vec![drawio_rs::model::paint::Paint::linear(
+        Color::rgb(1, 2, 3),
+        Color::rgb(4, 5, 6),
+    )];
+    n.style.stroke = Some(Color::BLACK);
+    let doc = Document {
+        name: "Gradient export".into(),
+        nodes: [(id, n)].into_iter().collect(),
+        root: vec![id],
+        ..Document::default()
+    };
+    let items = vec![export::Item {
+        name: doc.name.clone(),
+        doc: &doc,
+        roots: doc.layered_root(),
+    }];
+    let spec = Spec {
+        format: Format::Drawio,
+        scope: Scope::AllPages,
+        ..Spec::default()
+    };
+    let out = tmp("gradient-export").join("gradient.drawio");
+    export::write(&spec, &items, &out, None).unwrap();
+    let text = std::fs::read_to_string(&out).unwrap();
+    assert!(text.contains("gradient=1;"), "{text}");
+    assert!(text.contains("gradientColor=#040506"), "{text}");
+
+    let again = import::import_detailed(&out).unwrap();
+    let back = again.pages[0].doc.get(id).expect("gradient survives");
+    assert!(
+        matches!(
+            back.style.fills.first(),
+            Some(drawio_rs::model::paint::Paint::Linear { .. })
+        ),
+        "{:?}",
+        back.style.fills
+    );
+}
+
+#[test]
 fn scheme_name_round_trips_through_drawio() {
     let mut ed = Editor::default();
     let id = ed.add_node(
