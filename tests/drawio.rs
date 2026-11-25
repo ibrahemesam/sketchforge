@@ -761,3 +761,102 @@ fn native_c4_shapes_export_with_drawio_styles() {
         );
     }
 }
+
+#[test]
+fn sysml_drawio_shapes_import_as_native_shapes() {
+    let xml = r#"<mxfile><diagram id="d" name="SysML"><mxGraphModel><root>
+        <mxCell id="0"/><mxCell id="1" parent="0"/>
+        <mxCell id="block" vertex="1" parent="1" style="fontStyle=1;align=center;verticalAlign=middle;childLayout=stackLayout;horizontal=1;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;marginBottom=0;">
+          <mxGeometry x="0" y="0" width="180" height="100" as="geometry"/>
+          <mxCell id="block-stereotype" value="&lt;&lt;block&gt;&gt;" vertex="1" connectable="0" parent="block" style="html=1;align=center;strokeColor=none;fillColor=none;">
+            <mxGeometry x="0" y="0" width="140" height="20" as="geometry"/>
+          </mxCell>
+          <mxCell id="block-name" value="Block1" vertex="1" connectable="0" parent="block" style="html=1;align=center;strokeColor=none;fillColor=none;fontStyle=1;">
+            <mxGeometry x="0" y="20" width="140" height="14" as="geometry"/>
+          </mxCell>
+        </mxCell>
+        <mxCell id="requirement" vertex="1" parent="1" style="fontStyle=1;align=center;verticalAlign=middle;childLayout=stackLayout;horizontal=1;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;marginBottom=0;">
+          <mxGeometry x="220" y="0" width="190" height="90" as="geometry"/>
+          <mxCell id="requirement-stereotype" value="&lt;&lt;requirement&gt;&gt;" vertex="1" connectable="0" parent="requirement" style="html=1;align=center;strokeColor=none;fillColor=none;">
+            <mxGeometry x="0" y="0" width="190" height="16" as="geometry"/>
+          </mxCell>
+        </mxCell>
+        <mxCell id="port" value="Transmission" vertex="1" parent="1" style="html=1;shape=mxgraph.sysml.port1;fontStyle=1;whiteSpace=wrap;align=center;points=[[0,0.5,0],[1,0.5,0]];">
+          <mxGeometry x="0" y="140" width="160" height="60" as="geometry"/>
+        </mxCell>
+      </root></mxGraphModel></diagram></mxfile>"#;
+    let (pages, _) = drawio::import_str(xml).unwrap();
+    let names: Vec<&str> = pages[0]
+        .doc
+        .nodes
+        .values()
+        .map(|n| n.name.as_str())
+        .collect();
+    for expected in ["SysML Block", "SysML Requirement", "SysML Port"] {
+        assert!(
+            names.contains(&expected),
+            "{expected} missing from {names:?}"
+        );
+    }
+}
+
+#[test]
+fn native_sysml_shapes_export_with_drawio_styles() {
+    let defs = [
+        (1, "sysml-block", "Block"),
+        (2, "sysml-requirement", "Requirement"),
+        (3, "sysml-port", "Port"),
+    ];
+    let mut nodes = Vec::new();
+    let mut root = Vec::new();
+    for (id, def_id, label) in defs {
+        let def = drawio_rs::registry::by_id(def_id).expect("registry SysML shape");
+        let mut node =
+            drawio_rs::registry::build(def, Rect::new(0.0, 0.0, def.size.0, def.size.1), None);
+        node.id = NodeId(id);
+        node.label = label.into();
+        root.push(node.id);
+        nodes.push((node.id, node));
+    }
+    let doc = Document {
+        name: "SysML export".into(),
+        nodes: nodes.into_iter().collect(),
+        root,
+        ..Document::default()
+    };
+    let items = vec![export::Item {
+        name: doc.name.clone(),
+        doc: &doc,
+        roots: doc.layered_root(),
+    }];
+    let spec = Spec {
+        format: Format::Drawio,
+        scope: Scope::AllPages,
+        ..Spec::default()
+    };
+    let out = tmp("sysml-export").join("sysml.drawio");
+    export::write(&spec, &items, &out, None).unwrap();
+    let text = std::fs::read_to_string(&out).unwrap();
+    for needle in [
+        "childLayout=stackLayout",
+        "&lt;&lt;block&gt;&gt;",
+        "&lt;&lt;requirement&gt;&gt;",
+        "shape=mxgraph.sysml.port1",
+    ] {
+        assert!(text.contains(needle), "{needle} missing from {text}");
+    }
+
+    let (pages, _) = drawio::import_str(&text).unwrap();
+    let names: Vec<&str> = pages[0]
+        .doc
+        .nodes
+        .values()
+        .map(|n| n.name.as_str())
+        .collect();
+    for expected in ["SysML Block", "SysML Requirement", "SysML Port"] {
+        assert!(
+            names.contains(&expected),
+            "{expected} missing from {names:?}"
+        );
+    }
+}

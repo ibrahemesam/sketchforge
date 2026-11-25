@@ -276,6 +276,7 @@ struct RawCell {
     tooltip: String,
     tags: Vec<String>,
     metadata: std::collections::BTreeMap<String, String>,
+    child_values: Vec<String>,
     geom: Geom,
     order: usize,
 }
@@ -387,6 +388,12 @@ fn parse_cell(node: XmlNode<'_, '_>, wrapper: Option<XmlNode<'_, '_>>, order: us
         .or_else(|| wrapper.and_then(|w| w.attribute("style")))
         .unwrap_or("")
         .to_string();
+    let child_values = node
+        .children()
+        .filter(|n| n.is_element() && n.has_tag_name("mxCell"))
+        .filter_map(|c| c.attribute("value"))
+        .map(String::from)
+        .collect();
     RawCell {
         id,
         value,
@@ -402,6 +409,7 @@ fn parse_cell(node: XmlNode<'_, '_>, wrapper: Option<XmlNode<'_, '_>>, order: us
         tooltip,
         tags,
         metadata,
+        child_values,
         geom,
         order,
     }
@@ -1692,6 +1700,33 @@ fn c4_registry_for_cell(cell: &RawCell, st: &ParsedStyle) -> Option<&'static str
     }
 }
 
+// SysML ports use the registered `mxgraph.sysml.port*` shapes. Blocks and
+// requirements are draw.io composite templates identified by their
+// `<<block>>` and `<<requirement>>` child cells. Ported from draw.io's
+// `src/main/webapp/js/diagramly/sidebar/Sidebar-Sysml.js` and
+// `src/main/webapp/shapes/mxSysML.js`, Copyright (c) JGraph Holdings Ltd /
+// draw.io AG, Apache-2.0. See `THIRD_PARTY.md`.
+fn sysml_registry_for_cell(cell: &RawCell, st: &ParsedStyle) -> Option<&'static str> {
+    let shape = shape_name(st).unwrap_or("").to_ascii_lowercase();
+    match shape.as_str() {
+        "mxgraph.sysml.port"
+        | "mxgraph.sysml.port1"
+        | "mxgraph.sysml.port2"
+        | "mxgraph.sysml.port3"
+        | "mxgraph.sysml.port4"
+        | "mxgraph.sysml.nestedport" => return Some("sysml-port"),
+        _ => {}
+    }
+    let children = cell.child_values.join(" ").to_ascii_lowercase();
+    if children.contains("<<block>>") {
+        Some("sysml-block")
+    } else if children.contains("<<requirement>>") {
+        Some("sysml-requirement")
+    } else {
+        None
+    }
+}
+
 fn build_vertex(cell: &RawCell, st: &ParsedStyle, rect: Rect) -> (Node, Option<String>) {
     let value = plain_text(&cell.value);
     let mut approximation = None;
@@ -1702,6 +1737,11 @@ fn build_vertex(cell: &RawCell, st: &ParsedStyle, rect: Rect) -> (Node, Option<S
         return (n, approximation);
     }
     if let Some(reg) = c4_registry_for_cell(cell, st)
+        && let Some(n) = registry_vertex(reg, st, rect, &value)
+    {
+        return (n, approximation);
+    }
+    if let Some(reg) = sysml_registry_for_cell(cell, st)
         && let Some(n) = registry_vertex(reg, st, rect, &value)
     {
         return (n, approximation);
@@ -2523,6 +2563,7 @@ fn emit_node(out: &mut String, doc: &Document, id: NodeId, parent: Option<NodeId
     out.push_str(&parent_attr);
     out.push_str("\">\n");
     emit_geometry(out, doc, n, parent);
+    emit_sysml_children(out, n);
     out.push_str("        </mxCell>\n");
     if has_data {
         out.push_str("        </UserObject>\n");
@@ -2629,12 +2670,15 @@ fn shape_style(n: &Node, _doc: &Document) -> String {
     let c4 = crate::registry::all()
         .iter()
         .find(|d| d.name == n.name && d.id.starts_with("c4-"));
+    let sysml = crate::registry::all()
+        .iter()
+        .find(|d| d.name == n.name && d.id.starts_with("sysml-"));
     let bpmn = crate::registry::all()
         .iter()
         .find(|d| d.name == n.name && d.id.starts_with("bpmn-"));
     if let Some(def) = bpmn {
         style.push_str(drawio_shape_for_registry(def.id).unwrap_or("rounded=0;"));
-    } else if c4.is_none() {
+    } else if c4.is_none() && sysml.is_none() {
         match &n.kind {
             NodeKind::Group => style.push_str("group;"),
             NodeKind::Frame { .. } => style.push_str("swimlane;startSize=26;html=1;"),
@@ -2830,7 +2874,7 @@ fn shape_style(n: &Node, _doc: &Document) -> String {
             );
         }
     }
-    if let Some(def) = c4 {
+    if let Some(def) = c4.or(sysml) {
         style.push_str(drawio_shape_for_registry(def.id).unwrap_or("rounded=0;"));
     }
     style
@@ -3006,8 +3050,41 @@ fn drawio_shape_for_registry(id: &str) -> Option<&'static str> {
         "c4-boundary" => {
             "rounded=1;fontSize=11;whiteSpace=wrap;html=1;dashed=1;arcSize=20;fillColor=none;strokeColor=#666666;fontColor=#333333;labelBackgroundColor=none;align=left;verticalAlign=bottom;dashPattern=8 4;resizable=0;perimeter=rectanglePerimeter;absoluteArcSize=1;"
         }
+        "sysml-block" | "sysml-requirement" => {
+            "fontStyle=1;align=center;verticalAlign=middle;childLayout=stackLayout;horizontal=1;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;marginBottom=0;html=1;whiteSpace=wrap;"
+        }
+        "sysml-port" => {
+            "html=1;shape=mxgraph.sysml.port1;fontStyle=1;whiteSpace=wrap;align=center;"
+        }
         _ => return None,
     })
+}
+
+fn sysml_child_marker(id: &str) -> Option<&'static str> {
+    match id {
+        "sysml-block" => Some("<<block>>"),
+        "sysml-requirement" => Some("<<requirement>>"),
+        _ => None,
+    }
+}
+
+fn emit_sysml_children(out: &mut String, n: &Node) {
+    let Some(def) = crate::registry::all()
+        .iter()
+        .find(|d| d.name == n.name && d.id.starts_with("sysml-"))
+    else {
+        return;
+    };
+    let Some(marker) = sysml_child_marker(def.id) else {
+        return;
+    };
+    out.push_str("          <mxCell value=\"");
+    attr(out, marker);
+    out.push_str("\" vertex=\"1\" connectable=\"0\" parent=\"");
+    out.push_str(&node_cell(n.id));
+    out.push_str("\" style=\"html=1;align=center;spacing=0;verticalAlign=middle;strokeColor=none;fillColor=none;whiteSpace=wrap;\">\n            <mxGeometry x=\"0\" y=\"0\" width=\"");
+    out.push_str(&fmt_num(n.rect.w));
+    out.push_str("\" height=\"20\" as=\"geometry\" />\n          </mxCell>\n");
 }
 
 fn node_cell(id: NodeId) -> String {
