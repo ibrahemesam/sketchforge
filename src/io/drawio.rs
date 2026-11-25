@@ -3392,7 +3392,11 @@ fn drawio_shape_for_registry(id: &str) -> Option<&'static str> {
         // `src/main/webapp/js/diagramly/sidebar/Sidebar-Flowchart.js`,
         // Copyright (c) 2020-2025 JGraph Holdings Ltd / draw.io AG, Apache-2.0.
         // See `THIRD_PARTY.md`.
-        "delay" => "shape=mxgraph.flowchart.delay;whiteSpace=wrap;html=1;",
+        // Draw.io's flowchart palette writes Delay with this stroke width.
+        // Ported from `src/main/webapp/js/diagramly/sidebar/Sidebar-Flowchart.js`,
+        // Copyright (c) 2020-2025 JGraph Holdings Ltd / draw.io AG, Apache-2.0.
+        // See `THIRD_PARTY.md`.
+        "delay" => "strokeWidth=2;html=1;shape=mxgraph.flowchart.delay;whiteSpace=wrap;",
         // Draw.io's flowchart palette uses these off-page connector flags. Ported from
         // `src/main/webapp/js/diagramly/sidebar/Sidebar-Flowchart.js`,
         // Copyright (c) 2020-2025 JGraph Holdings Ltd / draw.io AG, Apache-2.0.
