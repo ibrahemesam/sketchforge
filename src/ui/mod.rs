@@ -999,6 +999,12 @@ fn layer_row(ui: &mut Ui, ed: &mut Editor, st: &mut UiState, id: NodeId, depth: 
     let width = ui.available_width();
     let (row, resp) =
         ui.allocate_exact_size(egui::vec2(width, 24.0), egui::Sense::click_and_drag());
+    let label = if n.name.trim().is_empty() {
+        "Select layer".to_string()
+    } else {
+        format!("Select {}", n.name)
+    };
+    resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, true, label.as_str()));
     st.layer_rows.push((id, row, depth));
     if resp.drag_started() && !n.locked {
         st.layer_drag = Some((id, None));
@@ -1695,6 +1701,48 @@ mod tests {
                 "expected a {expected} label, got {labels:?}"
             );
         }
+    }
+
+    #[test]
+    fn layer_rows_expose_select_actions_to_accesskit() {
+        let ctx = egui::Context::default();
+        theme::install_fonts(&ctx);
+        ctx.enable_accesskit();
+        let mut ed = Editor::default();
+        let id = ed.add_node(
+            Node::new(
+                NodeId(1),
+                NodeKind::Rect,
+                crate::geom::Rect::new(0.0, 0.0, 20.0, 20.0),
+            ),
+            None,
+        );
+        ed.doc.nodes.get_mut(&id).unwrap().name = "Header".into();
+        let mut st = UiState::default();
+        let mut out = ctx.run_ui(
+            egui::RawInput {
+                screen_rect: Some(egui::Rect::from_min_size(
+                    egui::Pos2::ZERO,
+                    egui::vec2(260.0, 80.0),
+                )),
+                ..Default::default()
+            },
+            |ui| layer_row(ui, &mut ed, &mut st, id, 0),
+        );
+        out.textures_delta.clear();
+        let update = out
+            .platform_output
+            .accesskit_update
+            .expect("layer row should register an accessibility node");
+        let labels: Vec<String> = update
+            .nodes
+            .iter()
+            .filter_map(|(_, node)| node.label().map(str::to_string))
+            .collect();
+        assert!(
+            labels.iter().any(|label| label == "Select Header"),
+            "expected a Select Header label, got {labels:?}"
+        );
     }
 
     #[test]
