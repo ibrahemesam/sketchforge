@@ -555,6 +555,8 @@ documentation closeout completes the round.
 
 **User redirect, draw.io Decision stencil (code committed 8f1026c).** Native Decision now exports with draw.io's `shape=mxgraph.flowchart.decision;` stencil and reimports as the same registry shape. Plain rhombi still import as generic polygons. The import test already passed; the export test failed before the fix and passes after it. THIRD_PARTY.md records the added flowchart stencil.
 
+**User redirect, draw.io Delay stencil (code committed d7f7d9d).** Native Delay now exports with draw.io's `shape=mxgraph.flowchart.delay;` stencil and reimports as the same registry shape. The import test already passed; the export test failed before the fix and passes after it. THIRD_PARTY.md records the added flowchart stencil.
+
 **Scope.**
 
 - A selection context resolver that classifies the current selection as document, single
