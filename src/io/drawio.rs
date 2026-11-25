@@ -3327,7 +3327,13 @@ fn drawio_shape_for_registry(id: &str) -> Option<&'static str> {
         "data" => {
             "shape=parallelogram;html=1;strokeWidth=2;perimeter=parallelogramPerimeter;whiteSpace=wrap;rounded=1;arcSize=12;size=0.23;"
         }
-        "manual-input" => "shape=manualInput;whiteSpace=wrap;html=1;",
+        // Draw.io's flowchart palette uses these manual input flags. Ported from
+        // `src/main/webapp/js/diagramly/sidebar/Sidebar-Flowchart.js`,
+        // Copyright (c) 2020-2025 JGraph Holdings Ltd / draw.io AG, Apache-2.0.
+        // See `THIRD_PARTY.md`.
+        "manual-input" => {
+            "html=1;strokeWidth=2;shape=manualInput;boundedLbl=1;whiteSpace=wrap;rounded=1;size=26;arcSize=11;"
+        }
         "manual-operation" => "shape=trapezoid;whiteSpace=wrap;html=1;",
         "preparation" => "shape=hexagon;whiteSpace=wrap;html=1;",
         // Draw.io's flowchart palette writes Delay as a stencil. Ported from

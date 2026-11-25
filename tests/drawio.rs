@@ -2059,3 +2059,62 @@ fn native_data_exports_with_drawio_palette_style() {
         .collect();
     assert!(names.contains(&"Data"), "{names:?}");
 }
+
+#[test]
+fn flowchart_manual_input_palette_style_imports_as_native_shape() {
+    let xml = r#"<mxfile><diagram id="d" name="Flow"><mxGraphModel><root>
+        <mxCell id="0"/><mxCell id="1" parent="0"/>
+        <mxCell id="input" value="Form" vertex="1" parent="1" style="html=1;strokeWidth=2;shape=manualInput;boundedLbl=1;whiteSpace=wrap;rounded=1;size=26;arcSize=11;">
+          <mxGeometry x="0" y="0" width="160" height="80" as="geometry"/>
+        </mxCell>
+      </root></mxGraphModel></diagram></mxfile>"#;
+    let (pages, _) = drawio::import_str(xml).unwrap();
+    let names: Vec<&str> = pages[0]
+        .doc
+        .nodes
+        .values()
+        .map(|n| n.name.as_str())
+        .collect();
+    assert!(names.contains(&"Manual Input"), "{names:?}");
+}
+
+#[test]
+fn native_manual_input_exports_with_drawio_palette_style() {
+    let def = drawio_rs::registry::by_id("manual-input").expect("registry Manual Input shape");
+    let mut node =
+        drawio_rs::registry::build(def, Rect::new(0.0, 0.0, def.size.0, def.size.1), None);
+    node.id = NodeId(7);
+    node.label = "Form".into();
+    let doc = Document {
+        name: "Manual Input export".into(),
+        nodes: [(node.id, node)].into_iter().collect(),
+        root: vec![NodeId(7)],
+        ..Document::default()
+    };
+    let items = vec![export::Item {
+        name: doc.name.clone(),
+        doc: &doc,
+        roots: doc.layered_root(),
+    }];
+    let spec = Spec {
+        format: Format::Drawio,
+        scope: Scope::AllPages,
+        ..Spec::default()
+    };
+    let out = tmp("manual-input-export").join("flow.drawio");
+    export::write(&spec, &items, &out, None).unwrap();
+    let text = std::fs::read_to_string(&out).unwrap();
+    assert!(
+        text.contains("html=1;strokeWidth=2;shape=manualInput;boundedLbl=1;whiteSpace=wrap;rounded=1;size=26;arcSize=11;"),
+        "{text}"
+    );
+
+    let (pages, _) = drawio::import_str(&text).unwrap();
+    let names: Vec<&str> = pages[0]
+        .doc
+        .nodes
+        .values()
+        .map(|n| n.name.as_str())
+        .collect();
+    assert!(names.contains(&"Manual Input"), "{names:?}");
+}
