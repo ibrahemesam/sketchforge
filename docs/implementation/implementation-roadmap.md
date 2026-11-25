@@ -503,6 +503,8 @@ documentation closeout completes the round.
 
 **Round 93 (code committed 486783d).** Every button in the Layers dialog now has an action-specific AccessKit name instead of a glyph or generic icon name. A dialog render test failed on the missing Hide Layer 2 label before the fix. UIX-12 stays IN_PROGRESS.
 
+**Round 94 (code committed 489e7a6).** The Style palette pager now names both arrows and all three page dots. A render test failed on glyph-only arrow labels before the fix. UIX-12 stays IN_PROGRESS.
+
 **Scope.**
 
 - A selection context resolver that classifies the current selection as document, single

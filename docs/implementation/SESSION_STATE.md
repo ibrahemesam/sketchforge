@@ -1,6 +1,6 @@
 # Sketch agent session state
 
-Last updated: 2026-11-25 (Layers dialog names, code committed 486783d).
+Last updated: 2026-11-25 (Style palette pager names, code committed 489e7a6).
 
 ## Objective
 
@@ -52,7 +52,9 @@ Layers panel order buttons Send backward and Bring forward instead of two
 Collapse labels. Its docs closeout was pushed as af9fc01. Round 92 code commit
 b7b3a54 gives the six sticky note color swatches AccessKit hex labels. Its docs
 closeout was pushed as 515167a. Round 93 code commit 486783d names every action
-button in the Layers dialog. The round 93 docs closeout follows this commit.
+button in the Layers dialog. Its docs closeout was pushed as 33305e0. Round 94
+code commit 489e7a6 names the Style palette arrows and page dots. The round 94
+docs closeout follows this commit.
 
 The full sidebar spec was implemented and verified in round 6 (see
 `.opencode/MEMORY.md`). Round 7 closed the transparent connector label gap.
@@ -768,6 +770,8 @@ Round 92 (committed b7b3a54) names all six sticky note color swatches with their
 
 Round 93 (committed 486783d) names every button in the Layers dialog with its action. A dialog render test failed on a generic label before the fix. UIX-12 stays IN_PROGRESS.
 
+Round 94 (committed 489e7a6) names the Style palette arrows and page dots. A palette render test failed on glyph-only arrow labels before the fix. UIX-12 stays IN_PROGRESS.
+
 ## Blockers
 
 - No blockers. M9 collaboration remains deferred pending a server, a conflict
@@ -782,14 +786,14 @@ Round 93 (committed 486783d) names every button in the Layers dialog with its ac
 
 ## Exact next task
 
-Audit UIX-12 beyond icon buttons, sidebar order buttons, sticky swatches and
-Layers dialog actions. It is IN_PROGRESS, not VERIFIED. A concrete candidate is
-the Style palette pager in `src/ui/inspector.rs`, whose arrows expose glyph
-labels and whose page dots have no widget info. Visible focus and the absent
-canvas accessibility tree are still open too. Capture a failing test before any
-real code fix. Otherwise close or correct stale rows as evidence-only with cited
-HEAD identifiers and update verification/session docs. Do not restart completed
-rounds. Keep blocked/deferred items blocked. No release, tag, or PR.
+Audit UIX-12 beyond icon buttons, sidebar order buttons, sticky swatches,
+Layers dialog actions and the Style palette pager. It is IN_PROGRESS, not
+VERIFIED. A concrete candidate is the sidebar layer visibility and lock buttons
+in `src/ui/mod.rs`, whose click regions have no widget info. Visible focus and
+the absent canvas accessibility tree are still open too. Capture a failing test
+before any real code fix. Otherwise close or correct stale rows as evidence-only
+with cited HEAD identifiers and update verification/session docs. Do not restart
+completed rounds. Keep blocked/deferred items blocked. No release, tag, or PR.
 
 ## Commands
 
