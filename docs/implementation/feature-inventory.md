@@ -290,7 +290,7 @@ gaps landed on 2026-10-26: a label without a solid background cuts the line behi
 text, and the gap follows label moves, reroutes, and export. Page view is a view
 preference and is not part of the page file.
 
-**Size:** 231 capabilities in 13 domains. 196 are verified against committed tests or directly exercised code, 8 are implemented without a focused check, and 27 are absent or blocked.
+**Size:** 231 capabilities in 13 domains. 196 are verified against committed tests or directly exercised code, 8 are implemented without a focused check, 1 is in progress, and 26 are blocked.
 
 ## Counts
 
@@ -298,7 +298,7 @@ preference and is not part of the page file.
 |---|---:|---|
 | VERIFIED | 196 | Committed test or directly exercised code path proves the behavior. |
 | IMPLEMENTED | 8 | Code exists and the path is readable, but no focused test or this-session runtime check covers it. |
-| DISCOVERED | 1 | draw.io behavior is documented here; no code or design exists. |
+| IN_PROGRESS | 1 | Partial code at HEAD with acceptance criteria still unmet. |
 | BLOCKED | 26 | Work cannot proceed without a missing subsystem, external service, licensing decision, or explicit scope decision. |
 | **Total** | **231** | |
 
@@ -316,7 +316,7 @@ preference and is not part of the page file.
 | CUS Libraries, scratchpad, and custom shapes | 16 | 12 | 1 | 0 | 0 | 0 | 3 |
 | DIA Diagram data: metadata, links, tags, and placeholders | 12 | 10 | 0 | 0 | 0 | 0 | 2 |
 | STO Storage, sharing, collaboration, and integrations | 11 | 1 | 0 | 0 | 0 | 0 | 10 |
-| UIX Editor UI, panels, search, and accessibility | 14 | 12 | 0 | 0 | 0 | 1 | 1 |
+| UIX Editor UI, panels, search, and accessibility | 14 | 12 | 0 | 1 | 0 | 0 | 1 |
 
 ## Status rules
 
@@ -327,11 +327,13 @@ preference and is not part of the page file.
   test. A note that runtime evidence exists in `.opencode/MEMORY.md` is not a claim that
   it was re-run.
 - **IN_PROGRESS** means partial code at HEAD with acceptance criteria still unmet.
-  There are no **IN_PROGRESS** rows at HEAD in this round.
+  UIX-12 is **IN_PROGRESS**. Icon buttons expose AccessKit names and take Tab focus,
+  but there is no full command audit, visible-focus assertion, or canvas tree.
 - **ANALYZED** means the draw.io behavior is documented and a native design choice is
   recorded in `architecture-decisions.md`, with no implementation. There are no **ANALYZED** rows at HEAD in this round.
-- `DISCOVERED` means the capability is documented in draw.io's docs and absent from the
-  baseline. `BLOCKED` adds a concrete reason that prevents work now.
+- **DISCOVERED** means the capability is documented in draw.io's docs and absent from the
+  baseline. No row has that status at HEAD. `BLOCKED` adds a concrete reason that prevents
+  work now.
 - A row with a limitation does not become `VERIFIED` merely because the happy path
   works. The limitation stays visible in the last column.
 
@@ -663,7 +665,7 @@ The chrome around the canvas and how commands are discovered.
 | UIX-09 | Floating toolbar | A canvas toolbar exposes select, hand, frame, shapes, pen, text, sticky, image, and eraser. | [Toolbars in draw.io editor themes](https://www.drawio.com/docs/manual/editor/toolbars/) | src/ui/mod.rs, src/app.rs | **VERIFIED** | Switch between every tool from the toolbar and confirm the active state follows the keyboard. | The toolbar hides with the UI (Command-backslash). Test: `m5_palette_and_shortcuts_screenshots`. |
 | UIX-10 | Light and dark themes | The editor chrome and canvas switch between light and dark, and the choice persists. | [Use the diagram editor in dark mode](https://www.drawio.com/docs/manual/editor/appearance/dark-mode/) | src/theme.rs, src/ui/mod.rs | **VERIFIED** | Toggle the theme, restart, and confirm the choice and canvas background persist. | Shape colors do not adapt to the theme. Test: `ui_theme_choice_switches_chrome_and_canvas`. |
 | UIX-11 | Search omnibox | A single search field finds shapes, diagram text, commands, and pages. | [Search for shapes, in-diagram text, help and more](https://www.drawio.com/docs/manual/editor/panels/search-omnibox/) | src/ui/palette.rs, src/find.rs | **VERIFIED** | Type a shape name, a command, and a label fragment and confirm each result type appears in one list. | The command palette lists commands, pages, layers, templates, generators, library items, registry shapes and diagram text in one search surface. `searches_registry_shapes_and_inserts_one` and `searches_diagram_text_across_pages_and_jumps_to_it` cover shape insertion and cross-page diagram text jumps. The row was stale. |
-| UIX-12 | Keyboard and screen-reader accessibility | Every command is reachable by keyboard, focus is visible, and controls expose accessible names. | [Keyboard shortcuts](https://www.drawio.com/docs/reference/shortcuts/) | src/ui/inspector.rs | **DISCOVERED** | Tab through the inspector and toolbar, operate them without a pointer, and inspect accessible names. | egui provides basic focus and labels, but there is no audit or screen-reader test. Canvas content has no accessibility tree. |
+| UIX-12 | Keyboard and screen-reader accessibility | Every command is reachable by keyboard, focus is visible, and controls expose accessible names. | [Keyboard shortcuts](https://www.drawio.com/docs/reference/shortcuts/) | src/theme.rs, src/ui/mod.rs | **IN_PROGRESS** | Tab through the inspector and toolbar, operate them without a pointer, and inspect accessible names. | Icon buttons now register AccessKit button labels and take Tab focus. `icon_buttons_expose_accessible_names` reads the label from the generated tree update, and `icon_buttons_take_keyboard_focus` checks focus movement. A full command audit, a visible-focus assertion, and a canvas accessibility tree are still missing. |
 | UIX-13 | Interface localization | The editor UI can switch languages and right-to-left chrome. | [Change the draw.io editor language](https://www.drawio.com/docs/manual/editor/editor-language-change/) | None | **BLOCKED** | Switch to a second language, confirm all visible strings change, and reload. | Strings are English literals in source. There is no message catalog or locale negotiation. |
 | UIX-14 | Onboarding and interactive tutorial | A first-run tour or sample diagram explains the tools and shortcuts. | [Draw a basic flow chart in draw.io](https://www.drawio.com/docs/getting-started/basic-flowchart/) | src/app.rs, src/options.rs, src/ui/mod.rs | **VERIFIED** | Launch a fresh store, follow the tour, and create a first diagram. | A three-step welcome panel opens on a fresh store, walks through shapes, connectors and export, and persists dismissal in options. The help dialog reopens it. Tests: `onboarding_seen_defaults_false_and_survives_options_round_trip`, `welcome_steps_advance_and_finish_once`. Round 37 live evidence is in `.artifacts/round37/live2/`. |
 

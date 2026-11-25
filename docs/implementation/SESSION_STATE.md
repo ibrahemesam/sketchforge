@@ -1,6 +1,6 @@
 # Sketch agent session state
 
-Last updated: 2026-11-25 (context menu Escape behavior and UIX-02 closeout, code committed 83c228c).
+Last updated: 2026-11-25 (icon-button accessible names, code committed 14e9272).
 
 ## Objective
 
@@ -44,7 +44,10 @@ context menu: a click selects the hit shape and opens the popup, while a drag
 still only pans. Its docs closeout was pushed as a841a6b. Round 88 (code
 committed 8d23cea) finished the UIX-02 Layout section audit, and round 89 (code
 committed 83c228c) made Escape close that popup without clearing the selection.
-The round 88 and 89 docs closeout follows this commit.
+Their docs closeout was pushed as b339ed4. Round 90 code commit 14e9272 gives
+every icon button an AccessKit name, with specific labels for toolbar and top-bar
+actions, and guards Tab focus. UIX-12 moved from DISCOVERED to IN_PROGRESS. The
+round 90 docs closeout follows this commit.
 
 The full sidebar spec was implemented and verified in round 6 (see
 `.opencode/MEMORY.md`). Round 7 closed the transparent connector label gap.
@@ -744,6 +747,16 @@ Round 84 (committed b4607aa and e98e2d9, pushed) implemented and verified DIA-12
 
 Round 85 (committed f478440, pushed) removed the empty Selection section and the Flatten action from connector-only Arrange. Shape selections keep both. UIX-02 remains IN_PROGRESS pending the Layout section review.
 
+Round 86 (committed 54a4358, pushed) added right-drag panning and outward connection arrows, with fixed-point crosses on selected shapes. CAN-01, CAN-14 and CAN-15 keep VERIFIED status.
+
+Round 87 (committed f2ad0df, pushed) added the right-click canvas context menu and kept right-drag as pan only. CAN-01 keeps VERIFIED status.
+
+Round 88 (committed 8d23cea, pushed) removed Layout and Constraints from connector-only Arrange inside a frame while keeping them for shapes. UIX-02 moved to VERIFIED.
+
+Round 89 (committed 83c228c, pushed) made Escape close the context menu without clearing the selection. CAN-01 keeps VERIFIED status.
+
+Round 90 (committed 14e9272) gives icon buttons AccessKit labels and specific names for toolbar and top-bar actions. The label test failed before the fix and the Tab-focus test guards existing focus behavior. UIX-12 moved from DISCOVERED to IN_PROGRESS.
+
 ## Blockers
 
 - No blockers. M9 collaboration remains deferred pending a server, a conflict
@@ -758,14 +771,12 @@ Round 85 (committed f478440, pushed) removed the empty Selection section and the
 
 ## Exact next task
 
-Continue assessing UIX-02 (still IN_PROGRESS): connector and text-layer
-selections now get different tab sets, and connector Arrange no longer shows
-size, position, Align, Snap to Grid, Selection or Flatten while keeping Flip and
-Reverse. Review the remaining Layout section combinations against draw.io and
-capture a failing test before any further real code fix.
-Assess UIX-12 for any genuine HEAD evidence (remains DISCOVERED/unaudited).
-Otherwise close or correct stale rows as evidence-only with cited HEAD
-identifiers and update verification/session docs. Do not restart completed
+Audit UIX-12 beyond icon buttons. It is IN_PROGRESS, not VERIFIED: the next
+concrete gap should be a command that cannot be reached by keyboard, a control
+with no accessible name, or missing visible focus. Capture a failing test before
+any real code fix. The canvas accessibility tree is still absent and remains an
+acceptance gap. Otherwise close or correct stale rows as evidence-only with cited
+HEAD identifiers and update verification/session docs. Do not restart completed
 rounds. Keep blocked/deferred items blocked. No release, tag, or PR.
 
 ## Commands

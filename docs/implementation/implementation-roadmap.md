@@ -495,6 +495,8 @@ documentation closeout completes the round.
 
 **Round 89 (code committed 83c228c).** Escape now closes the canvas context menu without clearing the current selection. The editor tracks popup state and only falls through to the normal Escape behavior when no menu is open. Outside clicks and chosen actions clear the same state. CAN-01 keeps VERIFIED status with updated evidence.
 
+**Round 90 (code committed 14e9272).** Icon buttons now register AccessKit button labels from the generated tree update, with specific names for toolbar and top-bar actions. The label test failed before the fix, while the Tab-focus test passed both times and now guards the behavior. UIX-12 moves from DISCOVERED to IN_PROGRESS because there is still no full command audit, visible-focus assertion, or canvas accessibility tree.
+
 **Scope.**
 
 - A selection context resolver that classifies the current selection as document, single
