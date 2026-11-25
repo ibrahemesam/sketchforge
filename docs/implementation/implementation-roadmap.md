@@ -513,6 +513,8 @@ documentation closeout completes the round.
 
 **Round 98 (code committed 570ad49).** Sidebar layer rows now say Select <layer> in the accessibility tree. A layer render test found no labels before the fix. UIX-12 stays IN_PROGRESS.
 
+**Round 99 (code committed faf817d).** Library shape tiles now say Insert <shape> in the accessibility tree. A library panel render test found no Insert Decision label before the fix. UIX-12 stays IN_PROGRESS.
+
 **Scope.**
 
 - A selection context resolver that classifies the current selection as document, single
