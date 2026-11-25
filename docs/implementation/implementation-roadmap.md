@@ -497,6 +497,8 @@ documentation closeout completes the round.
 
 **Round 90 (code committed 14e9272).** Icon buttons now register AccessKit button labels from the generated tree update, with specific names for toolbar and top-bar actions. The label test failed before the fix, while the Tab-focus test passed both times and now guards the behavior. UIX-12 moves from DISCOVERED to IN_PROGRESS because there is still no full command audit, visible-focus assertion, or canvas accessibility tree.
 
+**Round 91 (code committed 2e0e1df).** The Layers panel order buttons now expose Send backward and Bring forward to AccessKit instead of sharing the generic Collapse name. A sidebar render test failed on the two duplicate labels before the fix. UIX-12 stays IN_PROGRESS while the broader audit, visible focus, and canvas tree remain open.
+
 **Scope.**
 
 - A selection context resolver that classifies the current selection as document, single

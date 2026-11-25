@@ -1,6 +1,6 @@
 # Sketch agent session state
 
-Last updated: 2026-11-25 (icon-button accessible names, code committed 14e9272).
+Last updated: 2026-11-25 (sidebar order button names, code committed 2e0e1df).
 
 ## Objective
 
@@ -46,8 +46,10 @@ committed 8d23cea) finished the UIX-02 Layout section audit, and round 89 (code
 committed 83c228c) made Escape close that popup without clearing the selection.
 Their docs closeout was pushed as b339ed4. Round 90 code commit 14e9272 gives
 every icon button an AccessKit name, with specific labels for toolbar and top-bar
-actions, and guards Tab focus. UIX-12 moved from DISCOVERED to IN_PROGRESS. The
-round 90 docs closeout follows this commit.
+actions, and guards Tab focus. UIX-12 moved from DISCOVERED to IN_PROGRESS. Its
+docs closeout was pushed as ad44b28. Round 91 code commit 2e0e1df names the
+Layers panel order buttons Send backward and Bring forward instead of two
+Collapse labels. The round 91 docs closeout follows this commit.
 
 The full sidebar spec was implemented and verified in round 6 (see
 `.opencode/MEMORY.md`). Round 7 closed the transparent connector label gap.
@@ -757,6 +759,8 @@ Round 89 (committed 83c228c, pushed) made Escape close the context menu without 
 
 Round 90 (committed 14e9272) gives icon buttons AccessKit labels and specific names for toolbar and top-bar actions. The label test failed before the fix and the Tab-focus test guards existing focus behavior. UIX-12 moved from DISCOVERED to IN_PROGRESS.
 
+Round 91 (committed 2e0e1df) names the Layers panel order buttons Send backward and Bring forward. A sidebar render test failed on two Collapse labels before the fix. UIX-12 stays IN_PROGRESS.
+
 ## Blockers
 
 - No blockers. M9 collaboration remains deferred pending a server, a conflict
@@ -771,11 +775,11 @@ Round 90 (committed 14e9272) gives icon buttons AccessKit labels and specific na
 
 ## Exact next task
 
-Audit UIX-12 beyond icon buttons. It is IN_PROGRESS, not VERIFIED: the next
-concrete gap should be a command that cannot be reached by keyboard, a control
-with no accessible name, or missing visible focus. Capture a failing test before
-any real code fix. The canvas accessibility tree is still absent and remains an
-acceptance gap. Otherwise close or correct stale rows as evidence-only with cited
+Audit UIX-12 beyond icon buttons and sidebar order buttons. It is IN_PROGRESS,
+not VERIFIED. A concrete candidate is the Layers dialog order buttons in
+`src/ui/inspector.rs`, which still use generic chevron names. Another is visible
+focus or the absent canvas accessibility tree. Capture a failing test before any
+real code fix. Otherwise close or correct stale rows as evidence-only with cited
 HEAD identifiers and update verification/session docs. Do not restart completed
 rounds. Keep blocked/deferred items blocked. No release, tag, or PR.
 
