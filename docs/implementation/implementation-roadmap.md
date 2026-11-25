@@ -551,6 +551,8 @@ documentation closeout completes the round.
 
 **User redirect, draw.io hexagon alias (code committed 3dfafa7).** Draw.io's `shape=hexagon;` flowchart style now imports as native Preparation. Native Preparation already exported that style, so the two paths now round-trip. Both new tests failed before the fix and pass after it. THIRD_PARTY.md records the added flowchart alias.
 
+**User redirect, draw.io Terminator stencil (code committed c4cfa54).** Native Terminator now exports with draw.io's `shape=mxgraph.flowchart.terminator;` stencil and reimports as the same registry shape. The import test already passed; the export test failed before the fix and passes after it. THIRD_PARTY.md records the added flowchart stencil.
+
 **Scope.**
 
 - A selection context resolver that classifies the current selection as document, single

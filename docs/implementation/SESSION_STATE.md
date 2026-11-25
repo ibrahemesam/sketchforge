@@ -1,6 +1,6 @@
 # Sketch agent session state
 
-Last updated: 2026-11-25 (draw.io hexagon alias, code committed 3dfafa7; docs closeout follows).
+Last updated: 2026-11-25 (draw.io Terminator stencil, code committed c4cfa54; docs closeout follows).
 
 ## Objective
 
@@ -97,13 +97,15 @@ imports with other angles report an approximation. Use case actors followed as c
 `mermaidUsecaseActor` variants import as the native Actor, with approximations for
 hollow and silhouette types. ER cardinality arrows followed as a6e408c, with docs as ec0f79a: draw.io edge names
 and the `entityRelationEdgeStyle` style survive import and export, while native heads
-approximate the combined markers. Hexagon aliases followed as 3dfafa7: draw.io's
+approximate the combined markers. Hexagon aliases followed as 3dfafa7, with docs as 2cada44: draw.io's
 `shape=hexagon;` flowchart style now imports as native Preparation and reimports from the
-native shape's export. This closeout records the draw.io source port, the ADR-006
-amendment, the BPMN aliases, the C4 properties, the SysML markers, the flowchart aliases,
+native shape's export. Terminator stencils followed as c4cfa54: native Terminator exports
+with draw.io's flowchart stencil and reimports as the same shape. This closeout records
+the draw.io source port, the ADR-006 amendment, the BPMN aliases, the C4 properties,
+the SysML markers, the flowchart aliases,
 the ER flags and cardinality, the UML aliases, the floorplan aliases, the network aliases,
 the mermaid person stencil, the UML actor and class port, the basic pie stencil, the use
-case actor aliases and the hexagon alias.
+case actor aliases, the hexagon alias and the Terminator stencil.
 
 The full sidebar spec was implemented and verified in round 6 (see
 `.opencode/MEMORY.md`). Round 7 closed the transparent connector label gap.
