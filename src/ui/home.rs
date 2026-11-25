@@ -216,6 +216,8 @@ fn sidebar_item(
     let p = theme::pal(ui);
     let (row, resp) =
         ui.allocate_exact_size(egui::vec2(ui.available_width(), 26.0), egui::Sense::click());
+    let action = format!("Switch to {label}");
+    resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, true, action.as_str()));
     if selected {
         ui.painter().rect_filled(row, 6.0, p.pressed);
     } else if resp.hovered() {
@@ -498,5 +500,41 @@ mod tests {
         assert_eq!(relative_time(now - 3 * 3_600_000, now), "3 hours ago");
         assert_eq!(relative_time(now - 2 * 86_400_000, now), "2 days ago");
         assert_eq!(relative_time(now + 1, now), "just now");
+    }
+
+    #[test]
+    fn home_sidebar_rows_expose_navigation_actions_to_accesskit() {
+        let ctx = egui::Context::default();
+        crate::theme::install_fonts(&ctx);
+        ctx.enable_accesskit();
+        let mut hv = HomeView::default();
+        let mut options = crate::options::Options::default();
+        let mut options_dirty = false;
+        let mut out = ctx.run_ui(
+            egui::RawInput {
+                screen_rect: Some(egui::Rect::from_min_size(
+                    egui::Pos2::ZERO,
+                    egui::vec2(900.0, 600.0),
+                )),
+                ..Default::default()
+            },
+            |ui| draw(ui, &mut hv, false, false, &mut options, &mut options_dirty),
+        );
+        out.textures_delta.clear();
+        let update = out
+            .platform_output
+            .accesskit_update
+            .expect("home screen should register accessibility nodes");
+        let labels: Vec<String> = update
+            .nodes
+            .iter()
+            .filter_map(|(_, node)| node.label().map(str::to_string))
+            .collect();
+        for expected in ["Switch to Recents", "Switch to Trash"] {
+            assert!(
+                labels.iter().any(|label| label == expected),
+                "expected a {expected} label, got {labels:?}"
+            );
+        }
     }
 }
