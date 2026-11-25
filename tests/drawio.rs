@@ -1506,3 +1506,79 @@ fn native_uml_actor_and_class_export_with_drawio_styles() {
         );
     }
 }
+
+#[test]
+fn pie_drawio_shape_imports_as_native_slice() {
+    let xml = r#"<mxfile><diagram id="d" name="Charts"><mxGraphModel><root>
+        <mxCell id="0"/><mxCell id="1" parent="0"/>
+        <mxCell id="pie" value="Quarter share" vertex="1" parent="1" style="html=1;shape=mxgraph.basic.pie;startAngle=0.2;endAngle=0.9;">
+          <mxGeometry x="0" y="0" width="120" height="120" as="geometry"/>
+        </mxCell>
+      </root></mxGraphModel></diagram></mxfile>"#;
+    let (pages, report) = drawio::import_str(xml).unwrap();
+    let names: Vec<&str> = pages[0]
+        .doc
+        .nodes
+        .values()
+        .map(|n| n.name.as_str())
+        .collect();
+    assert!(names.contains(&"Pie Slice"), "{names:?}");
+    assert!(
+        report
+            .approximated
+            .iter()
+            .any(|d| d.reason.contains("pie angles")),
+        "{report:?}"
+    );
+}
+
+#[test]
+fn native_pie_slice_exports_with_drawio_style() {
+    let def = drawio_rs::registry::by_id("pie-slice").expect("registry Pie Slice shape");
+    let mut node =
+        drawio_rs::registry::build(def, Rect::new(0.0, 0.0, def.size.0, def.size.1), None);
+    node.id = NodeId(1);
+    node.label = "Quarter share".into();
+    let doc = Document {
+        name: "Pie export".into(),
+        nodes: [(node.id, node)].into_iter().collect(),
+        root: vec![NodeId(1)],
+        ..Document::default()
+    };
+    let items = vec![export::Item {
+        name: doc.name.clone(),
+        doc: &doc,
+        roots: doc.layered_root(),
+    }];
+    let spec = Spec {
+        format: Format::Drawio,
+        scope: Scope::AllPages,
+        ..Spec::default()
+    };
+    let out = tmp("pie-export").join("pie.drawio");
+    export::write(&spec, &items, &out, None).unwrap();
+    let text = std::fs::read_to_string(&out).unwrap();
+    for needle in [
+        "shape=mxgraph.basic.pie;",
+        "startAngle=0;",
+        "endAngle=0.25;",
+    ] {
+        assert!(text.contains(needle), "{needle} missing from {text}");
+    }
+
+    let (pages, report) = drawio::import_str(&text).unwrap();
+    let names: Vec<&str> = pages[0]
+        .doc
+        .nodes
+        .values()
+        .map(|n| n.name.as_str())
+        .collect();
+    assert!(names.contains(&"Pie Slice"), "{names:?}");
+    assert!(
+        !report
+            .approximated
+            .iter()
+            .any(|d| d.reason.contains("pie angles")),
+        "{report:?}"
+    );
+}

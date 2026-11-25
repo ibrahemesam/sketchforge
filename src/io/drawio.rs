@@ -1764,6 +1764,19 @@ fn person_registry_for_shape(shape: Option<&str>) -> Option<&'static str> {
     }
 }
 
+// Draw.io's basic palette writes the pie shape as `mxgraph.basic.pie` with
+// `startAngle` and `endAngle` as fractions of a turn. The native registry has
+// one fixed quarter slice. Ported from
+// `src/main/webapp/js/diagramly/sidebar/Sidebar-Basic.js` and
+// `src/main/webapp/shapes/mxBasic.js`, Copyright (c) 2020-2025 JGraph Holdings
+// Ltd / draw.io AG, Apache-2.0. See `THIRD_PARTY.md`.
+fn chart_registry_for_shape(shape: Option<&str>) -> Option<&'static str> {
+    match shape.map(leaves)?.to_ascii_lowercase().as_str() {
+        "pie" => Some("pie-slice"),
+        _ => None,
+    }
+}
+
 fn registry_vertex(reg: &str, st: &ParsedStyle, rect: Rect, value: &str) -> Option<Node> {
     let def = crate::registry::by_id(reg)?;
     let mut n = crate::registry::build(def, rect, None);
@@ -1893,6 +1906,13 @@ fn build_vertex(cell: &RawCell, st: &ParsedStyle, rect: Rect) -> (Node, Option<S
         && let Some(n) = registry_vertex(reg, st, rect, &value)
     {
         return (n, approximation);
+    }
+    if let Some(reg) = chart_registry_for_shape(shape)
+        && let Some(n) = registry_vertex(reg, st, rect, &value)
+    {
+        let quarter = st.num("startAngle") == Some(0.0) && st.num("endAngle") == Some(0.25);
+        let loss = (!quarter).then(|| "pie angles are imported as a quarter slice".into());
+        return (n, loss);
     }
     let mut node = if is_group_style(st) {
         let mut n = Node::new(NodeId(0), NodeKind::Group, rect);
@@ -3222,6 +3242,9 @@ fn drawio_shape_for_registry(id: &str) -> Option<&'static str> {
             "verticalLabelPosition=bottom;html=1;verticalAlign=top;align=center;shape=mxgraph.floorplan.stairs;whiteSpace=wrap;"
         }
         "person" => "shape=mermaidPerson;perimeter=mermaidPersonPerimeter;whiteSpace=wrap;html=1;",
+        "pie-slice" => {
+            "verticalLabelPosition=bottom;verticalAlign=top;html=1;shape=mxgraph.basic.pie;startAngle=0;endAngle=0.25;whiteSpace=wrap;"
+        }
         "bpmn-start" => {
             "shape=mxgraph.bpmn.event;outline=standard;symbol=general;perimeter=ellipsePerimeter;aspect=fixed;whiteSpace=wrap;html=1;"
         }
