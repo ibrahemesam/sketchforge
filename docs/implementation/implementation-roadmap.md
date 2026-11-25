@@ -563,6 +563,8 @@ documentation closeout completes the round.
 
 **User redirect, draw.io Manual Input palette style (code committed 6b9151c).** Native Manual Input now writes draw.io's `boundedLbl`, `size` and `arcSize` flags and reimports as the same registry shape. The import test already passed; the export test failed before the fix and passes after it. THIRD_PARTY.md records the palette flags.
 
+**User redirect, draw.io Manual Operation palette style (code committed ed21bff).** Native Manual Operation now writes draw.io's trapezoid perimeter, label and flip flags and reimports as the same registry shape. The import test already passed; the export test failed before the fix and passes after it. THIRD_PARTY.md records the palette flags.
+
 **Scope.**
 
 - A selection context resolver that classifies the current selection as document, single
