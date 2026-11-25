@@ -2530,3 +2530,46 @@ fn native_on_page_exports_with_drawio_palette_style() {
         .collect();
     assert!(names.contains(&"On-Page Connector"), "{names:?}");
 }
+
+#[test]
+fn native_actor_exports_with_drawio_palette_style() {
+    let def = drawio_rs::registry::by_id("actor").expect("registry Actor shape");
+    let mut node =
+        drawio_rs::registry::build(def, Rect::new(0.0, 0.0, def.size.0, def.size.1), None);
+    node.id = NodeId(14);
+    node.label = "Customer".into();
+    let doc = Document {
+        name: "Actor export".into(),
+        nodes: [(node.id, node)].into_iter().collect(),
+        root: vec![NodeId(14)],
+        ..Document::default()
+    };
+    let items = vec![export::Item {
+        name: doc.name.clone(),
+        doc: &doc,
+        roots: doc.layered_root(),
+    }];
+    let spec = Spec {
+        format: Format::Drawio,
+        scope: Scope::AllPages,
+        ..Spec::default()
+    };
+    let out = tmp("actor-export").join("actor.drawio");
+    export::write(&spec, &items, &out, None).unwrap();
+    let text = std::fs::read_to_string(&out).unwrap();
+    assert!(
+        text.contains(
+            "shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;fillColor="
+        ),
+        "{text}"
+    );
+
+    let (pages, _) = drawio::import_str(&text).unwrap();
+    let names: Vec<&str> = pages[0]
+        .doc
+        .nodes
+        .values()
+        .map(|n| n.name.as_str())
+        .collect();
+    assert!(names.contains(&"Actor"), "{names:?}");
+}
