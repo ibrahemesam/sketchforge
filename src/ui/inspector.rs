@@ -1039,6 +1039,9 @@ fn swatches(ui: &mut Ui, current: Color) -> Option<Color> {
         ui.spacing_mut().item_spacing.x = 4.0;
         for c in STICKY_COLORS {
             let (r, resp) = ui.allocate_exact_size(egui::vec2(20.0, 20.0), egui::Sense::click());
+            resp.widget_info(|| {
+                egui::WidgetInfo::selected(egui::WidgetType::Button, true, c == current, c.to_hex())
+            });
             ui.painter().rect_filled(r, 5.0, c32(c));
             if c == current {
                 ui.painter().rect_stroke(
@@ -5549,9 +5552,9 @@ fn text_tab(
 #[cfg(test)]
 mod tests {
     use super::{
-        AdaptiveColors, Color, Node, NodeId, NodeKind, Paint, SectionGuard, apply, filter_matches,
-        normalize_query, panel, parse_tags, replace_row_filter, row_visible, section_open,
-        set_section_open,
+        AdaptiveColors, Color, Node, NodeId, NodeKind, Paint, STICKY_COLORS, SectionGuard, apply,
+        filter_matches, normalize_query, panel, parse_tags, replace_row_filter, row_visible,
+        section_open, set_section_open, swatches,
     };
     use crate::editor::Editor;
     use crate::ui::UiState;
@@ -5563,6 +5566,41 @@ mod tests {
             vec!["web".to_string(), "external".to_string()]
         );
         assert!(parse_tags("   ").is_empty());
+    }
+
+    #[test]
+    fn sticky_swatches_expose_color_names_to_accesskit() {
+        let ctx = egui::Context::default();
+        ctx.enable_accesskit();
+        let mut out = ctx.run_ui(
+            egui::RawInput {
+                screen_rect: Some(egui::Rect::from_min_size(
+                    egui::Pos2::ZERO,
+                    egui::vec2(200.0, 60.0),
+                )),
+                ..Default::default()
+            },
+            |ui| {
+                swatches(ui, STICKY_COLORS[0]);
+            },
+        );
+        out.textures_delta.clear();
+        let update = out
+            .platform_output
+            .accesskit_update
+            .expect("swatches should register accessibility nodes");
+        let labels: Vec<String> = update
+            .nodes
+            .iter()
+            .filter_map(|(_, node)| node.label().map(str::to_string))
+            .collect();
+        for color in STICKY_COLORS {
+            let hex = color.to_hex();
+            assert!(
+                labels.iter().any(|label| label == &hex),
+                "expected a {hex} label, got {labels:?}"
+            );
+        }
     }
 
     #[test]
