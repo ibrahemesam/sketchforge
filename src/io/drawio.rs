@@ -1665,6 +1665,21 @@ fn bpmn_registry_for_shape(shape: &str, st: &ParsedStyle) -> Option<&'static str
     }
 }
 
+// Flowchart stencil aliases follow draw.io's
+// `src/main/webapp/js/diagramly/sidebar/Sidebar-Flowchart.js`, Copyright (c)
+// 2020-2025 JGraph Holdings Ltd / draw.io AG, Apache-2.0. See `THIRD_PARTY.md`.
+fn flowchart_registry_for_shape(shape: &str) -> Option<&'static str> {
+    match shape.to_ascii_lowercase().as_str() {
+        "mxgraph.flowchart.document2" => Some("document"),
+        "mxgraph.flowchart.manual_input" => Some("manual-input"),
+        "mxgraph.flowchart.manual_operation" => Some("manual-operation"),
+        "mxgraph.flowchart.on-page_reference" => Some("on-page-connector"),
+        "mxgraph.flowchart.sequential_data" => Some("data"),
+        "mxgraph.flowchart.stored_data" => Some("database"),
+        _ => None,
+    }
+}
+
 fn registry_vertex(reg: &str, st: &ParsedStyle, rect: Rect, value: &str) -> Option<Node> {
     let def = crate::registry::by_id(reg)?;
     let mut n = crate::registry::build(def, rect, None);
@@ -1732,6 +1747,11 @@ fn build_vertex(cell: &RawCell, st: &ParsedStyle, rect: Rect) -> (Node, Option<S
     let mut approximation = None;
     let shape = shape_name(st);
     if let Some(reg) = shape.and_then(|s| bpmn_registry_for_shape(s, st))
+        && let Some(n) = registry_vertex(reg, st, rect, &value)
+    {
+        return (n, approximation);
+    }
+    if let Some(reg) = shape.and_then(flowchart_registry_for_shape)
         && let Some(n) = registry_vertex(reg, st, rect, &value)
     {
         return (n, approximation);
@@ -2676,7 +2696,19 @@ fn shape_style(n: &Node, _doc: &Document) -> String {
     let bpmn = crate::registry::all()
         .iter()
         .find(|d| d.name == n.name && d.id.starts_with("bpmn-"));
-    if let Some(def) = bpmn {
+    let flowchart = crate::registry::all().iter().find(|d| {
+        d.name == n.name
+            && matches!(
+                d.id,
+                "document"
+                    | "manual-input"
+                    | "manual-operation"
+                    | "on-page-connector"
+                    | "data"
+                    | "database"
+            )
+    });
+    if let Some(def) = bpmn.or(flowchart) {
         style.push_str(drawio_shape_for_registry(def.id).unwrap_or("rounded=0;"));
     } else if c4.is_none() && sysml.is_none() {
         match &n.kind {
@@ -2997,8 +3029,9 @@ fn drawio_shape_for_registry(id: &str) -> Option<&'static str> {
         "process" | "entity" => "rounded=0;whiteSpace=wrap;html=1;",
         "decision" | "relationship" => "rhombus;whiteSpace=wrap;html=1;",
         "terminator" => "rounded=1;arcSize=50;whiteSpace=wrap;html=1;",
-        "attribute" | "derived-attribute" | "key-attribute" | "on-page-connector" => {
-            "ellipse;whiteSpace=wrap;html=1;"
+        "attribute" | "derived-attribute" | "key-attribute" => "ellipse;whiteSpace=wrap;html=1;",
+        "on-page-connector" => {
+            "verticalLabelPosition=bottom;verticalAlign=top;html=1;shape=mxgraph.flowchart.on-page_reference;perimeter=ellipsePerimeter;whiteSpace=wrap;"
         }
         "database" => "shape=cylinder3;whiteSpace=wrap;html=1;",
         "document" => "shape=document;whiteSpace=wrap;html=1;",
