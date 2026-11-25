@@ -1827,3 +1827,59 @@ fn native_terminator_exports_with_drawio_stencil() {
         .collect();
     assert!(names.contains(&"Terminator"), "{names:?}");
 }
+
+#[test]
+fn flowchart_decision_stencil_imports_as_native_shape() {
+    let xml = r#"<mxfile><diagram id="d" name="Flow"><mxGraphModel><root>
+        <mxCell id="0"/><mxCell id="1" parent="0"/>
+        <mxCell id="d" value="Continue?" vertex="1" parent="1" style="strokeWidth=2;html=1;shape=mxgraph.flowchart.decision;whiteSpace=wrap;">
+          <mxGeometry x="0" y="0" width="140" height="100" as="geometry"/>
+        </mxCell>
+      </root></mxGraphModel></diagram></mxfile>"#;
+    let (pages, _) = drawio::import_str(xml).unwrap();
+    let names: Vec<&str> = pages[0]
+        .doc
+        .nodes
+        .values()
+        .map(|n| n.name.as_str())
+        .collect();
+    assert!(names.contains(&"Decision"), "{names:?}");
+}
+
+#[test]
+fn native_decision_exports_with_drawio_stencil() {
+    let def = drawio_rs::registry::by_id("decision").expect("registry Decision shape");
+    let mut node =
+        drawio_rs::registry::build(def, Rect::new(0.0, 0.0, def.size.0, def.size.1), None);
+    node.id = NodeId(3);
+    node.label = "Continue?".into();
+    let doc = Document {
+        name: "Decision export".into(),
+        nodes: [(node.id, node)].into_iter().collect(),
+        root: vec![NodeId(3)],
+        ..Document::default()
+    };
+    let items = vec![export::Item {
+        name: doc.name.clone(),
+        doc: &doc,
+        roots: doc.layered_root(),
+    }];
+    let spec = Spec {
+        format: Format::Drawio,
+        scope: Scope::AllPages,
+        ..Spec::default()
+    };
+    let out = tmp("decision-export").join("flow.drawio");
+    export::write(&spec, &items, &out, None).unwrap();
+    let text = std::fs::read_to_string(&out).unwrap();
+    assert!(text.contains("shape=mxgraph.flowchart.decision;"), "{text}");
+
+    let (pages, _) = drawio::import_str(&text).unwrap();
+    let names: Vec<&str> = pages[0]
+        .doc
+        .nodes
+        .values()
+        .map(|n| n.name.as_str())
+        .collect();
+    assert!(names.contains(&"Decision"), "{names:?}");
+}

@@ -2942,6 +2942,7 @@ fn shape_style(n: &Node, _doc: &Document) -> String {
                     | "data"
                     | "database"
                     | "terminator"
+                    | "decision"
             )
     });
     let er = crate::registry::all().iter().find(|d| {
@@ -3294,7 +3295,11 @@ fn c4_type_for_registry(id: &str) -> Option<&'static str> {
 fn drawio_shape_for_registry(id: &str) -> Option<&'static str> {
     Some(match id {
         "process" | "entity" => "rounded=0;whiteSpace=wrap;html=1;",
-        "decision" => "rhombus;whiteSpace=wrap;html=1;",
+        // Draw.io's flowchart palette writes Decision as a stencil. Ported from
+        // `src/main/webapp/js/diagramly/sidebar/Sidebar-Flowchart.js`,
+        // Copyright (c) 2020-2025 JGraph Holdings Ltd / draw.io AG, Apache-2.0.
+        // See `THIRD_PARTY.md`.
+        "decision" => "shape=mxgraph.flowchart.decision;whiteSpace=wrap;html=1;",
         "relationship" => {
             "shape=rhombus;double=1;perimeter=rhombusPerimeter;whiteSpace=wrap;html=1;align=center;"
         }
