@@ -491,6 +491,10 @@ documentation closeout completes the round.
 
 **Round 87 (code committed f2ad0df).** A right click without movement now selects the shape under the pointer and opens a canvas context menu; a right drag still only pans. The popup uses the editor action table for edit, clipboard, duplicate, delete, arrange, group and ungroup commands, and a smaller set on empty canvas. Escape, an outside click or a chosen command closes it. Failing input tests were captured before the fix, and a headless render confirms the popup paints over the diagram. CAN-01 keeps VERIFIED status with updated evidence.
 
+**Round 88 (code committed 8d23cea).** Connector-only Arrange no longer shows Layout or Constraints when a connector sits inside a frame. A shape in the same frame keeps both, with a render test on each side of that split. UIX-02 moves to VERIFIED after the tab, section and control audit.
+
+**Round 89 (code committed 83c228c).** Escape now closes the canvas context menu without clearing the current selection. The editor tracks popup state and only falls through to the normal Escape behavior when no menu is open. Outside clicks and chosen actions clear the same state. CAN-01 keeps VERIFIED status with updated evidence.
+
 **Scope.**
 
 - A selection context resolver that classifies the current selection as document, single

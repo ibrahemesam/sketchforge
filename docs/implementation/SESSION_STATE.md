@@ -1,6 +1,6 @@
 # Sketch agent session state
 
-Last updated: 2026-11-24 (right-drag pan and draw.io connection handles, code committed 54a4358).
+Last updated: 2026-11-25 (context menu Escape behavior and UIX-02 closeout, code committed 83c228c).
 
 ## Objective
 
@@ -41,7 +41,10 @@ outward arrowheads for quick connections. Selected shapes now show the eight
 fixed-point crosses, and the help footer names right-drag. Its docs closeout was
 pushed as aa9ff06. Round 87 (code committed f2ad0df) added a right-click canvas
 context menu: a click selects the hit shape and opens the popup, while a drag
-still only pans. The round 87 docs closeout follows this commit.
+still only pans. Its docs closeout was pushed as a841a6b. Round 88 (code
+committed 8d23cea) finished the UIX-02 Layout section audit, and round 89 (code
+committed 83c228c) made Escape close that popup without clearing the selection.
+The round 88 and 89 docs closeout follows this commit.
 
 The full sidebar spec was implemented and verified in round 6 (see
 `.opencode/MEMORY.md`). Round 7 closed the transparent connector label gap.
