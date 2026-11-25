@@ -1,6 +1,6 @@
 # Sketch agent session state
 
-Last updated: 2026-11-25 (draw.io Terminator palette style, code committed 4658c80; docs closeout follows).
+Last updated: 2026-11-25 (draw.io Decision palette style, code committed b35cdc4; docs closeout follows).
 
 ## Objective
 
@@ -115,13 +115,14 @@ Off-Page palette flags followed as 550b3cc, with docs as 59ce112: native Off-Pag
 draw.io's connector size and label flags. Process palette flags followed as f0b6489: native Process
 writes draw.io's rounded rectangle flags and reimports as Process. Document palette flags followed as
 624e141, with docs as 52d764f: native Document writes draw.io's `strokeWidth` and `size` flags with the stencil.
-Terminator palette flags followed as 4658c80: native Terminator writes draw.io's full palette style and reimports as
-Terminator. This closeout records
+Terminator palette flags followed as 4658c80, with docs as ae600db: native Terminator writes draw.io's full palette style and reimports as
+Terminator. Decision palette flags followed as b35cdc4: native Decision writes draw.io's full palette
+style and reimports as Decision. This closeout records
 the draw.io source port, the ADR-006 amendment, the BPMN aliases, the C4 properties,
 the SysML markers, the flowchart aliases,
 the ER flags and cardinality, the UML aliases, the floorplan aliases, the network aliases,
 the mermaid person stencil, the UML actor and class port, the basic pie stencil, the use
-case actor aliases, the hexagon alias, the Terminator stencil, the Decision stencil, the Delay stencil, the Document stencil, the Data palette flags, the Manual Input palette flags, the Manual Operation palette flags, the Preparation palette flags, the Off-Page palette flags, the Process palette flags, the Document palette flags and the Terminator palette flags.
+case actor aliases, the hexagon alias, the Terminator stencil, the Decision stencil, the Delay stencil, the Document stencil, the Data palette flags, the Manual Input palette flags, the Manual Operation palette flags, the Preparation palette flags, the Off-Page palette flags, the Process palette flags, the Document palette flags, the Terminator palette flags and the Decision palette flags.
 
 The full sidebar spec was implemented and verified in round 6 (see
 `.opencode/MEMORY.md`). Round 7 closed the transparent connector label gap.
