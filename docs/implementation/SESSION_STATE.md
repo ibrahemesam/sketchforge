@@ -1,6 +1,6 @@
 # Sketch agent session state
 
-Last updated: 2026-11-25 (draw.io network shape support, code committed 3b80e76; docs closeout follows).
+Last updated: 2026-11-25 (draw.io Person shape support, code committed 1ebf465; docs closeout follows).
 
 ## Objective
 
@@ -83,12 +83,14 @@ exports write the same style flags. UML shapes followed as 40aa938, with docs as
 draw.io's `shape=note2` and `shape=folder` import as native Note and Package shapes, and
 native shapes export with the UML palette styles. Floorplan shapes followed as 03bee77, with docs as d04f611: draw.io's
 `mxgraph.floorplan.*` door, window and stair aliases import as native shapes, and native
-shapes export with the matching stencil styles. Network shapes followed as 3b80e76:
+shapes export with the matching stencil styles. Network shapes followed as 3b80e76, with docs as af1c008:
 `mxgraph.networks.*` server, PC and storage aliases import as native Server, Host and
-Database shapes, and native network shapes export with the matching stencil styles. This
-closeout records the draw.io source port, the ADR-006 amendment, the BPMN aliases, the C4
-properties, the SysML markers, the flowchart aliases, the ER flags, the UML aliases, the
-floorplan aliases and the network aliases.
+Database shapes, and native network shapes export with the matching stencil styles. Person
+support followed as 1ebf465: draw.io's mermaid person stencil imports as the native Person
+shape, and native Person exports with that stencil and perimeter. This closeout records the
+draw.io source port, the ADR-006 amendment, the BPMN aliases, the C4 properties, the SysML
+markers, the flowchart aliases, the ER flags, the UML aliases, the floorplan aliases, the
+network aliases and the mermaid person stencil.
 
 The full sidebar spec was implemented and verified in round 6 (see
 `.opencode/MEMORY.md`). Round 7 closed the transparent connector label gap.
