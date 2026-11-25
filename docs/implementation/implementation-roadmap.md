@@ -549,6 +549,8 @@ documentation closeout completes the round.
 
 **User redirect, draw.io ER cardinality arrows (code committed a6e408c).** Draw.io ER arrow names and `entityRelationEdgeStyle` now survive import and export on native connectors. Native heads approximate the combined markers, and imports report that approximation. The integration test failed before the fix and passes after it. THIRD_PARTY.md records mxER.js.
 
+**User redirect, draw.io hexagon alias (code committed 3dfafa7).** Draw.io's `shape=hexagon;` flowchart style now imports as native Preparation. Native Preparation already exported that style, so the two paths now round-trip. Both new tests failed before the fix and pass after it. THIRD_PARTY.md records the added flowchart alias.
+
 **Scope.**
 
 - A selection context resolver that classifies the current selection as document, single
