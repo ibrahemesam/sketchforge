@@ -501,6 +501,8 @@ documentation closeout completes the round.
 
 **Round 92 (code committed b7b3a54).** Sticky note color swatches now expose their six hex colors as AccessKit labels instead of unnamed click targets. A swatch render test failed with no labels before the fix. UIX-12 stays IN_PROGRESS while the command audit, visible focus, and canvas tree remain open.
 
+**Round 93 (code committed 486783d).** Every button in the Layers dialog now has an action-specific AccessKit name instead of a glyph or generic icon name. A dialog render test failed on the missing Hide Layer 2 label before the fix. UIX-12 stays IN_PROGRESS.
+
 **Scope.**
 
 - A selection context resolver that classifies the current selection as document, single
