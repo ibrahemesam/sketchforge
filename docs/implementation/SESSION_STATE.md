@@ -1,6 +1,6 @@
 # Sketch agent session state
 
-Last updated: 2026-11-25 (draw.io color import and export, code committed 21c0b68; attribution docs closeout follows).
+Last updated: 2026-11-25 (draw.io BPMN shape support, code committed f6b7f69; docs closeout follows).
 
 ## Objective
 
@@ -66,7 +66,10 @@ pushed as 215e830. Round 101 code commit 0931d18 names the layer disclosure
 buttons. Its docs closeout was pushed as 647fa6f. The user then redirected work to
 draw.io colors, panel resize and shape support. The panel fix was committed and pushed
 as e2663ad. The draw.io color import and export fix was committed and pushed as
-21c0b68. This docs closeout records the draw.io source port and the ADR-006 amendment.
+21c0b68. The draw.io attribution docs closeout followed as ca39123. BPMN shape import and
+export were then committed as f6b7f69: draw.io event, task and gateway aliases now map to
+native BPMN registry shapes, and native BPMN shapes export with draw.io styles. This
+closeout records the draw.io source port, the ADR-006 amendment and the BPMN aliases.
 
 The full sidebar spec was implemented and verified in round 6 (see
 `.opencode/MEMORY.md`). Round 7 closed the transparent connector label gap.

@@ -523,6 +523,8 @@ documentation closeout completes the round.
 
 **User redirect, draw.io colors (code committed 21c0b68).** Color import now follows draw.io roles for defaults, invert, CSS syntax, light-dark pairs, swimlane body fill and gradient flags. Export writes gradient=1 and swimlaneFillColor. A real Life.drawio file kept only white fills before the fix, then kept its green and magenta colors. The user also lifted the clean-room restriction for draw.io source. README.md, THIRD_PARTY.md and ADR-006 now record the Apache-2.0 port.
 
+**User redirect, draw.io BPMN shapes (code committed f6b7f69).** BPMN event, task and gateway aliases now import as native registry shapes instead of generic ellipses, rectangles and frames. The `outline` key selects start, intermediate or end events, task cells with `container=1` still become tasks, and native BPMN shapes export with draw.io's `mxgraph.bpmn` styles. Both integration tests failed before the fix and pass after it. THIRD_PARTY.md now lists the BPMN sources alongside the earlier draw.io port.
+
 **Scope.**
 
 - A selection context resolver that classifies the current selection as document, single
