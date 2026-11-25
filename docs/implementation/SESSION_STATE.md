@@ -1,6 +1,6 @@
 # Sketch agent session state
 
-Last updated: 2026-11-25 (Command palette result names, code committed d661af8).
+Last updated: 2026-11-25 (Sidebar layer row names, code committed 570ad49).
 
 ## Objective
 
@@ -57,8 +57,9 @@ code commit 489e7a6 names the Style palette arrows and page dots. Its docs
 closeout was pushed as 1c7123e. Round 95 code commit bacbe2f names the sidebar
 layer eye and lock controls. Its docs closeout was pushed as 02a5545. Round 96
 code commit 8af5f2d names the sidebar page rows. Its docs closeout was pushed as
-c044836. Round 97 code commit d661af8 names the command palette result rows. The
-round 97 docs closeout follows this commit.
+c044836. Round 97 code commit d661af8 names the command palette result rows. Its
+docs closeout was pushed as f319bab. Round 98 code commit 570ad49 names the
+sidebar layer rows. The round 98 docs closeout follows this commit.
 
 The full sidebar spec was implemented and verified in round 6 (see
 `.opencode/MEMORY.md`). Round 7 closed the transparent connector label gap.
@@ -782,6 +783,8 @@ Round 96 (committed 8af5f2d) names sidebar page rows with their switch action. A
 
 Round 97 (committed d661af8) names command palette result rows with their run action. A palette render test found no labels before the fix. UIX-12 stays IN_PROGRESS.
 
+Round 98 (committed 570ad49) names sidebar layer rows with their select action. A layer render test found no labels before the fix. UIX-12 stays IN_PROGRESS.
+
 ## Blockers
 
 - No blockers. M9 collaboration remains deferred pending a server, a conflict
@@ -797,11 +800,11 @@ Round 97 (committed d661af8) names command palette result rows with their run ac
 ## Exact next task
 
 Audit UIX-12 beyond icon buttons, sidebar order buttons, sticky swatches,
-Layers dialog actions, the Style palette pager, sidebar layer controls, page rows
-and command palette results. It is IN_PROGRESS, not VERIFIED. A concrete candidate
-is the sidebar layer row itself in `src/ui/mod.rs`, whose click target has no
-widget info. Visible focus and the absent canvas accessibility tree are still
-open too. Capture a failing test before any real code fix. Otherwise close or
+Layers dialog actions, the Style palette pager, sidebar layer controls, page rows,
+command palette results and layer rows. It is IN_PROGRESS, not VERIFIED. A concrete
+candidate is the library shape tiles in `src/ui/library.rs`, whose click targets
+have no widget info. Visible focus and the absent canvas accessibility tree are
+still open too. Capture a failing test before any real code fix. Otherwise close or
 correct stale rows as evidence-only with cited HEAD identifiers and update
 verification/session docs. Do not restart completed rounds. Keep blocked/deferred
 items blocked. No release, tag, or PR.

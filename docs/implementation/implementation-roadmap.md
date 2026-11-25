@@ -511,6 +511,8 @@ documentation closeout completes the round.
 
 **Round 97 (code committed d661af8).** Command palette result rows now say Run <command> in the accessibility tree. A palette render test found no labels before the fix. UIX-12 stays IN_PROGRESS.
 
+**Round 98 (code committed 570ad49).** Sidebar layer rows now say Select <layer> in the accessibility tree. A layer render test found no labels before the fix. UIX-12 stays IN_PROGRESS.
+
 **Scope.**
 
 - A selection context resolver that classifies the current selection as document, single
