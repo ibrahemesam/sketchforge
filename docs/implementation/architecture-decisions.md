@@ -247,36 +247,45 @@ and dropped content. The inventory uses the status vocabulary in ADR-014.
 - Implement a shallow version of every feature. It multiplies maintenance and produces
   wrong output in exports.
 
-## ADR-006: No proprietary assets and no copied draw.io implementation
+## ADR-006: No proprietary assets and licensed ports only
 
-**Status:** Accepted.
+**Status:** Accepted, amended 2026-11-25.
 
-**Context.** Sketch is a clean-room reimplementation. The repository bundles Inter and
-Noto Sans Arabic under the SIL Open Font License and ports MIT-licensed algorithms with
-attribution. draw.io is open source, but its documentation, shape libraries, templates,
-and icon packs include assets with separate terms. Vendor stencils carry trademarks.
+**Context.** Sketch began as a clean-room reimplementation with respect to Paper and
+Figma. The repository bundles Inter and Noto Sans Arabic under the SIL Open Font License
+and ports MIT-licensed algorithms with attribution. The user lifted the clean-room
+restriction for draw.io source only. draw.io is Apache-2.0, but its documentation, shape
+libraries, templates, and icon packs include assets with separate terms. Vendor stencils
+carry trademarks.
 
-**Decision.** Use draw.io documentation for behavior only. Do not copy draw.io code,
-shaders, icons, fonts, templates, or shape XML into the application. Native shapes are
-built from Sketch's own geometry. Third-party code or assets require a named source, a
-license review, an entry in `THIRD_PARTY.md`, and a comment where the code starts. Vendor
-icon packs (AWS, Azure, SAP, Citrix, Salesforce, Veeam, and similar) stay blocked until a
-license decision exists. Documentation links may point to draw.io pages.
+**Decision.** Port draw.io behavior from Apache-2.0 source when it helps match the
+format. Each ported file names its source in a comment and gets an entry with copyright
+and license text in `THIRD_PARTY.md`. Do not copy draw.io icons, fonts, templates, shape
+XML, or vendor packs into the application without a license review. Paper and Figma remain
+behavior only, with no code, shaders, icons, fonts or assets from either. Native shapes are
+built from Sketch's own geometry. Imported draw.io XML is treated as data to map, not as
+code to execute. Vendor icon packs (AWS, Azure, SAP, Citrix, Salesforce, Veeam, and
+similar) stay blocked until a license decision exists. Documentation links may point to
+draw.io pages.
 
 **Consequences.**
 
 - "Feature parity" means behavior parity, not visual asset parity.
+- The draw.io adapter can follow upstream color and style rules instead of guessing.
+- The Paper work stays clean-room, and vendor icon packs stay blocked.
 - Domain packs use generic native shapes unless a licensed asset set is approved.
 - Imported draw.io shape XML is treated as data to map, not as code to execute.
-- A clean-room claim remains defensible.
 
 **Rejected alternatives.**
 
-- Copy draw.io's shape definitions or stencil XML. It conflicts with the clean-room rule
-  and may carry asset licenses.
+- Copy draw.io's shape definitions or stencil XML. They may carry asset licenses and are
+  not needed to map supported shapes to native geometry.
 - Bundle vendor icons because draw.io does. Trademark and redistribution terms differ by
   vendor and are not covered by the app license.
-- Reuse draw.io screenshots or icons in the UI. The UI should use Sketch's own icon set.
+- Reuse draw.io screenshots or icons in the UI. The UI uses Sketch's own icon set.
+- Avoid all draw.io source and re-derive format behavior from observation. The user
+  rejected that restriction on 2026-11-25, and guessing color roles already caused a
+  contrast regression.
 
 ## ADR-007: The format panel is a context-driven projection
 

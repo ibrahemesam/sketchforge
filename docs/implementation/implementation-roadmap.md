@@ -519,6 +519,10 @@ documentation closeout completes the round.
 
 **Round 101 (code committed 0931d18).** Layer disclosure chevrons now say Collapse <layer> or Expand <layer> in the accessibility tree. A layer render test saw only the two row labels before the fix. UIX-12 stays IN_PROGRESS.
 
+**User redirect, sidebar (code committed e2663ad).** The left panel keeps egui's resize handle, stores its width in Options, clamps content without fighting a drag, and shows a divider at the edge. Two render tests failed before the fix. IO-15 and IO-16 keep their statuses.
+
+**User redirect, draw.io colors (code committed 21c0b68).** Color import now follows draw.io roles for defaults, invert, CSS syntax, light-dark pairs, swimlane body fill and gradient flags. Export writes gradient=1 and swimlaneFillColor. A real Life.drawio file kept only white fills before the fix, then kept its green and magenta colors. The user also lifted the clean-room restriction for draw.io source. README.md, THIRD_PARTY.md and ADR-006 now record the Apache-2.0 port.
+
 **Scope.**
 
 - A selection context resolver that classifies the current selection as document, single

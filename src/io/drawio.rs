@@ -1,5 +1,9 @@
 //! draw.io (`.drawio`, `.xml`) import and export, per ADR-011.
 //!
+//! Color defaults and style handling are a Rust port of draw.io logic in
+//! `src/main/webapp/js/grapheditor/Editor.js` and `js/grapheditor/Graph.js`,
+//! Copyright (c) jGraph Ltd, Apache-2.0. See `THIRD_PARTY.md`.
+//!
 //! Import parses the `mxfile`/`mxGraphModel` XML into an intermediate cell list, maps
 //! the supported subset onto native nodes, layers and connectors, and returns a report
 //! of what was imported, approximated or dropped. Compressed payloads are decoded;

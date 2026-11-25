@@ -1,6 +1,6 @@
 # Sketch agent session state
 
-Last updated: 2026-11-25 (Layer disclosure button names, code committed 0931d18).
+Last updated: 2026-11-25 (draw.io color import and export, code committed 21c0b68; attribution docs closeout follows).
 
 ## Objective
 
@@ -63,7 +63,10 @@ sidebar layer rows. Its docs closeout was pushed as de61997. Round 99 code commi
 faf817d names the library shape tiles. Its docs closeout was pushed as f00fe6e.
 Round 100 code commit 1f17c9f names the home sidebar rows. Its docs closeout was
 pushed as 215e830. Round 101 code commit 0931d18 names the layer disclosure
-buttons. The round 101 docs closeout follows this commit.
+buttons. Its docs closeout was pushed as 647fa6f. The user then redirected work to
+draw.io colors, panel resize and shape support. The panel fix was committed and pushed
+as e2663ad. The draw.io color import and export fix was committed and pushed as
+21c0b68. This docs closeout records the draw.io source port and the ADR-006 amendment.
 
 The full sidebar spec was implemented and verified in round 6 (see
 `.opencode/MEMORY.md`). Round 7 closed the transparent connector label gap.
@@ -810,13 +813,13 @@ Round 101 (committed 0931d18) names layer disclosure buttons with their collapse
 ## Exact next task
 
 User redirected on 2026-11-25 from the UIX-12 naming rounds. UIX-12 stays
-IN_PROGRESS but is paused. Next tasks, in order: (1) fix draw.io import so
-fill colors, stroke colors, font colors and gradients survive and contrast stays
-readable; (2) make the left sidebar resizable and persist its width; (3) widen
-draw.io shape support. Capture a failing test before each real fix. The user
-lifted the clean-room requirement for draw.io source only. Ported code needs a
-source comment and an entry in THIRD_PARTY.md. Paper assets stay excluded.
-Keep blocked/deferred items blocked. No release, tag, or PR.
+IN_PROGRESS but is paused. Draw.io colors and the resizable sidebar are done and
+pushed. Next: widen draw.io shape support, starting with BPMN aliases such as
+`mxgraph.bpmn.event`, `mxgraph.bpmn.task2` and `mxgraph.bpmn.gateway2`, map them
+to native BPMN IDs, and write export styles. Capture a failing test before the
+fix. The user lifted the clean-room requirement for draw.io source only. Ported
+code needs a source comment and an entry in THIRD_PARTY.md. Paper assets stay
+excluded. Keep blocked/deferred items blocked. No release, tag, or PR.
 
 ## Commands
 

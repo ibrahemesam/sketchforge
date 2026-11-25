@@ -86,7 +86,7 @@ Set `DRAWIO_RS_MCP_PORT` before starting drawio-rs. The bridge talks over localh
 
 ## Project background
 
-drawio-rs is a clean-room reimplementation modeled on Paper Desktop. `analysis/PAPER_ARCHITECTURE.md` records what that app does, based on a licensed copy. No Paper code, shaders, icons, fonts or assets are in this repo. drawio-rs is not affiliated with or endorsed by Paper.
+drawio-rs is modeled on Paper Desktop and draw.io. `analysis/PAPER_ARCHITECTURE.md` records what Paper does, based on a licensed copy, and no Paper code, shaders, icons, fonts or assets are in this repo. The draw.io adapter ports selected color and style logic from draw.io's Apache-2.0 source; `THIRD_PARTY.md` names the files and copyright. drawio-rs is not affiliated with or endorsed by Paper or jGraph.
 
 The old app name was Sketch, and before that paper-rs. The file format and environment variables still accept the old names. Most of the implementation was written by AI agents from prompts, then built, tested and corrected in this repo.
 
