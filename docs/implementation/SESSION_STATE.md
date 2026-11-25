@@ -1,6 +1,6 @@
 # Sketch agent session state
 
-Last updated: 2026-11-25 (Home sidebar row names, code committed 1f17c9f).
+Last updated: 2026-11-25 (Layer disclosure button names, code committed 0931d18).
 
 ## Objective
 
@@ -61,8 +61,9 @@ c044836. Round 97 code commit d661af8 names the command palette result rows. Its
 docs closeout was pushed as f319bab. Round 98 code commit 570ad49 names the
 sidebar layer rows. Its docs closeout was pushed as de61997. Round 99 code commit
 faf817d names the library shape tiles. Its docs closeout was pushed as f00fe6e.
-Round 100 code commit 1f17c9f names the home sidebar rows. The round 100 docs
-closeout follows this commit.
+Round 100 code commit 1f17c9f names the home sidebar rows. Its docs closeout was
+pushed as 215e830. Round 101 code commit 0931d18 names the layer disclosure
+buttons. The round 101 docs closeout follows this commit.
 
 The full sidebar spec was implemented and verified in round 6 (see
 `.opencode/MEMORY.md`). Round 7 closed the transparent connector label gap.
@@ -792,6 +793,8 @@ Round 99 (committed faf817d) names library shape tiles with their insert action.
 
 Round 100 (committed 1f17c9f) names home sidebar rows with their view switch action. A home screen render test found no Switch to Recents label before the fix. UIX-12 stays IN_PROGRESS.
 
+Round 101 (committed 0931d18) names layer disclosure buttons with their collapse and expand action. A layer render test saw only the row labels before the fix. UIX-12 stays IN_PROGRESS.
+
 ## Blockers
 
 - No blockers. M9 collaboration remains deferred pending a server, a conflict
@@ -806,16 +809,14 @@ Round 100 (committed 1f17c9f) names home sidebar rows with their view switch act
 
 ## Exact next task
 
-Audit UIX-12 beyond icon buttons, sidebar order buttons, sticky swatches,
-Layers dialog actions, the Style palette pager, sidebar layer controls, page rows,
-command palette results, layer rows, library tiles and home sidebar rows. It is
-IN_PROGRESS, not VERIFIED. A concrete candidate is the layer-row disclosure
-chevron in `src/ui/mod.rs`, whose click target has no widget info. Visible focus
-and the absent canvas accessibility tree are still open too. Capture a failing
-test before any real code fix. Otherwise close or correct stale rows as
-evidence-only with cited HEAD identifiers and update verification/session docs.
-Do not restart completed rounds. Keep blocked/deferred items blocked. No release,
-tag, or PR.
+User redirected on 2026-11-25 from the UIX-12 naming rounds. UIX-12 stays
+IN_PROGRESS but is paused. Next tasks, in order: (1) fix draw.io import so
+fill colors, stroke colors, font colors and gradients survive and contrast stays
+readable; (2) make the left sidebar resizable and persist its width; (3) widen
+draw.io shape support. Capture a failing test before each real fix. The user
+lifted the clean-room requirement for draw.io source only. Ported code needs a
+source comment and an entry in THIRD_PARTY.md. Paper assets stay excluded.
+Keep blocked/deferred items blocked. No release, tag, or PR.
 
 ## Commands
 

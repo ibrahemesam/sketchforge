@@ -517,6 +517,8 @@ documentation closeout completes the round.
 
 **Round 100 (code committed 1f17c9f).** Home sidebar rows now say Switch to <view> in the accessibility tree. A home screen render test found no Switch to Recents label before the fix. UIX-12 stays IN_PROGRESS.
 
+**Round 101 (code committed 0931d18).** Layer disclosure chevrons now say Collapse <layer> or Expand <layer> in the accessibility tree. A layer render test saw only the two row labels before the fix. UIX-12 stays IN_PROGRESS.
+
 **Scope.**
 
 - A selection context resolver that classifies the current selection as document, single
