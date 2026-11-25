@@ -1753,6 +1753,17 @@ fn network_registry_for_shape(shape: Option<&str>) -> Option<&'static str> {
     }
 }
 
+// Draw.io's basic palette writes the org Person shape as `mermaidPerson`.
+// Ported from `src/main/webapp/js/diagramly/sidebar/Sidebar-Basic.js`,
+// Copyright (c) 2020-2025 JGraph Holdings Ltd / draw.io AG, Apache-2.0. See
+// `THIRD_PARTY.md`.
+fn person_registry_for_shape(shape: Option<&str>) -> Option<&'static str> {
+    match shape?.to_ascii_lowercase().as_str() {
+        "mermaidperson" => Some("person"),
+        _ => None,
+    }
+}
+
 fn registry_vertex(reg: &str, st: &ParsedStyle, rect: Rect, value: &str) -> Option<Node> {
     let def = crate::registry::by_id(reg)?;
     let mut n = crate::registry::build(def, rect, None);
@@ -1855,6 +1866,11 @@ fn build_vertex(cell: &RawCell, st: &ParsedStyle, rect: Rect) -> (Node, Option<S
         return (n, approximation);
     }
     if let Some(reg) = network_registry_for_shape(shape)
+        && let Some(n) = registry_vertex(reg, st, rect, &value)
+    {
+        return (n, approximation);
+    }
+    if let Some(reg) = person_registry_for_shape(shape)
         && let Some(n) = registry_vertex(reg, st, rect, &value)
     {
         return (n, approximation);
@@ -3182,7 +3198,7 @@ fn drawio_shape_for_registry(id: &str) -> Option<&'static str> {
         "stairs" => {
             "verticalLabelPosition=bottom;html=1;verticalAlign=top;align=center;shape=mxgraph.floorplan.stairs;whiteSpace=wrap;"
         }
-        "person" => "shape=person;whiteSpace=wrap;html=1;",
+        "person" => "shape=mermaidPerson;perimeter=mermaidPersonPerimeter;whiteSpace=wrap;html=1;",
         "bpmn-start" => {
             "shape=mxgraph.bpmn.event;outline=standard;symbol=general;perimeter=ellipsePerimeter;aspect=fixed;whiteSpace=wrap;html=1;"
         }

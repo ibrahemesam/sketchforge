@@ -1350,3 +1350,68 @@ fn native_network_shapes_export_with_drawio_styles() {
         );
     }
 }
+
+#[test]
+fn person_drawio_shapes_import_as_native_shapes() {
+    let xml = r#"<mxfile><diagram id="d" name="Org"><mxGraphModel><root>
+        <mxCell id="0"/><mxCell id="1" parent="0"/>
+        <mxCell id="mermaid" value="Project lead" vertex="1" parent="1" style="shape=mermaidPerson;perimeter=mermaidPersonPerimeter;whiteSpace=wrap;html=1;">
+          <mxGeometry x="0" y="0" width="100" height="100" as="geometry"/>
+        </mxCell>
+        <mxCell id="person" value="Reviewer" vertex="1" parent="1" style="shape=person;whiteSpace=wrap;html=1;">
+          <mxGeometry x="140" y="0" width="100" height="100" as="geometry"/>
+        </mxCell>
+      </root></mxGraphModel></diagram></mxfile>"#;
+    let (pages, _) = drawio::import_str(xml).unwrap();
+    let names: Vec<&str> = pages[0]
+        .doc
+        .nodes
+        .values()
+        .map(|n| n.name.as_str())
+        .collect();
+    assert_eq!(
+        names.iter().filter(|name| **name == "Person").count(),
+        2,
+        "{names:?}"
+    );
+}
+
+#[test]
+fn native_person_shape_exports_with_drawio_style() {
+    let def = drawio_rs::registry::by_id("person").expect("registry Person shape");
+    let mut node =
+        drawio_rs::registry::build(def, Rect::new(0.0, 0.0, def.size.0, def.size.1), None);
+    node.id = NodeId(1);
+    node.label = "Project lead".into();
+    let doc = Document {
+        name: "Person export".into(),
+        nodes: [(node.id, node)].into_iter().collect(),
+        root: vec![NodeId(1)],
+        ..Document::default()
+    };
+    let items = vec![export::Item {
+        name: doc.name.clone(),
+        doc: &doc,
+        roots: doc.layered_root(),
+    }];
+    let spec = Spec {
+        format: Format::Drawio,
+        scope: Scope::AllPages,
+        ..Spec::default()
+    };
+    let out = tmp("person-export").join("person.drawio");
+    export::write(&spec, &items, &out, None).unwrap();
+    let text = std::fs::read_to_string(&out).unwrap();
+    for needle in ["shape=mermaidPerson;", "perimeter=mermaidPersonPerimeter;"] {
+        assert!(text.contains(needle), "{needle} missing from {text}");
+    }
+
+    let (pages, _) = drawio::import_str(&text).unwrap();
+    let names: Vec<&str> = pages[0]
+        .doc
+        .nodes
+        .values()
+        .map(|n| n.name.as_str())
+        .collect();
+    assert!(names.contains(&"Person"), "{names:?}");
+}
