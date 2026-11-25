@@ -533,6 +533,8 @@ documentation closeout completes the round.
 
 **User redirect, draw.io ER notation (code committed 9e98c71).** Draw.io's `double=1` flag on `ext` and `rhombus` cells now imports as Weak Entity and Relationship. Underlined ellipses import as Key Attribute, and dashed ellipses import as Derived Attribute. Native ER shapes export with the same style flags, so all four variants round-trip. Both integration tests failed before the fix and pass after it. THIRD_PARTY.md now lists Sidebar-ER.js.
 
+**User redirect, draw.io UML shapes (code committed 40aa938).** Draw.io's `shape=note2` now imports as Note and `shape=folder` imports as Package. The folder alias wins even when draw.io marks the cell as a container, so it no longer becomes a frame. Native note and package shapes export with the UML palette styles. Both integration tests failed before the fix and pass after it. THIRD_PARTY.md now lists Sidebar-UML25.js.
+
 **Scope.**
 
 - A selection context resolver that classifies the current selection as document, single

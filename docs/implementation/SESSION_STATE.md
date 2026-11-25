@@ -1,6 +1,6 @@
 # Sketch agent session state
 
-Last updated: 2026-11-25 (draw.io ER notation support, code committed 9e98c71; docs closeout follows).
+Last updated: 2026-11-25 (draw.io UML shape support, code committed 40aa938; docs closeout follows).
 
 ## Objective
 
@@ -77,10 +77,13 @@ import as native SysML shapes, and exports write those styles and child markers.
 aliases followed as fb9c602, with docs as 5420bd9: draw.io's `document2`, `manual_input`,
 `manual_operation`, `on-page_reference`, `sequential_data` and `stored_data` import as
 native shapes, and native flowchart shapes export with the matching draw.io styles. ER
-notation followed as 9e98c71: the `double=1` flag on `ext` and `rhombus` cells, plus
-underlined and dashed ellipses, import as native ER shapes, and exports write the same
-style flags. This closeout records the draw.io source port, the ADR-006 amendment, the
-BPMN aliases, the C4 properties, the SysML markers, the flowchart aliases and the ER flags.
+notation followed as 9e98c71, with docs as adcf58f: the `double=1` flag on `ext` and
+`rhombus` cells, plus underlined and dashed ellipses, import as native ER shapes, and
+exports write the same style flags. UML shapes followed as 40aa938: draw.io's `shape=note2`
+and `shape=folder` import as native Note and Package shapes, and native shapes export with
+the UML palette styles. This closeout records the draw.io source port, the ADR-006
+amendment, the BPMN aliases, the C4 properties, the SysML markers, the flowchart aliases,
+the ER flags and the UML aliases.
 
 The full sidebar spec was implemented and verified in round 6 (see
 `.opencode/MEMORY.md`). Round 7 closed the transparent connector label gap.
