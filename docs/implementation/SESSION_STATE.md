@@ -1,6 +1,6 @@
 # Sketch agent session state
 
-Last updated: 2026-11-25 (Style palette pager names, code committed 489e7a6).
+Last updated: 2026-11-25 (Sidebar layer control names, code committed bacbe2f).
 
 ## Objective
 
@@ -53,8 +53,9 @@ Collapse labels. Its docs closeout was pushed as af9fc01. Round 92 code commit
 b7b3a54 gives the six sticky note color swatches AccessKit hex labels. Its docs
 closeout was pushed as 515167a. Round 93 code commit 486783d names every action
 button in the Layers dialog. Its docs closeout was pushed as 33305e0. Round 94
-code commit 489e7a6 names the Style palette arrows and page dots. The round 94
-docs closeout follows this commit.
+code commit 489e7a6 names the Style palette arrows and page dots. Its docs
+closeout was pushed as 1c7123e. Round 95 code commit bacbe2f names the sidebar
+layer eye and lock controls. The round 95 docs closeout follows this commit.
 
 The full sidebar spec was implemented and verified in round 6 (see
 `.opencode/MEMORY.md`). Round 7 closed the transparent connector label gap.
@@ -772,6 +773,8 @@ Round 93 (committed 486783d) names every button in the Layers dialog with its ac
 
 Round 94 (committed 489e7a6) names the Style palette arrows and page dots. A palette render test failed on glyph-only arrow labels before the fix. UIX-12 stays IN_PROGRESS.
 
+Round 95 (committed bacbe2f) names the sidebar eye and lock click regions. A hidden, locked row produced no labels before the fix. UIX-12 stays IN_PROGRESS.
+
 ## Blockers
 
 - No blockers. M9 collaboration remains deferred pending a server, a conflict
@@ -787,9 +790,9 @@ Round 94 (committed 489e7a6) names the Style palette arrows and page dots. A pal
 ## Exact next task
 
 Audit UIX-12 beyond icon buttons, sidebar order buttons, sticky swatches,
-Layers dialog actions and the Style palette pager. It is IN_PROGRESS, not
-VERIFIED. A concrete candidate is the sidebar layer visibility and lock buttons
-in `src/ui/mod.rs`, whose click regions have no widget info. Visible focus and
+Layers dialog actions, the Style palette pager and sidebar layer controls. It is
+IN_PROGRESS, not VERIFIED. A concrete candidate is the sidebar page rows in
+`src/ui/pages.rs`, whose click regions have no widget info. Visible focus and
 the absent canvas accessibility tree are still open too. Capture a failing test
 before any real code fix. Otherwise close or correct stale rows as evidence-only
 with cited HEAD identifiers and update verification/session docs. Do not restart

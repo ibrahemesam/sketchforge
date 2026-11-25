@@ -505,6 +505,8 @@ documentation closeout completes the round.
 
 **Round 94 (code committed 489e7a6).** The Style palette pager now names both arrows and all three page dots. A render test failed on glyph-only arrow labels before the fix. UIX-12 stays IN_PROGRESS.
 
+**Round 95 (code committed bacbe2f).** The sidebar eye and lock click regions now name their actions. A hidden, locked row produced no labels in the failing test. UIX-12 stays IN_PROGRESS.
+
 **Scope.**
 
 - A selection context resolver that classifies the current selection as document, single
