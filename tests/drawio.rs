@@ -1415,3 +1415,94 @@ fn native_person_shape_exports_with_drawio_style() {
         .collect();
     assert!(names.contains(&"Person"), "{names:?}");
 }
+
+#[test]
+fn uml_actor_and_class_import_as_native_shapes() {
+    let xml = r#"<mxfile><diagram id="d" name="UML"><mxGraphModel><root>
+        <mxCell id="0"/><mxCell id="1" parent="0"/>
+        <mxCell id="actor" value="Customer" vertex="1" parent="1" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;">
+          <mxGeometry x="0" y="0" width="30" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="class" value="Account" vertex="1" parent="1" style="swimlane;fontStyle=0;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=55;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=0;marginBottom=0;html=1;whiteSpace=wrap;">
+          <mxGeometry x="60" y="0" width="140" height="183" as="geometry"/>
+          <mxCell id="attributes" value="attributes" vertex="1" connectable="0" parent="class" style="text;html=1;strokeColor=none;fillColor=none;">
+            <mxGeometry x="0" y="0" width="140" height="20" as="geometry"/>
+          </mxCell>
+          <mxCell id="operations" value="operations" vertex="1" connectable="0" parent="class" style="text;html=1;strokeColor=none;fillColor=none;">
+            <mxGeometry x="0" y="93" width="140" height="20" as="geometry"/>
+          </mxCell>
+        </mxCell>
+      </root></mxGraphModel></diagram></mxfile>"#;
+    let (pages, _) = drawio::import_str(xml).unwrap();
+    let names: Vec<&str> = pages[0]
+        .doc
+        .nodes
+        .values()
+        .map(|n| n.name.as_str())
+        .collect();
+    for expected in ["Actor", "Class"] {
+        assert!(
+            names.contains(&expected),
+            "{expected} missing from {names:?}"
+        );
+    }
+}
+
+#[test]
+fn native_uml_actor_and_class_export_with_drawio_styles() {
+    let defs = [(1, "actor", "Customer"), (2, "class", "Account")];
+    let mut nodes = Vec::new();
+    let mut root = Vec::new();
+    for (id, def_id, label) in defs {
+        let def = drawio_rs::registry::by_id(def_id).expect("registry UML shape");
+        let mut node =
+            drawio_rs::registry::build(def, Rect::new(0.0, 0.0, def.size.0, def.size.1), None);
+        node.id = NodeId(id);
+        node.label = label.into();
+        root.push(node.id);
+        nodes.push((node.id, node));
+    }
+    let doc = Document {
+        name: "UML actor and class".into(),
+        nodes: nodes.into_iter().collect(),
+        root,
+        ..Document::default()
+    };
+    let items = vec![export::Item {
+        name: doc.name.clone(),
+        doc: &doc,
+        roots: doc.layered_root(),
+    }];
+    let spec = Spec {
+        format: Format::Drawio,
+        scope: Scope::AllPages,
+        ..Spec::default()
+    };
+    let out = tmp("uml-actor-class").join("uml.drawio");
+    export::write(&spec, &items, &out, None).unwrap();
+    let text = std::fs::read_to_string(&out).unwrap();
+    for needle in [
+        "shape=umlActor;",
+        "verticalLabelPosition=bottom;",
+        "childLayout=stackLayout;",
+        "startSize=55;",
+        "value=\"attributes\"",
+        "value=\"operations\"",
+    ] {
+        assert!(text.contains(needle), "{needle} missing from {text}");
+    }
+
+    let (pages, _) = drawio::import_str(&text).unwrap();
+    let names: Vec<&str> = pages[0]
+        .doc
+        .nodes
+        .values()
+        .map(|n| n.name.as_str())
+        .collect();
+    for expected in ["Actor", "Class"] {
+        assert!(
+            names.contains(&expected),
+            "{expected} missing from {names:?}"
+        );
+    }
+}

@@ -1826,6 +1826,20 @@ fn sysml_registry_for_cell(cell: &RawCell, st: &ParsedStyle) -> Option<&'static 
     }
 }
 
+// Draw.io stores UML classes as composite templates with `attributes` and
+// `operations` children. The native registry has one Class shape with those
+// compartments. Ported from `src/main/webapp/js/diagramly/sidebar/Sidebar-UML25.js`,
+// Copyright (c) 2020-2025 JGraph Holdings Ltd / draw.io AG, Apache-2.0. See
+// `THIRD_PARTY.md`.
+fn uml_class_registry_for_cell(cell: &RawCell) -> Option<&'static str> {
+    let children = cell.child_values.join(" ").to_ascii_lowercase();
+    if children.contains("attributes") && children.contains("operations") {
+        Some("class")
+    } else {
+        None
+    }
+}
+
 fn build_vertex(cell: &RawCell, st: &ParsedStyle, rect: Rect) -> (Node, Option<String>) {
     let value = plain_text(&cell.value);
     let mut approximation = None;
@@ -1851,6 +1865,11 @@ fn build_vertex(cell: &RawCell, st: &ParsedStyle, rect: Rect) -> (Node, Option<S
         return (n, approximation);
     }
     if let Some(reg) = sysml_registry_for_cell(cell, st)
+        && let Some(n) = registry_vertex(reg, st, rect, &value)
+    {
+        return (n, approximation);
+    }
+    if let Some(reg) = uml_class_registry_for_cell(cell)
         && let Some(n) = registry_vertex(reg, st, rect, &value)
     {
         return (n, approximation);
@@ -2692,7 +2711,7 @@ fn emit_node(out: &mut String, doc: &Document, id: NodeId, parent: Option<NodeId
     out.push_str(&parent_attr);
     out.push_str("\">\n");
     emit_geometry(out, doc, n, parent);
-    emit_sysml_children(out, n);
+    emit_uml_children(out, n);
     out.push_str("        </mxCell>\n");
     if has_data {
         out.push_str("        </UserObject>\n");
@@ -3186,8 +3205,12 @@ fn drawio_shape_for_registry(id: &str) -> Option<&'static str> {
         "firewall" => {
             "fontColor=#0066CC;verticalAlign=top;verticalLabelPosition=bottom;labelPosition=center;align=center;html=1;outlineConnect=0;fillColor=#CCCCCC;strokeColor=#6881B3;gradientColor=none;gradientDirection=north;strokeWidth=2;shape=mxgraph.networks.firewall;whiteSpace=wrap;"
         }
-        "actor" => "shape=actor;whiteSpace=wrap;html=1;",
-        "class" => "shape=class;whiteSpace=wrap;html=1;",
+        "actor" => {
+            "shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;whiteSpace=wrap;"
+        }
+        "class" => {
+            "swimlane;fontStyle=0;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=55;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=0;marginBottom=0;html=1;whiteSpace=wrap;"
+        }
         "weak-entity" => "shape=ext;double=1;margin=3;whiteSpace=wrap;html=1;align=center;",
         "door" => {
             "verticalLabelPosition=bottom;html=1;verticalAlign=top;align=center;shape=mxgraph.floorplan.doorLeft;aspect=fixed;whiteSpace=wrap;"
@@ -3237,31 +3260,34 @@ fn drawio_shape_for_registry(id: &str) -> Option<&'static str> {
     })
 }
 
-fn sysml_child_marker(id: &str) -> Option<&'static str> {
+fn uml_child_markers(id: &str) -> Option<&'static [&'static str]> {
     match id {
-        "sysml-block" => Some("<<block>>"),
-        "sysml-requirement" => Some("<<requirement>>"),
+        "sysml-block" => Some(&["<<block>>"]),
+        "sysml-requirement" => Some(&["<<requirement>>"]),
+        "class" => Some(&["attributes", "operations"]),
         _ => None,
     }
 }
 
-fn emit_sysml_children(out: &mut String, n: &Node) {
+fn emit_uml_children(out: &mut String, n: &Node) {
     let Some(def) = crate::registry::all()
         .iter()
-        .find(|d| d.name == n.name && d.id.starts_with("sysml-"))
+        .find(|d| d.name == n.name && (d.id.starts_with("sysml-") || d.id == "class"))
     else {
         return;
     };
-    let Some(marker) = sysml_child_marker(def.id) else {
+    let Some(markers) = uml_child_markers(def.id) else {
         return;
     };
-    out.push_str("          <mxCell value=\"");
-    attr(out, marker);
-    out.push_str("\" vertex=\"1\" connectable=\"0\" parent=\"");
-    out.push_str(&node_cell(n.id));
-    out.push_str("\" style=\"html=1;align=center;spacing=0;verticalAlign=middle;strokeColor=none;fillColor=none;whiteSpace=wrap;\">\n            <mxGeometry x=\"0\" y=\"0\" width=\"");
-    out.push_str(&fmt_num(n.rect.w));
-    out.push_str("\" height=\"20\" as=\"geometry\" />\n          </mxCell>\n");
+    for marker in markers {
+        out.push_str("          <mxCell value=\"");
+        attr(out, marker);
+        out.push_str("\" vertex=\"1\" connectable=\"0\" parent=\"");
+        out.push_str(&node_cell(n.id));
+        out.push_str("\" style=\"html=1;align=center;spacing=0;verticalAlign=middle;strokeColor=none;fillColor=none;whiteSpace=wrap;\">\n            <mxGeometry x=\"0\" y=\"0\" width=\"");
+        out.push_str(&fmt_num(n.rect.w));
+        out.push_str("\" height=\"20\" as=\"geometry\" />\n          </mxCell>\n");
+    }
 }
 
 fn node_cell(id: NodeId) -> String {
