@@ -329,6 +329,8 @@ pub struct Editor {
     pub sticky_color: Color,
     /// Requests for the chrome (command palette, rename...).
     pub ui_events: Vec<commands::UiEvent>,
+    /// The canvas popup is visible. Escape closes it without changing the selection.
+    pub context_menu_open: bool,
     /// System clipboard (set by the app; None in tests unless injected).
     pub clipboard_io: Option<Box<dyn crate::io::clipboard::Provider>>,
     /// Text we last put on the system clipboard (to recognize our own copy).
@@ -400,6 +402,7 @@ impl Editor {
             grid_step,
             sticky_color: Color::rgb(0xff, 0xdf, 0x6b),
             ui_events: Vec::new(),
+            context_menu_open: false,
             clipboard_style: None,
             clipboard_io: None,
             clipboard_written: None,
@@ -1039,6 +1042,7 @@ impl Editor {
         {
             if button == Button::Secondary {
                 // A drag pans; a click without movement opens the menu on release.
+                self.context_menu_open = false;
                 self.ui_events.push(commands::UiEvent::CloseMenu);
             }
             self.gesture = Gesture::Pan {
@@ -2249,6 +2253,7 @@ impl Editor {
                         Some(_) => {}
                         None => self.selection.clear(),
                     }
+                    self.context_menu_open = true;
                     self.ui_events.push(commands::UiEvent::ContextMenu { pos });
                 }
             }
@@ -2706,7 +2711,13 @@ impl Editor {
                 self.tool = t;
             }
             A::Escape => {
+                let menu_was_open = self.context_menu_open;
+                self.context_menu_open = false;
                 self.ui_events.push(commands::UiEvent::CloseMenu);
+                if menu_was_open {
+                    // Dismissing the popup is a separate step from changing the selection.
+                    return;
+                }
                 if !matches!(self.gesture, Gesture::None) {
                     self.cancel_gesture();
                 } else if self.tool != Tool::Select {

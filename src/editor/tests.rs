@@ -244,6 +244,40 @@ fn right_drag_pans_without_a_context_menu() {
 }
 
 #[test]
+fn escape_after_context_menu_preserves_selection() {
+    let mut e = ed();
+    let id = e.add_node(
+        Node::new(
+            NodeId(1),
+            NodeKind::Rect,
+            Rect::new(120.0, 120.0, 80.0, 60.0),
+        ),
+        None,
+    );
+    button_drag(
+        &mut e,
+        (150.0, 150.0),
+        (150.0, 150.0),
+        0.0,
+        Button::Secondary,
+    );
+    assert_eq!(e.selection, vec![id]);
+    assert!(e.context_menu_open);
+    key(&mut e, Key::Escape, Modifiers::NONE);
+    assert!(!e.context_menu_open);
+    assert_eq!(
+        e.selection,
+        vec![id],
+        "Escape closes the menu without deselecting the shape"
+    );
+    assert!(
+        e.ui_events
+            .iter()
+            .any(|ev| matches!(ev, commands::UiEvent::CloseMenu))
+    );
+}
+
+#[test]
 fn zoom_shortcuts() {
     let mut e = ed();
     key(&mut e, Key::Char('='), Modifiers::cmd());

@@ -385,7 +385,10 @@ pub fn draw(ui: &mut Ui, ed: &mut Editor, st: &mut UiState) -> egui::Rect {
                     opened_at_frame: ui.ctx().cumulative_frame_nr(),
                 });
             }
-            UiEvent::CloseMenu => st.context_menu = None,
+            UiEvent::CloseMenu => {
+                st.context_menu = None;
+                ed.context_menu_open = false;
+            }
         }
     }
     context_menu(ui.ctx(), ed, st);
@@ -601,10 +604,12 @@ fn context_menu(ctx: &egui::Context, ed: &mut Editor, st: &mut UiState) {
         .response;
     if !opened_here && response.clicked_elsewhere() {
         st.context_menu = None;
+        ed.context_menu_open = false;
     }
     if let Some(action) = chosen {
         ed.run(action);
         st.context_menu = None;
+        ed.context_menu_open = false;
     }
 }
 
