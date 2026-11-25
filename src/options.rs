@@ -22,6 +22,9 @@ pub struct Options {
     /// Canvas grid spacing in world units (draw.io's Grid size). Keep this a
     /// multiple of anything snapping treats as a hard floor; 10 is the default.
     pub grid_size: f64,
+    /// Width of the left sidebar in logical pixels. Old option files get 240.
+    #[serde(default = "sidebar_width_default")]
+    pub sidebar_width: f64,
     /// Folder scanned for custom template libraries (M7). None when the user
     /// has not chosen one; the bundled packs always load.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -40,6 +43,7 @@ impl Default for Options {
         Options {
             theme: ThemeChoice::default(),
             grid_size: 10.0,
+            sidebar_width: 240.0,
             template_folder: None,
             inspector_sections: BTreeMap::new(),
             onboarding_seen: false,
@@ -53,6 +57,19 @@ fn grid_size_default(v: f64) -> f64 {
         v
     } else {
         10.0
+    }
+}
+
+fn sidebar_width_default() -> f64 {
+    240.0
+}
+
+/// Sidebar widths outside the panel's range are ignored, like bad grid sizes.
+fn sidebar_width_from(v: f64) -> f64 {
+    if v.is_finite() && (180.0..=420.0).contains(&v) {
+        v
+    } else {
+        240.0
     }
 }
 
@@ -70,6 +87,7 @@ impl Options {
                     Options::default()
                 });
                 o.grid_size = grid_size_default(o.grid_size);
+                o.sidebar_width = sidebar_width_from(o.sidebar_width);
                 o
             }
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => Options::default(),
@@ -108,6 +126,7 @@ mod tests {
         let o = Options {
             theme: ThemeChoice::Light,
             grid_size: 20.0,
+            sidebar_width: 300.0,
             template_folder: Some(PathBuf::from("/tmp/templates")),
             inspector_sections: BTreeMap::new(),
             onboarding_seen: false,

@@ -292,6 +292,7 @@ pub enum LayerDrop {
 
 pub fn setup_style(ctx: &egui::Context) {
     theme::apply(ctx);
+    ctx.all_styles_mut(|s| s.interaction.resize_grab_radius_side = 6.0);
 }
 
 pub(crate) fn c32(c: Color) -> Color32 {
@@ -403,9 +404,22 @@ pub fn draw(ui: &mut Ui, ed: &mut Editor, st: &mut UiState) -> egui::Rect {
     } else {
         p.sidebar
     };
-    egui::Panel::left("layers")
+    let sidebar_width = if st.options.sidebar_width.is_finite() {
+        st.options.sidebar_width.clamp(180.0, 420.0) as f32
+    } else {
+        240.0
+    };
+    let avail = ui.available_rect_before_wrap();
+    let panel_id = egui::Id::new("layers");
+    let stored_width = egui::containers::panel::PanelState::load(ui.ctx(), panel_id)
+        .map(|state| state.outer_rect.width())
+        .filter(|w| w.is_finite() && *w > 0.0)
+        .unwrap_or(sidebar_width)
+        .clamp(180.0, 420.0);
+    let laid_out_right = avail.left() + stored_width;
+    let panel_resp = egui::Panel::left("layers")
         .resizable(true)
-        .default_size(240.0)
+        .default_size(sidebar_width)
         .size_range(180.0..=420.0)
         .frame(
             egui::Frame::NONE
@@ -419,6 +433,35 @@ pub fn draw(ui: &mut Ui, ed: &mut Editor, st: &mut UiState) -> egui::Rect {
             }
             layers(ui, ed, st)
         });
+    // Egui sizes this panel from its response rect, which grows with long page
+    // names. Put the stored width back to the laid-out width so a shrink sticks.
+    // Skip that while dragging: egui keeps the old stored width until the drag
+    // ends, so clamping here would pull the divider back to where it started.
+    let resize_id = panel_id.with("__resize");
+    let resizing =
+        ui.ctx().is_being_dragged(resize_id) || ui.ctx().drag_stopped_id() == Some(resize_id);
+    let mut panel_right = panel_resp.response.rect.right();
+    if !resizing && panel_right > laid_out_right + 0.5 {
+        let mut outer_rect = panel_resp.response.rect;
+        outer_rect.max.x = laid_out_right;
+        ui.ctx().data_mut(|d| {
+            d.insert_persisted(panel_id, egui::containers::panel::PanelState { outer_rect });
+        });
+        panel_right = laid_out_right;
+    }
+    let width = f64::from(panel_right - avail.left());
+    if (st.options.sidebar_width - width).abs() > 0.5 {
+        st.options.sidebar_width = width;
+        st.options_dirty = true;
+    }
+    ui.painter().rect_filled(
+        egui::Rect::from_min_max(
+            egui::pos2(laid_out_right, avail.top()),
+            egui::pos2(laid_out_right + 1.0, avail.bottom()),
+        ),
+        0.0,
+        p.separator,
+    );
     egui::Panel::top("toolbar")
         .exact_size(if st.native_chrome {
             theme::TOOLBAR_H
@@ -2126,5 +2169,131 @@ mod tests {
         assert_eq!(options.theme, ThemeChoice::Dark);
         assert!(dirty);
         assert_eq!(ctx.theme(), egui::Theme::Dark);
+    }
+
+    #[test]
+    fn sidebar_shrink_is_not_inflated_by_content() {
+        let ctx = egui::Context::default();
+        setup_style(&ctx);
+        let mut ed = Editor::default();
+        ed.pages[0].name = "x".repeat(80);
+        let mut st = UiState::default();
+        let panel_id = egui::Id::new("layers");
+        ctx.data_mut(|d| {
+            d.insert_persisted(
+                panel_id,
+                egui::containers::panel::PanelState {
+                    outer_rect: egui::Rect::from_min_size(
+                        egui::Pos2::ZERO,
+                        egui::vec2(180.0, 700.0),
+                    ),
+                },
+            );
+        });
+        let mut out = ctx.run_ui(
+            egui::RawInput {
+                screen_rect: Some(egui::Rect::from_min_size(
+                    egui::Pos2::ZERO,
+                    egui::vec2(900.0, 700.0),
+                )),
+                ..Default::default()
+            },
+            |ui| {
+                draw(ui, &mut ed, &mut st);
+            },
+        );
+        out.textures_delta.clear();
+        let width = egui::containers::panel::PanelState::load(&ctx, panel_id)
+            .expect("left panel state")
+            .outer_rect
+            .width();
+        assert!(width <= 181.0, "left panel widened to {width}px");
+    }
+
+    #[test]
+    fn sidebar_drag_stores_the_new_width() {
+        let ctx = egui::Context::default();
+        setup_style(&ctx);
+        let mut ed = Editor::default();
+        let mut st = UiState::default();
+        let screen = egui::Rect::from_min_size(egui::Pos2::ZERO, egui::vec2(900.0, 700.0));
+        let mut run = |events: Vec<egui::Event>| {
+            let mut out = ctx.run_ui(
+                egui::RawInput {
+                    screen_rect: Some(screen),
+                    events,
+                    ..Default::default()
+                },
+                |ui| {
+                    draw(ui, &mut ed, &mut st);
+                },
+            );
+            out.textures_delta.clear();
+        };
+        run(Vec::new());
+        let handle_id = egui::Id::new("layers").with("__resize");
+        run(vec![
+            egui::Event::PointerMoved(egui::pos2(240.0, 300.0)),
+            egui::Event::PointerButton {
+                pos: egui::pos2(240.0, 300.0),
+                button: egui::PointerButton::Primary,
+                pressed: true,
+                modifiers: Default::default(),
+            },
+        ]);
+        run(vec![egui::Event::PointerMoved(egui::pos2(320.0, 300.0))]);
+        assert!(
+            ctx.is_being_dragged(handle_id),
+            "sidebar divider was not dragged"
+        );
+        run(vec![egui::Event::PointerButton {
+            pos: egui::pos2(320.0, 300.0),
+            button: egui::PointerButton::Primary,
+            pressed: false,
+            modifiers: Default::default(),
+        }]);
+        let width = egui::containers::panel::PanelState::load(&ctx, egui::Id::new("layers"))
+            .expect("left panel state")
+            .outer_rect
+            .width();
+        assert!((width - 320.0).abs() <= 2.0, "left panel was {width}px");
+        assert!(
+            (st.options.sidebar_width - 320.0).abs() <= 2.0,
+            "options kept {}px",
+            st.options.sidebar_width
+        );
+        assert!(st.options_dirty, "the new width is written to options.json");
+    }
+
+    #[test]
+    fn sidebar_width_is_restored_from_options_on_a_fresh_context() {
+        let ctx = egui::Context::default();
+        setup_style(&ctx);
+        let mut ed = Editor::default();
+        let mut st = UiState {
+            options: Options {
+                sidebar_width: 320.0,
+                ..Options::default()
+            },
+            ..Default::default()
+        };
+        let mut out = ctx.run_ui(
+            egui::RawInput {
+                screen_rect: Some(egui::Rect::from_min_size(
+                    egui::Pos2::ZERO,
+                    egui::vec2(900.0, 700.0),
+                )),
+                ..Default::default()
+            },
+            |ui| {
+                draw(ui, &mut ed, &mut st);
+            },
+        );
+        out.textures_delta.clear();
+        let width = egui::containers::panel::PanelState::load(&ctx, egui::Id::new("layers"))
+            .expect("left panel state")
+            .outer_rect
+            .width();
+        assert!((width - 320.0).abs() <= 1.0, "left panel was {width}px");
     }
 }
