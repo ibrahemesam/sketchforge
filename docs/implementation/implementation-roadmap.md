@@ -553,6 +553,8 @@ documentation closeout completes the round.
 
 **User redirect, draw.io Terminator stencil (code committed c4cfa54).** Native Terminator now exports with draw.io's `shape=mxgraph.flowchart.terminator;` stencil and reimports as the same registry shape. The import test already passed; the export test failed before the fix and passes after it. THIRD_PARTY.md records the added flowchart stencil.
 
+**User redirect, draw.io Decision stencil (code committed 8f1026c).** Native Decision now exports with draw.io's `shape=mxgraph.flowchart.decision;` stencil and reimports as the same registry shape. Plain rhombi still import as generic polygons. The import test already passed; the export test failed before the fix and passes after it. THIRD_PARTY.md records the added flowchart stencil.
+
 **Scope.**
 
 - A selection context resolver that classifies the current selection as document, single
