@@ -1709,3 +1709,62 @@ fn er_cardinality_arrows_survive_drawio_round_trip() {
         "{text}"
     );
 }
+
+#[test]
+fn flowchart_hexagon_imports_as_native_preparation() {
+    let xml = r#"<mxfile><diagram id="d" name="Flow"><mxGraphModel><root>
+        <mxCell id="0"/><mxCell id="1" parent="0"/>
+        <mxCell id="p" value="Prepare data" vertex="1" parent="1" style="verticalLabelPosition=bottom;verticalAlign=top;html=1;shape=hexagon;perimeter=hexagonPerimeter2;arcSize=6;size=0.27;whiteSpace=wrap;">
+          <mxGeometry x="0" y="0" width="120" height="60" as="geometry"/>
+        </mxCell>
+      </root></mxGraphModel></diagram></mxfile>"#;
+    let (pages, _) = drawio::import_str(xml).unwrap();
+    let names: Vec<&str> = pages[0]
+        .doc
+        .nodes
+        .values()
+        .map(|n| n.name.as_str())
+        .collect();
+    assert!(names.contains(&"Preparation"), "{names:?}");
+}
+
+#[test]
+fn native_preparation_exports_with_drawio_hexagon() {
+    let def = drawio_rs::registry::by_id("preparation").expect("registry Preparation shape");
+    let mut node =
+        drawio_rs::registry::build(def, Rect::new(0.0, 0.0, def.size.0, def.size.1), None);
+    node.id = NodeId(1);
+    node.label = "Prepare data".into();
+    let doc = Document {
+        name: "Preparation export".into(),
+        nodes: [(node.id, node)].into_iter().collect(),
+        root: vec![NodeId(1)],
+        ..Document::default()
+    };
+    let items = vec![export::Item {
+        name: doc.name.clone(),
+        doc: &doc,
+        roots: doc.layered_root(),
+    }];
+    let spec = Spec {
+        format: Format::Drawio,
+        scope: Scope::AllPages,
+        ..Spec::default()
+    };
+    let out = tmp("preparation-export").join("flow.drawio");
+    export::write(&spec, &items, &out, None).unwrap();
+    let text = std::fs::read_to_string(&out).unwrap();
+    assert!(
+        text.contains("shape=hexagon;whiteSpace=wrap;html=1;"),
+        "{text}"
+    );
+
+    let (pages, _) = drawio::import_str(&text).unwrap();
+    let names: Vec<&str> = pages[0]
+        .doc
+        .nodes
+        .values()
+        .map(|n| n.name.as_str())
+        .collect();
+    assert!(names.contains(&"Preparation"), "{names:?}");
+}
