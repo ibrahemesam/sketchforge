@@ -567,6 +567,8 @@ documentation closeout completes the round.
 
 **User redirect, draw.io Preparation palette style (code committed c46d91b).** Native Preparation now writes draw.io's hexagon perimeter, size and label flags and reimports as the same registry shape. The import test already passed; the export test failed before the fix and passes after it. The older hexagon export expectation uses the full palette style. THIRD_PARTY.md records the palette flags.
 
+**User redirect, draw.io Off-Page palette style (code committed 550b3cc).** Native Off-Page Connector now writes draw.io's connector size and label flags and reimports as the same registry shape. The import test already passed; the export test failed before the fix and passes after it. THIRD_PARTY.md records the palette flags.
+
 **Scope.**
 
 - A selection context resolver that classifies the current selection as document, single

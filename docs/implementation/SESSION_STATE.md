@@ -1,6 +1,6 @@
 # Sketch agent session state
 
-Last updated: 2026-11-25 (draw.io Preparation palette style, code committed c46d91b; docs closeout follows).
+Last updated: 2026-11-25 (draw.io Off-Page palette style, code committed 550b3cc; docs closeout follows).
 
 ## Objective
 
@@ -110,12 +110,14 @@ native Data writes draw.io's parallelogram perimeter, corner and size flags. Man
 flags followed as 6b9151c, with docs as 03e016b: native Manual Input writes draw.io's label, size
 and arc flags. Manual Operation palette flags followed as ed21bff, with docs as 49b3eb8: native
 Manual Operation writes draw.io's trapezoid and label flags. Preparation palette flags followed as
-c46d91b: native Preparation writes draw.io's hexagon perimeter and size flags. This closeout records
+c46d91b, with docs as 26c53a0: native Preparation writes draw.io's hexagon perimeter and size flags.
+Off-Page palette flags followed as 550b3cc: native Off-Page Connector writes draw.io's connector size
+and label flags. This closeout records
 the draw.io source port, the ADR-006 amendment, the BPMN aliases, the C4 properties,
 the SysML markers, the flowchart aliases,
 the ER flags and cardinality, the UML aliases, the floorplan aliases, the network aliases,
 the mermaid person stencil, the UML actor and class port, the basic pie stencil, the use
-case actor aliases, the hexagon alias, the Terminator stencil, the Decision stencil, the Delay stencil, the Document stencil, the Data palette flags, the Manual Input palette flags, the Manual Operation palette flags and the Preparation palette flags.
+case actor aliases, the hexagon alias, the Terminator stencil, the Decision stencil, the Delay stencil, the Document stencil, the Data palette flags, the Manual Input palette flags, the Manual Operation palette flags, the Preparation palette flags and the Off-Page palette flags.
 
 The full sidebar spec was implemented and verified in round 6 (see
 `.opencode/MEMORY.md`). Round 7 closed the transparent connector label gap.
