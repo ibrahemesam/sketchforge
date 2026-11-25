@@ -1,6 +1,6 @@
 # Sketch agent session state
 
-Last updated: 2026-11-25 (draw.io C4 shape support, code committed e5faf5c; docs closeout follows).
+Last updated: 2026-11-25 (draw.io SysML shape support, code committed 3311f08; docs closeout follows).
 
 ## Objective
 
@@ -69,10 +69,12 @@ as e2663ad. The draw.io color import and export fix was committed and pushed as
 21c0b68. The draw.io attribution docs closeout followed as ca39123. BPMN shape import and
 export were then committed as f6b7f69, with docs as 57cf906: draw.io event, task and
 gateway aliases now map to native BPMN registry shapes, and native BPMN shapes export with
-draw.io styles. C4 shapes followed as e5faf5c: `c4Type` properties and `mxgraph.c4`
-aliases import as native C4 shapes, and exports write the C4 property and palette styles.
-This closeout records the draw.io source port, the ADR-006 amendment, the BPMN aliases and
-the C4 properties.
+draw.io styles. C4 shapes followed as e5faf5c, with docs as 7bc1afa: `c4Type` properties
+and `mxgraph.c4` aliases import as native C4 shapes, and exports write the C4 property and
+palette styles. SysML shapes followed as 3311f08: `mxgraph.sysml.port*` aliases and the
+`<<block>>` / `<<requirement>>` composite children import as native SysML shapes, and
+exports write those styles and child markers. This closeout records the draw.io source
+port, the ADR-006 amendment, the BPMN aliases, the C4 properties and the SysML markers.
 
 The full sidebar spec was implemented and verified in round 6 (see
 `.opencode/MEMORY.md`). Round 7 closed the transparent connector label gap.
