@@ -1717,6 +1717,24 @@ fn uml_registry_for_shape(shape: Option<&str>) -> Option<&'static str> {
     }
 }
 
+// Draw.io's floorplan palette uses one stencil alias per door, window and
+// stair variant. The native registry has one shape per family. Ported from
+// `src/main/webapp/js/diagramly/sidebar/Sidebar-Floorplan.js`, Copyright (c)
+// 2020-2025 JGraph Holdings Ltd / draw.io AG, Apache-2.0. See `THIRD_PARTY.md`.
+fn floorplan_registry_for_shape(shape: Option<&str>) -> Option<&'static str> {
+    let lower = shape?.to_ascii_lowercase();
+    let alias = lower.strip_prefix("mxgraph.floorplan.")?;
+    if alias.starts_with("door") {
+        Some("door")
+    } else if alias.starts_with("window") {
+        Some("window")
+    } else if alias.starts_with("stairs") || alias == "spiral_stairs" {
+        Some("stairs")
+    } else {
+        None
+    }
+}
+
 fn registry_vertex(reg: &str, st: &ParsedStyle, rect: Rect, value: &str) -> Option<Node> {
     let def = crate::registry::by_id(reg)?;
     let mut n = crate::registry::build(def, rect, None);
@@ -1809,6 +1827,11 @@ fn build_vertex(cell: &RawCell, st: &ParsedStyle, rect: Rect) -> (Node, Option<S
         return (n, approximation);
     }
     if let Some(reg) = uml_registry_for_shape(shape)
+        && let Some(n) = registry_vertex(reg, st, rect, &value)
+    {
+        return (n, approximation);
+    }
+    if let Some(reg) = floorplan_registry_for_shape(shape)
         && let Some(n) = registry_vertex(reg, st, rect, &value)
     {
         return (n, approximation);
@@ -3119,9 +3142,15 @@ fn drawio_shape_for_registry(id: &str) -> Option<&'static str> {
         "actor" => "shape=actor;whiteSpace=wrap;html=1;",
         "class" => "shape=class;whiteSpace=wrap;html=1;",
         "weak-entity" => "shape=ext;double=1;margin=3;whiteSpace=wrap;html=1;align=center;",
-        "door" => "shape=door;whiteSpace=wrap;html=1;",
-        "window" => "shape=window;whiteSpace=wrap;html=1;",
-        "stairs" => "shape=stairs;whiteSpace=wrap;html=1;",
+        "door" => {
+            "verticalLabelPosition=bottom;html=1;verticalAlign=top;align=center;shape=mxgraph.floorplan.doorLeft;aspect=fixed;whiteSpace=wrap;"
+        }
+        "window" => {
+            "verticalLabelPosition=bottom;html=1;verticalAlign=top;align=center;shape=mxgraph.floorplan.window;whiteSpace=wrap;"
+        }
+        "stairs" => {
+            "verticalLabelPosition=bottom;html=1;verticalAlign=top;align=center;shape=mxgraph.floorplan.stairs;whiteSpace=wrap;"
+        }
         "person" => "shape=person;whiteSpace=wrap;html=1;",
         "bpmn-start" => {
             "shape=mxgraph.bpmn.event;outline=standard;symbol=general;perimeter=ellipsePerimeter;aspect=fixed;whiteSpace=wrap;html=1;"

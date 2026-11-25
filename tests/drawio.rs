@@ -1163,3 +1163,92 @@ fn native_uml_shapes_export_with_drawio_styles() {
         );
     }
 }
+
+#[test]
+fn floorplan_drawio_shapes_import_as_native_shapes() {
+    let xml = r#"<mxfile><diagram id="d" name="Floorplan"><mxGraphModel><root>
+        <mxCell id="0"/><mxCell id="1" parent="0"/>
+        <mxCell id="door" value="Left door" vertex="1" parent="1" style="html=1;shape=mxgraph.floorplan.doorLeft;aspect=fixed;">
+          <mxGeometry x="0" y="0" width="80" height="85" as="geometry"/>
+        </mxCell>
+        <mxCell id="window" value="Sliding window" vertex="1" parent="1" style="html=1;shape=mxgraph.floorplan.windowGlider;dx=0.25;">
+          <mxGeometry x="120" y="0" width="100" height="10" as="geometry"/>
+        </mxCell>
+        <mxCell id="stairs" value="Landing" vertex="1" parent="1" style="html=1;shape=mxgraph.floorplan.stairsRest;">
+          <mxGeometry x="0" y="120" width="300" height="200" as="geometry"/>
+        </mxCell>
+      </root></mxGraphModel></diagram></mxfile>"#;
+    let (pages, _) = drawio::import_str(xml).unwrap();
+    let names: Vec<&str> = pages[0]
+        .doc
+        .nodes
+        .values()
+        .map(|n| n.name.as_str())
+        .collect();
+    for expected in ["Door", "Window", "Stairs"] {
+        assert!(
+            names.contains(&expected),
+            "{expected} missing from {names:?}"
+        );
+    }
+}
+
+#[test]
+fn native_floorplan_shapes_export_with_drawio_styles() {
+    let defs = [
+        (1, "door", "Door"),
+        (2, "window", "Window"),
+        (3, "stairs", "Stairs"),
+    ];
+    let mut nodes = Vec::new();
+    let mut root = Vec::new();
+    for (id, def_id, label) in defs {
+        let def = drawio_rs::registry::by_id(def_id).expect("registry floorplan shape");
+        let mut node =
+            drawio_rs::registry::build(def, Rect::new(0.0, 0.0, def.size.0, def.size.1), None);
+        node.id = NodeId(id);
+        node.label = label.into();
+        root.push(node.id);
+        nodes.push((node.id, node));
+    }
+    let doc = Document {
+        name: "Floorplan export".into(),
+        nodes: nodes.into_iter().collect(),
+        root,
+        ..Document::default()
+    };
+    let items = vec![export::Item {
+        name: doc.name.clone(),
+        doc: &doc,
+        roots: doc.layered_root(),
+    }];
+    let spec = Spec {
+        format: Format::Drawio,
+        scope: Scope::AllPages,
+        ..Spec::default()
+    };
+    let out = tmp("floorplan-export").join("floorplan.drawio");
+    export::write(&spec, &items, &out, None).unwrap();
+    let text = std::fs::read_to_string(&out).unwrap();
+    for needle in [
+        "shape=mxgraph.floorplan.doorLeft;",
+        "shape=mxgraph.floorplan.window;",
+        "shape=mxgraph.floorplan.stairs;",
+    ] {
+        assert!(text.contains(needle), "{needle} missing from {text}");
+    }
+
+    let (pages, _) = drawio::import_str(&text).unwrap();
+    let names: Vec<&str> = pages[0]
+        .doc
+        .nodes
+        .values()
+        .map(|n| n.name.as_str())
+        .collect();
+    for expected in ["Door", "Window", "Stairs"] {
+        assert!(
+            names.contains(&expected),
+            "{expected} missing from {names:?}"
+        );
+    }
+}
