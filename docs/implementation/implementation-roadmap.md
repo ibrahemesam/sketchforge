@@ -579,6 +579,8 @@ documentation closeout completes the round.
 
 **User redirect, draw.io Delay palette style (code committed 2ca5dc2).** Native Delay now writes `strokeWidth=2` with the flowchart stencil and reimports as Delay. The import fixture already used the full palette style; the export test failed before the fix and passes after it. THIRD_PARTY.md records the stroke width flag.
 
+**User redirect, draw.io Database palette style (code committed ea64845).** Native Database now writes draw.io's flowchart Database palette style instead of the generic cylinder stencil and reimports as Database. The new export test failed before the fix and passes after it. The network export round trip still passes. THIRD_PARTY.md records the stencil flag.
+
 **Scope.**
 
 - A selection context resolver that classifies the current selection as document, single
