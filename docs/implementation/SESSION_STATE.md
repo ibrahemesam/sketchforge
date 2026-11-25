@@ -1,6 +1,6 @@
 # Sketch agent session state
 
-Last updated: 2026-11-25 (draw.io use case actor aliases, code committed c343695; docs closeout follows).
+Last updated: 2026-11-25 (draw.io ER cardinality arrows, code committed a6e408c; docs closeout follows).
 
 ## Objective
 
@@ -93,12 +93,15 @@ exports with the palette's label styles, composite cells with `attributes` and `
 children import as Class, and native Class exports with the draw.io swimlane style and both
 children. Pie slice support followed as f221136, with docs as 0f26ab3: draw.io's basic pie stencil
 imports as the native Pie Slice, native Pie Slice exports with quarter-turn angles, and
-imports with other angles report an approximation. Use case actors followed as c343695:
-draw.io's `mermaidUsecaseActor` variants import as the native Actor, with approximations for
-hollow and silhouette types. This closeout records the draw.io source port, the ADR-006
+imports with other angles report an approximation. Use case actors followed as c343695, with docs as b502f7f: draw.io's
+`mermaidUsecaseActor` variants import as the native Actor, with approximations for
+hollow and silhouette types. ER cardinality arrows followed as a6e408c: draw.io edge names
+and the `entityRelationEdgeStyle` style survive import and export, while native heads
+approximate the combined markers. This closeout records the draw.io source port, the ADR-006
 amendment, the BPMN aliases, the C4 properties, the SysML markers, the flowchart aliases,
-the ER flags, the UML aliases, the floorplan aliases, the network aliases, the mermaid person
-stencil, the UML actor and class port, the basic pie stencil and the use case actor aliases.
+the ER flags and cardinality, the UML aliases, the floorplan aliases, the network aliases,
+the mermaid person stencil, the UML actor and class port, the basic pie stencil and the use
+case actor aliases.
 
 The full sidebar spec was implemented and verified in round 6 (see
 `.opencode/MEMORY.md`). Round 7 closed the transparent connector label gap.

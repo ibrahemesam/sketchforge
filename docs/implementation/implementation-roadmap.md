@@ -547,6 +547,8 @@ documentation closeout completes the round.
 
 **User redirect, draw.io use case actor aliases (code committed c343695).** Draw.io's `mermaidUsecaseActor` variants now import as the native Actor. Hollow and silhouette types report a shape approximation, while native Actor export keeps the existing `umlActor` style. The integration test failed before the fix and passes after it. THIRD_PARTY.md records the added basic palette aliases.
 
+**User redirect, draw.io ER cardinality arrows (code committed a6e408c).** Draw.io ER arrow names and `entityRelationEdgeStyle` now survive import and export on native connectors. Native heads approximate the combined markers, and imports report that approximation. The integration test failed before the fix and passes after it. THIRD_PARTY.md records mxER.js.
+
 **Scope.**
 
 - A selection context resolver that classifies the current selection as document, single
