@@ -1088,6 +1088,7 @@ fn layer_row(ui: &mut Ui, ed: &mut Editor, st: &mut UiState, id: NodeId, depth: 
             );
         }
         theme::paint_icon(ui.painter(), r.shrink(3.0), icon, fg2);
+        b.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, true, tip));
         b.on_hover_text(tip).clicked()
     };
     let eye = if n.visible { Icon::Eye } else { Icon::EyeSlash };
@@ -1643,6 +1644,52 @@ mod tests {
             .filter_map(|(_, node)| node.label().map(str::to_string))
             .collect();
         for expected in ["Send backward", "Bring forward"] {
+            assert!(
+                labels.iter().any(|label| label == expected),
+                "expected a {expected} label, got {labels:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn layer_visibility_and_lock_controls_expose_accesskit_labels() {
+        let ctx = egui::Context::default();
+        theme::install_fonts(&ctx);
+        ctx.enable_accesskit();
+        let mut ed = Editor::default();
+        let id = ed.add_node(
+            Node::new(
+                NodeId(1),
+                NodeKind::Rect,
+                crate::geom::Rect::new(0.0, 0.0, 20.0, 20.0),
+            ),
+            None,
+        );
+        let node = ed.doc.nodes.get_mut(&id).unwrap();
+        node.visible = false;
+        node.locked = true;
+        let mut st = UiState::default();
+        let mut out = ctx.run_ui(
+            egui::RawInput {
+                screen_rect: Some(egui::Rect::from_min_size(
+                    egui::Pos2::ZERO,
+                    egui::vec2(260.0, 80.0),
+                )),
+                ..Default::default()
+            },
+            |ui| layer_row(ui, &mut ed, &mut st, id, 0),
+        );
+        out.textures_delta.clear();
+        let update = out
+            .platform_output
+            .accesskit_update
+            .expect("layer row should register accessibility nodes");
+        let labels: Vec<String> = update
+            .nodes
+            .iter()
+            .filter_map(|(_, node)| node.label().map(str::to_string))
+            .collect();
+        for expected in ["Show", "Unlock"] {
             assert!(
                 labels.iter().any(|label| label == expected),
                 "expected a {expected} label, got {labels:?}"
