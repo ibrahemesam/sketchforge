@@ -1,6 +1,6 @@
 # Sketch agent session state
 
-Last updated: 2026-11-25 (draw.io Manual Operation palette style, code committed ed21bff; docs closeout follows).
+Last updated: 2026-11-25 (draw.io Preparation palette style, code committed c46d91b; docs closeout follows).
 
 ## Objective
 
@@ -108,13 +108,14 @@ as 4aad462, with docs as 79bc01d: native Document exports with draw.io's `docume
 as the same shape. Data palette flags followed as 99190d2, with docs as 67b9210:
 native Data writes draw.io's parallelogram perimeter, corner and size flags. Manual Input palette
 flags followed as 6b9151c, with docs as 03e016b: native Manual Input writes draw.io's label, size
-and arc flags. Manual Operation palette flags followed as ed21bff: native Manual Operation writes
-draw.io's trapezoid and label flags. This closeout records
+and arc flags. Manual Operation palette flags followed as ed21bff, with docs as 49b3eb8: native
+Manual Operation writes draw.io's trapezoid and label flags. Preparation palette flags followed as
+c46d91b: native Preparation writes draw.io's hexagon perimeter and size flags. This closeout records
 the draw.io source port, the ADR-006 amendment, the BPMN aliases, the C4 properties,
 the SysML markers, the flowchart aliases,
 the ER flags and cardinality, the UML aliases, the floorplan aliases, the network aliases,
 the mermaid person stencil, the UML actor and class port, the basic pie stencil, the use
-case actor aliases, the hexagon alias, the Terminator stencil, the Decision stencil, the Delay stencil, the Document stencil, the Data palette flags, the Manual Input palette flags and the Manual Operation palette flags.
+case actor aliases, the hexagon alias, the Terminator stencil, the Decision stencil, the Delay stencil, the Document stencil, the Data palette flags, the Manual Input palette flags, the Manual Operation palette flags and the Preparation palette flags.
 
 The full sidebar spec was implemented and verified in round 6 (see
 `.opencode/MEMORY.md`). Round 7 closed the transparent connector label gap.
