@@ -347,6 +347,14 @@ pub fn draw(ctx: &egui::Context, ed: &mut Editor, st: &mut UiState, canvas: egui
                                     egui::vec2(ui.available_width(), 26.0),
                                     egui::Sense::click(),
                                 );
+                                let name = format!("Run {}", e.label);
+                                resp.widget_info(|| {
+                                    egui::WidgetInfo::labeled(
+                                        egui::WidgetType::Button,
+                                        true,
+                                        name.as_str(),
+                                    )
+                                });
                                 if sel {
                                     ui.painter().rect_filled(row, 6.0, theme::accent());
                                     ui.scroll_to_rect(row, None);
@@ -499,5 +507,43 @@ mod tests {
         run(&mut ed, &mut st, hit.cmd.clone());
         assert_eq!(ed.active_page, page);
         assert_eq!(ed.selection, vec![id]);
+    }
+
+    #[test]
+    fn command_palette_results_expose_run_actions_to_accesskit() {
+        let ctx = egui::Context::default();
+        crate::theme::install_fonts(&ctx);
+        ctx.enable_accesskit();
+        let mut ed = Editor::default();
+        let mut st = UiState {
+            palette: PaletteUi {
+                open: true,
+                query: "print".into(),
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        let canvas = egui::Rect::from_min_size(egui::Pos2::ZERO, egui::vec2(800.0, 600.0));
+        let mut out = ctx.run_ui(
+            egui::RawInput {
+                screen_rect: Some(canvas),
+                ..Default::default()
+            },
+            |ui| draw(ui.ctx(), &mut ed, &mut st, canvas),
+        );
+        out.textures_delta.clear();
+        let update = out
+            .platform_output
+            .accesskit_update
+            .expect("command palette should register accessibility nodes");
+        let labels: Vec<String> = update
+            .nodes
+            .iter()
+            .filter_map(|(_, node)| node.label().map(str::to_string))
+            .collect();
+        assert!(
+            labels.iter().any(|label| label == "Run Print…"),
+            "expected a Run Print… label, got {labels:?}"
+        );
     }
 }
