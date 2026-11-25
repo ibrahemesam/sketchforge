@@ -978,3 +978,110 @@ fn native_flowchart_shapes_export_with_drawio_styles() {
         );
     }
 }
+
+#[test]
+fn er_drawio_shapes_import_as_native_shapes() {
+    let xml = r#"<mxfile><diagram id="d" name="ER"><mxGraphModel><root>
+        <mxCell id="0"/><mxCell id="1" parent="0"/>
+        <mxCell id="weak" value="Weak" vertex="1" parent="1" style="shape=ext;double=1;margin=3;whiteSpace=wrap;html=1;align=center;">
+          <mxGeometry x="0" y="0" width="100" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="key" value="Key" vertex="1" parent="1" style="ellipse;whiteSpace=wrap;html=1;align=center;fontStyle=4;">
+          <mxGeometry x="120" y="0" width="100" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="weak-key" value="Weak Key" vertex="1" parent="1" style="ellipse;whiteSpace=wrap;html=1;align=center;fontStyle=20;">
+          <mxGeometry x="240" y="0" width="100" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="derived" value="Derived" vertex="1" parent="1" style="ellipse;whiteSpace=wrap;html=1;align=center;dashed=1;">
+          <mxGeometry x="0" y="80" width="100" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="identifying" value="Identifies" vertex="1" parent="1" style="shape=rhombus;double=1;perimeter=rhombusPerimeter;whiteSpace=wrap;html=1;align=center;">
+          <mxGeometry x="120" y="80" width="120" height="60" as="geometry"/>
+        </mxCell>
+      </root></mxGraphModel></diagram></mxfile>"#;
+    let (pages, _) = drawio::import_str(xml).unwrap();
+    let names: Vec<&str> = pages[0]
+        .doc
+        .nodes
+        .values()
+        .map(|n| n.name.as_str())
+        .collect();
+    for expected in [
+        "Weak Entity",
+        "Key Attribute",
+        "Derived Attribute",
+        "Relationship",
+    ] {
+        assert!(
+            names.contains(&expected),
+            "{expected} missing from {names:?}"
+        );
+    }
+}
+
+#[test]
+fn native_er_shapes_export_with_drawio_styles() {
+    let defs = [
+        (1, "weak-entity", "Weak"),
+        (2, "key-attribute", "Key"),
+        (3, "derived-attribute", "Derived"),
+        (4, "relationship", "Identifies"),
+    ];
+    let mut nodes = Vec::new();
+    let mut root = Vec::new();
+    for (id, def_id, label) in defs {
+        let def = drawio_rs::registry::by_id(def_id).expect("registry ER shape");
+        let mut node =
+            drawio_rs::registry::build(def, Rect::new(0.0, 0.0, def.size.0, def.size.1), None);
+        node.id = NodeId(id);
+        node.label = label.into();
+        root.push(node.id);
+        nodes.push((node.id, node));
+    }
+    let doc = Document {
+        name: "ER export".into(),
+        nodes: nodes.into_iter().collect(),
+        root,
+        ..Document::default()
+    };
+    let items = vec![export::Item {
+        name: doc.name.clone(),
+        doc: &doc,
+        roots: doc.layered_root(),
+    }];
+    let spec = Spec {
+        format: Format::Drawio,
+        scope: Scope::AllPages,
+        ..Spec::default()
+    };
+    let out = tmp("er-export").join("er.drawio");
+    export::write(&spec, &items, &out, None).unwrap();
+    let text = std::fs::read_to_string(&out).unwrap();
+    for needle in [
+        "shape=ext;double=1;",
+        "fontStyle=4;",
+        "dashed=1;",
+        "rhombus;",
+    ] {
+        assert!(text.contains(needle), "{needle} missing from {text}");
+    }
+
+    let (pages, _) = drawio::import_str(&text).unwrap();
+    let names: Vec<&str> = pages[0]
+        .doc
+        .nodes
+        .values()
+        .map(|n| n.name.as_str())
+        .collect();
+    for expected in [
+        "Weak Entity",
+        "Key Attribute",
+        "Derived Attribute",
+        "Relationship",
+    ] {
+        assert!(
+            names.contains(&expected),
+            "{expected} missing from {names:?}"
+        );
+    }
+}

@@ -1680,6 +1680,25 @@ fn flowchart_registry_for_shape(shape: &str) -> Option<&'static str> {
     }
 }
 
+// Draw.io's ER palette builds Chen notation from style flags rather than
+// dedicated shape aliases. The same styles are written on export. Ported from
+// `src/main/webapp/js/diagramly/sidebar/Sidebar-ER.js`, Copyright (c) 2020-2025
+// JGraph Holdings Ltd / draw.io AG, Apache-2.0. See `THIRD_PARTY.md`.
+fn er_registry_for_shape(shape: Option<&str>, st: &ParsedStyle) -> Option<&'static str> {
+    let leaf = shape.map(leaves).unwrap_or("").to_ascii_lowercase();
+    let underlined = st
+        .num("fontStyle")
+        .map(|bits| (bits as i32) & 4 != 0)
+        .unwrap_or(false);
+    match leaf.as_str() {
+        "ext" if st.flag("double") => Some("weak-entity"),
+        "ellipse" if underlined => Some("key-attribute"),
+        "ellipse" if st.flag("dashed") => Some("derived-attribute"),
+        "rhombus" if st.flag("double") => Some("relationship"),
+        _ => None,
+    }
+}
+
 fn registry_vertex(reg: &str, st: &ParsedStyle, rect: Rect, value: &str) -> Option<Node> {
     let def = crate::registry::by_id(reg)?;
     let mut n = crate::registry::build(def, rect, None);
@@ -1752,6 +1771,11 @@ fn build_vertex(cell: &RawCell, st: &ParsedStyle, rect: Rect) -> (Node, Option<S
         return (n, approximation);
     }
     if let Some(reg) = shape.and_then(flowchart_registry_for_shape)
+        && let Some(n) = registry_vertex(reg, st, rect, &value)
+    {
+        return (n, approximation);
+    }
+    if let Some(reg) = er_registry_for_shape(shape, st)
         && let Some(n) = registry_vertex(reg, st, rect, &value)
     {
         return (n, approximation);
@@ -2708,7 +2732,19 @@ fn shape_style(n: &Node, _doc: &Document) -> String {
                     | "database"
             )
     });
-    if let Some(def) = bpmn.or(flowchart) {
+    let er = crate::registry::all().iter().find(|d| {
+        d.name == n.name
+            && matches!(
+                d.id,
+                "entity"
+                    | "weak-entity"
+                    | "attribute"
+                    | "derived-attribute"
+                    | "key-attribute"
+                    | "relationship"
+            )
+    });
+    if let Some(def) = bpmn.or(flowchart).or(er) {
         style.push_str(drawio_shape_for_registry(def.id).unwrap_or("rounded=0;"));
     } else if c4.is_none() && sysml.is_none() {
         match &n.kind {
@@ -3027,9 +3063,14 @@ fn c4_type_for_registry(id: &str) -> Option<&'static str> {
 fn drawio_shape_for_registry(id: &str) -> Option<&'static str> {
     Some(match id {
         "process" | "entity" => "rounded=0;whiteSpace=wrap;html=1;",
-        "decision" | "relationship" => "rhombus;whiteSpace=wrap;html=1;",
+        "decision" => "rhombus;whiteSpace=wrap;html=1;",
+        "relationship" => {
+            "shape=rhombus;double=1;perimeter=rhombusPerimeter;whiteSpace=wrap;html=1;align=center;"
+        }
         "terminator" => "rounded=1;arcSize=50;whiteSpace=wrap;html=1;",
-        "attribute" | "derived-attribute" | "key-attribute" => "ellipse;whiteSpace=wrap;html=1;",
+        "attribute" => "ellipse;whiteSpace=wrap;html=1;",
+        "derived-attribute" => "ellipse;whiteSpace=wrap;html=1;align=center;dashed=1;",
+        "key-attribute" => "ellipse;whiteSpace=wrap;html=1;align=center;fontStyle=4;",
         "on-page-connector" => {
             "verticalLabelPosition=bottom;verticalAlign=top;html=1;shape=mxgraph.flowchart.on-page_reference;perimeter=ellipsePerimeter;whiteSpace=wrap;"
         }
@@ -3050,7 +3091,7 @@ fn drawio_shape_for_registry(id: &str) -> Option<&'static str> {
         "firewall" => "shape=firewall;whiteSpace=wrap;html=1;",
         "actor" => "shape=actor;whiteSpace=wrap;html=1;",
         "class" => "shape=class;whiteSpace=wrap;html=1;",
-        "weak-entity" => "shape=weakEntity;whiteSpace=wrap;html=1;",
+        "weak-entity" => "shape=ext;double=1;margin=3;whiteSpace=wrap;html=1;align=center;",
         "door" => "shape=door;whiteSpace=wrap;html=1;",
         "window" => "shape=window;whiteSpace=wrap;html=1;",
         "stairs" => "shape=stairs;whiteSpace=wrap;html=1;",
