@@ -581,6 +581,8 @@ documentation closeout completes the round.
 
 **User redirect, draw.io Database palette style (code committed ea64845).** Native Database now writes draw.io's flowchart Database palette style instead of the generic cylinder stencil and reimports as Database. The new export test failed before the fix and passes after it. The network export round trip still passes. THIRD_PARTY.md records the stencil flag.
 
+**User redirect, draw.io On-Page palette style (code committed b3e84b5).** Native On-Page Connector now writes draw.io's palette style without the duplicate wrap flag and reimports as the same registry shape. The focused export test failed before the fix and passes after it. THIRD_PARTY.md records the palette flag.
+
 **Scope.**
 
 - A selection context resolver that classifies the current selection as document, single

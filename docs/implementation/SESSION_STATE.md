@@ -1,6 +1,6 @@
 # Sketch agent session state
 
-Last updated: 2026-11-25 (draw.io Database palette style, code committed ea64845; docs closeout follows).
+Last updated: 2026-11-25 (draw.io On-Page palette style, code committed b3e84b5; docs closeout follows).
 
 ## Objective
 
@@ -118,13 +118,15 @@ writes draw.io's rounded rectangle flags and reimports as Process. Document pale
 Terminator palette flags followed as 4658c80, with docs as ae600db: native Terminator writes draw.io's full palette style and reimports as
 Terminator. Decision palette flags followed as b35cdc4, with docs as 4e148a5: native Decision writes draw.io's full palette
 style and reimports as Decision. Delay palette flags followed as 2ca5dc2, with docs as 026de81: native Delay writes draw.io's
-full palette style and reimports as Delay. Database palette flags followed as ea64845: native Database
-writes draw.io's flowchart Database stencil and reimports as Database. This closeout records
+full palette style and reimports as Delay. Database palette flags followed as ea64845, with docs as 42d3b17:
+native Database writes draw.io's flowchart Database stencil and reimports as Database. On-Page palette flags followed as
+b3e84b5: native On-Page Connector writes draw.io's palette style without the duplicate wrap flag and reimports as
+On-Page Connector. This closeout records
 the draw.io source port, the ADR-006 amendment, the BPMN aliases, the C4 properties,
 the SysML markers, the flowchart aliases,
 the ER flags and cardinality, the UML aliases, the floorplan aliases, the network aliases,
 the mermaid person stencil, the UML actor and class port, the basic pie stencil, the use
-case actor aliases, the hexagon alias, the Terminator stencil, the Decision stencil, the Delay stencil, the Document stencil, the Data palette flags, the Manual Input palette flags, the Manual Operation palette flags, the Preparation palette flags, the Off-Page palette flags, the Process palette flags, the Document palette flags, the Terminator palette flags, the Decision palette flags, the Delay palette flags and the Database palette flags.
+case actor aliases, the hexagon alias, the Terminator stencil, the Decision stencil, the Delay stencil, the Document stencil, the Data palette flags, the Manual Input palette flags, the Manual Operation palette flags, the Preparation palette flags, the Off-Page palette flags, the Process palette flags, the Document palette flags, the Terminator palette flags, the Decision palette flags, the Delay palette flags, the Database palette flags and the On-Page palette flags.
 
 The full sidebar spec was implemented and verified in round 6 (see
 `.opencode/MEMORY.md`). Round 7 closed the transparent connector label gap.
