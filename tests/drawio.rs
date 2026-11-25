@@ -954,7 +954,7 @@ fn native_flowchart_shapes_export_with_drawio_styles() {
         "shape=trapezoid;",
         "shape=mxgraph.flowchart.on-page_reference;",
         "shape=parallelogram;",
-        "shape=cylinder3;",
+        "shape=mxgraph.flowchart.database;",
     ] {
         assert!(text.contains(needle), "{needle} missing from {text}");
     }
@@ -2426,4 +2426,63 @@ fn flowchart_delay_palette_style_imports_as_native_shape() {
         .map(|n| n.name.as_str())
         .collect();
     assert!(names.contains(&"Delay"), "{names:?}");
+}
+
+#[test]
+fn flowchart_database_palette_style_imports_as_native_shape() {
+    let xml = r#"<mxfile><diagram id="d" name="Flow"><mxGraphModel><root>
+        <mxCell id="0"/><mxCell id="1" parent="0"/>
+        <mxCell id="database" value="Archive" vertex="1" parent="1" style="strokeWidth=2;html=1;shape=mxgraph.flowchart.database;whiteSpace=wrap;">
+          <mxGeometry x="0" y="0" width="120" height="80" as="geometry"/>
+        </mxCell>
+      </root></mxGraphModel></diagram></mxfile>"#;
+    let (pages, _) = drawio::import_str(xml).unwrap();
+    let names: Vec<&str> = pages[0]
+        .doc
+        .nodes
+        .values()
+        .map(|n| n.name.as_str())
+        .collect();
+    assert!(names.contains(&"Database"), "{names:?}");
+}
+
+#[test]
+fn native_database_exports_with_drawio_palette_style() {
+    let def = drawio_rs::registry::by_id("database").expect("registry Database shape");
+    let mut node =
+        drawio_rs::registry::build(def, Rect::new(0.0, 0.0, def.size.0, def.size.1), None);
+    node.id = NodeId(12);
+    node.label = "Archive".into();
+    let doc = Document {
+        name: "Database export".into(),
+        nodes: [(node.id, node)].into_iter().collect(),
+        root: vec![NodeId(12)],
+        ..Document::default()
+    };
+    let items = vec![export::Item {
+        name: doc.name.clone(),
+        doc: &doc,
+        roots: doc.layered_root(),
+    }];
+    let spec = Spec {
+        format: Format::Drawio,
+        scope: Scope::AllPages,
+        ..Spec::default()
+    };
+    let out = tmp("database-export").join("flow.drawio");
+    export::write(&spec, &items, &out, None).unwrap();
+    let text = std::fs::read_to_string(&out).unwrap();
+    assert!(
+        text.contains("strokeWidth=2;html=1;shape=mxgraph.flowchart.database;whiteSpace=wrap;"),
+        "{text}"
+    );
+
+    let (pages, _) = drawio::import_str(&text).unwrap();
+    let names: Vec<&str> = pages[0]
+        .doc
+        .nodes
+        .values()
+        .map(|n| n.name.as_str())
+        .collect();
+    assert!(names.contains(&"Database"), "{names:?}");
 }
