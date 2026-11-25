@@ -3333,7 +3333,11 @@ fn drawio_shape_for_registry(id: &str) -> Option<&'static str> {
         // `src/main/webapp/js/diagramly/sidebar/Sidebar-Flowchart.js`,
         // Copyright (c) 2020-2025 JGraph Holdings Ltd / draw.io AG, Apache-2.0.
         // See `THIRD_PARTY.md`.
-        "terminator" => "shape=mxgraph.flowchart.terminator;whiteSpace=wrap;html=1;",
+        // Draw.io's flowchart palette writes Terminator with this stroke width.
+        // Ported from `src/main/webapp/js/diagramly/sidebar/Sidebar-Flowchart.js`,
+        // Copyright (c) 2020-2025 JGraph Holdings Ltd / draw.io AG, Apache-2.0.
+        // See `THIRD_PARTY.md`.
+        "terminator" => "strokeWidth=2;html=1;shape=mxgraph.flowchart.terminator;whiteSpace=wrap;",
         "attribute" => "ellipse;whiteSpace=wrap;html=1;",
         "derived-attribute" => "ellipse;whiteSpace=wrap;html=1;align=center;dashed=1;",
         "key-attribute" => "ellipse;whiteSpace=wrap;html=1;align=center;fontStyle=4;",

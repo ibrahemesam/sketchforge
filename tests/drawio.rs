@@ -1790,7 +1790,7 @@ fn flowchart_terminator_stencil_imports_as_native_shape() {
 }
 
 #[test]
-fn native_terminator_exports_with_drawio_stencil() {
+fn native_terminator_exports_with_drawio_palette_style() {
     let def = drawio_rs::registry::by_id("terminator").expect("registry Terminator shape");
     let mut node =
         drawio_rs::registry::build(def, Rect::new(0.0, 0.0, def.size.0, def.size.1), None);
@@ -1816,7 +1816,7 @@ fn native_terminator_exports_with_drawio_stencil() {
     export::write(&spec, &items, &out, None).unwrap();
     let text = std::fs::read_to_string(&out).unwrap();
     assert!(
-        text.contains("shape=mxgraph.flowchart.terminator;"),
+        text.contains("strokeWidth=2;html=1;shape=mxgraph.flowchart.terminator;whiteSpace=wrap;"),
         "{text}"
     );
 
@@ -2366,4 +2366,22 @@ fn native_process_exports_with_drawio_palette_style() {
         .map(|n| n.name.as_str())
         .collect();
     assert!(names.contains(&"Process"), "{names:?}");
+}
+
+#[test]
+fn flowchart_terminator_palette_style_imports_as_native_shape() {
+    let xml = r#"<mxfile><diagram id="d" name="Flow"><mxGraphModel><root>
+        <mxCell id="0"/><mxCell id="1" parent="0"/>
+        <mxCell id="terminator" value="Start" vertex="1" parent="1" style="strokeWidth=2;html=1;shape=mxgraph.flowchart.terminator;whiteSpace=wrap;">
+          <mxGeometry x="0" y="0" width="160" height="60" as="geometry"/>
+        </mxCell>
+      </root></mxGraphModel></diagram></mxfile>"#;
+    let (pages, _) = drawio::import_str(xml).unwrap();
+    let names: Vec<&str> = pages[0]
+        .doc
+        .nodes
+        .values()
+        .map(|n| n.name.as_str())
+        .collect();
+    assert!(names.contains(&"Terminator"), "{names:?}");
 }
