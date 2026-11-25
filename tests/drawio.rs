@@ -7,7 +7,9 @@ use drawio_rs::geom::Rect;
 use drawio_rs::io::drawio;
 use drawio_rs::io::export::{self, Format, Scope, Spec};
 use drawio_rs::io::import;
-use drawio_rs::model::{Color, DefaultStyle, Document, Node, NodeId, NodeKind, Style, TextStyle};
+use drawio_rs::model::{
+    Color, DefaultStyle, Document, Head, Node, NodeId, NodeKind, Style, TextStyle,
+};
 use serde_json::json;
 use std::path::{Path, PathBuf};
 
@@ -1617,5 +1619,93 @@ fn mermaid_use_case_actor_drawio_shapes_import_as_native_actors() {
             .count(),
         2,
         "{report:?}"
+    );
+}
+
+#[test]
+fn er_cardinality_arrows_survive_drawio_round_trip() {
+    let xml = r#"<mxfile><diagram id="d" name="ER"><mxGraphModel><root>
+        <mxCell id="0"/><mxCell id="1" parent="0"/>
+        <mxCell id="a" value="Customer" vertex="1" parent="1" style="whiteSpace=wrap;html=1;">
+          <mxGeometry x="0" y="0" width="100" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="b" value="Order" vertex="1" parent="1" style="whiteSpace=wrap;html=1;">
+          <mxGeometry x="200" y="0" width="100" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="e" value="places" edge="1" parent="1" source="a" target="b" style="edgeStyle=entityRelationEdgeStyle;fontSize=12;html=1;startArrow=ERmandOne;endArrow=ERoneToMany;">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="100" y="20" as="sourcePoint"/>
+            <mxPoint x="200" y="20" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+      </root></mxGraphModel></diagram></mxfile>"#;
+    let (pages, report) = drawio::import_str(xml).unwrap();
+    let edge = pages[0]
+        .doc
+        .nodes
+        .values()
+        .find(|n| n.label == "places")
+        .expect("ER edge");
+    assert!(edge.is_connector());
+    assert_eq!(edge.metadata["drawioEdgeStyle"], "entityRelationEdgeStyle");
+    assert_eq!(edge.metadata["drawioStartArrow"], "ERmandOne");
+    assert_eq!(edge.metadata["drawioEndArrow"], "ERoneToMany");
+    assert!(
+        matches!(
+            edge.kind,
+            NodeKind::Connector {
+                start_head: Head::Bar,
+                end_head: Head::Arrow,
+                ..
+            }
+        ),
+        "{:?}",
+        edge.kind
+    );
+    assert!(
+        report
+            .approximated
+            .iter()
+            .any(|d| d.reason.contains("ER cardinality")),
+        "{report:?}"
+    );
+
+    let doc = &pages[0].doc;
+    let items = vec![export::Item {
+        name: doc.name.clone(),
+        doc,
+        roots: doc.layered_root(),
+    }];
+    let spec = Spec {
+        format: Format::Drawio,
+        scope: Scope::AllPages,
+        ..Spec::default()
+    };
+    let out = tmp("er-cardinality").join("er.drawio");
+    export::write(&spec, &items, &out, None).unwrap();
+    let text = std::fs::read_to_string(&out).unwrap();
+    for needle in [
+        "edgeStyle=entityRelationEdgeStyle;",
+        "startArrow=ERmandOne;",
+        "endArrow=ERoneToMany;",
+    ] {
+        assert!(text.contains(needle), "{needle} missing from {text}");
+    }
+    assert!(!text.contains("edgeStyle=orthogonalEdgeStyle;"), "{text}");
+
+    let (again, _) = drawio::import_str(&text).unwrap();
+    let reimported = again[0]
+        .doc
+        .nodes
+        .values()
+        .find(|n| n.label == "places")
+        .expect("reimported ER edge");
+    assert_eq!(
+        reimported.metadata["drawioStartArrow"], "ERmandOne",
+        "{text}"
+    );
+    assert_eq!(
+        reimported.metadata["drawioEndArrow"], "ERoneToMany",
+        "{text}"
     );
 }

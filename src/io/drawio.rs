@@ -32,6 +32,13 @@ const SKETCH_GRID_COLOR: &str = "__sketchGridColor";
 /// value rides in the mxGraphModel sidecar and survives a Sketch round trip.
 const SKETCH_PAGE_TRANSITION: &str = "__sketchPageTransition";
 const SKETCH_PAGE_TRANSITION_MS: &str = "__sketchPageTransitionMs";
+/// Draw.io ER edge style, kept on native connectors so it exports unchanged.
+const DRAWIO_EDGE_STYLE: &str = "drawioEdgeStyle";
+/// Draw.io ER start marker, kept on native connectors because the native head set
+/// cannot draw crow's feet and bars together.
+const DRAWIO_START_ARROW: &str = "drawioStartArrow";
+/// Draw.io ER end marker, kept alongside [`DRAWIO_START_ARROW`].
+const DRAWIO_END_ARROW: &str = "drawioEndArrow";
 
 // --------------------------------------------------------------------------------- report
 
@@ -743,8 +750,23 @@ fn import_model(
         let local: Vec<V2> = world.iter().map(|p| *p - bbox.min()).collect();
         let parent_off = doc.parent_origin(native_parent);
         let route = route_for(&st);
-        let start_head = head_for(st.get("startArrow")).unwrap_or(Head::None);
-        let end_head = head_for(st.get("endArrow")).unwrap_or(Head::Arrow);
+        let start_arrow = st.get("startArrow");
+        let end_arrow = st.get("endArrow");
+        let start_er_head = er_head_for(start_arrow);
+        let end_er_head = er_head_for(end_arrow);
+        let start_head = head_for(start_arrow)
+            .or(start_er_head)
+            .unwrap_or(Head::None);
+        let end_head = head_for(end_arrow).or(end_er_head).unwrap_or_else(|| {
+            if end_arrow.is_none() {
+                Head::Arrow
+            } else {
+                Head::None
+            }
+        });
+        let er_cardinality = start_er_head.is_some()
+            || end_er_head.is_some()
+            || st.get("edgeStyle") == Some("entityRelationEdgeStyle");
         let start_head_size = st.num("startSize").unwrap_or(DEFAULT_HEAD_SIZE);
         let end_head_size = st.num("endSize").unwrap_or(DEFAULT_HEAD_SIZE);
         let start_head_offset = st.num("sourcePerimeterSpacing").unwrap_or(0.0);
@@ -820,6 +842,28 @@ fn import_model(
             None
         };
         apply_cell_data(&mut node, cell);
+        if er_cardinality {
+            if st.get("edgeStyle") == Some("entityRelationEdgeStyle") {
+                node.metadata.insert(
+                    DRAWIO_EDGE_STYLE.to_string(),
+                    "entityRelationEdgeStyle".into(),
+                );
+            }
+            if let Some(value) = start_arrow.filter(|v| er_head_for(Some(*v)).is_some()) {
+                node.metadata
+                    .insert(DRAWIO_START_ARROW.to_string(), value.to_string());
+            }
+            if let Some(value) = end_arrow.filter(|v| er_head_for(Some(*v)).is_some()) {
+                node.metadata
+                    .insert(DRAWIO_END_ARROW.to_string(), value.to_string());
+            }
+            report.approx(
+                &name,
+                &cell.id,
+                "edge",
+                "ER cardinality arrows are approximated by native heads; draw.io names are preserved",
+            );
+        }
         let id = doc.alloc_id();
         node.id = id;
         drawio_to_native.insert(cell.id.clone(), id);
@@ -2359,6 +2403,21 @@ fn head_for(value: Option<&str>) -> Option<Head> {
     }
 }
 
+// Draw.io's Chen notation uses combined crow's-foot, bar and circle markers.
+// The native head set has one shape per end, so imports pick the closest head
+// and keep the exact draw.io name for export. Ported from
+// `src/main/webapp/js/diagramly/sidebar/Sidebar-ER.js` and
+// `src/main/webapp/shapes/er/mxER.js`, Copyright (c) 2020-2025 JGraph Holdings
+// Ltd / draw.io AG, Apache-2.0. See `THIRD_PARTY.md`.
+fn er_head_for(value: Option<&str>) -> Option<Head> {
+    match value? {
+        "ERone" | "ERmandOne" => Some(Head::Bar),
+        "ERmany" | "ERoneToMany" | "ERzeroToMany" => Some(Head::Arrow),
+        "ERzeroToOne" => Some(Head::Dot),
+        _ => None,
+    }
+}
+
 fn jump_for(st: &ParsedStyle) -> LineJump {
     match st.get("jumpStyle") {
         Some("arc") => LineJump::Arc,
@@ -3013,17 +3072,36 @@ fn shape_style(n: &Node, _doc: &Document) -> String {
         ..
     } = &n.kind
     {
-        if *route == Route::Elbow {
+        let preserved = n
+            .metadata
+            .get(DRAWIO_EDGE_STYLE)
+            .map(String::as_str)
+            .filter(|v| {
+                matches!(
+                    *v,
+                    "entityRelationEdgeStyle" | "orthogonalEdgeStyle" | "elbowEdgeStyle"
+                )
+            });
+        if let Some(name) = preserved {
+            let _ = write!(style, "edgeStyle={name};");
+        } else if *route == Route::Elbow {
             style.push_str("edgeStyle=orthogonalEdgeStyle;");
         } else if *route == Route::Curved {
             style.push_str("curved=1;");
         }
-        let _ = write!(
-            style,
-            "startArrow={};endArrow={};",
-            head_name(*start_head),
-            head_name(*end_head)
-        );
+        let start_arrow = n
+            .metadata
+            .get(DRAWIO_START_ARROW)
+            .map(String::as_str)
+            .filter(|v| er_head_for(Some(*v)).is_some())
+            .unwrap_or_else(|| head_name(*start_head));
+        let end_arrow = n
+            .metadata
+            .get(DRAWIO_END_ARROW)
+            .map(String::as_str)
+            .filter(|v| er_head_for(Some(*v)).is_some())
+            .unwrap_or_else(|| head_name(*end_head));
+        let _ = write!(style, "startArrow={start_arrow};endArrow={end_arrow};");
         if n.start_head_size != DEFAULT_HEAD_SIZE {
             let _ = write!(style, "startSize={};", fmt_num(n.start_head_size));
         }
