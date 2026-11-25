@@ -1777,6 +1777,17 @@ fn chart_registry_for_shape(shape: Option<&str>) -> Option<&'static str> {
     }
 }
 
+// Draw.io's basic palette has normal, hollow and silhouette mermaid use case
+// actors. The native registry has one stick-figure Actor. Ported from
+// `src/main/webapp/js/diagramly/sidebar/Sidebar-Basic.js`, Copyright (c)
+// 2020-2025 JGraph Holdings Ltd / draw.io AG, Apache-2.0. See `THIRD_PARTY.md`.
+fn usecase_actor_registry_for_shape(shape: Option<&str>) -> Option<&'static str> {
+    match shape.map(leaves)?.to_ascii_lowercase().as_str() {
+        "mermaidusecaseactor" => Some("actor"),
+        _ => None,
+    }
+}
+
 fn registry_vertex(reg: &str, st: &ParsedStyle, rect: Rect, value: &str) -> Option<Node> {
     let def = crate::registry::by_id(reg)?;
     let mut n = crate::registry::build(def, rect, None);
@@ -1912,6 +1923,19 @@ fn build_vertex(cell: &RawCell, st: &ParsedStyle, rect: Rect) -> (Node, Option<S
     {
         let quarter = st.num("startAngle") == Some(0.0) && st.num("endAngle") == Some(0.25);
         let loss = (!quarter).then(|| "pie angles are imported as a quarter slice".into());
+        return (n, loss);
+    }
+    if let Some(reg) = usecase_actor_registry_for_shape(shape)
+        && let Some(n) = registry_vertex(reg, st, rect, &value)
+    {
+        let actor_type = st.get("actorType").unwrap_or("").to_ascii_lowercase();
+        let loss = if actor_type.is_empty() || actor_type == "normal" {
+            None
+        } else {
+            Some(format!(
+                "use case actor type {actor_type} is imported as the native actor"
+            ))
+        };
         return (n, loss);
     }
     let mut node = if is_group_style(st) {

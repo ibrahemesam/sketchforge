@@ -1582,3 +1582,40 @@ fn native_pie_slice_exports_with_drawio_style() {
         "{report:?}"
     );
 }
+
+#[test]
+fn mermaid_use_case_actor_drawio_shapes_import_as_native_actors() {
+    let xml = r#"<mxfile><diagram id="d" name="Use cases"><mxGraphModel><root>
+        <mxCell id="0"/><mxCell id="1" parent="0"/>
+        <mxCell id="normal" value="Normal user" vertex="1" parent="1" style="shape=mermaidUsecaseActor;actorType=normal;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;">
+          <mxGeometry x="0" y="0" width="56" height="72" as="geometry"/>
+        </mxCell>
+        <mxCell id="hollow" value="Guest" vertex="1" parent="1" style="shape=mermaidUsecaseActor;actorType=hollow;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;">
+          <mxGeometry x="80" y="0" width="56" height="72" as="geometry"/>
+        </mxCell>
+        <mxCell id="awesome" value="Admin" vertex="1" parent="1" style="shape=mermaidUsecaseActor;actorType=awesome;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;">
+          <mxGeometry x="160" y="0" width="56" height="72" as="geometry"/>
+        </mxCell>
+      </root></mxGraphModel></diagram></mxfile>"#;
+    let (pages, report) = drawio::import_str(xml).unwrap();
+    let names: Vec<&str> = pages[0]
+        .doc
+        .nodes
+        .values()
+        .map(|n| n.name.as_str())
+        .collect();
+    assert_eq!(
+        names.iter().filter(|name| **name == "Actor").count(),
+        3,
+        "{names:?}"
+    );
+    assert_eq!(
+        report
+            .approximated
+            .iter()
+            .filter(|d| d.reason.contains("use case actor type"))
+            .count(),
+        2,
+        "{report:?}"
+    );
+}
