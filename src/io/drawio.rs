@@ -3320,7 +3320,11 @@ fn drawio_shape_for_registry(id: &str) -> Option<&'static str> {
         "manual-input" => "shape=manualInput;whiteSpace=wrap;html=1;",
         "manual-operation" => "shape=trapezoid;whiteSpace=wrap;html=1;",
         "preparation" => "shape=hexagon;whiteSpace=wrap;html=1;",
-        "delay" => "shape=delay;whiteSpace=wrap;html=1;",
+        // Draw.io's flowchart palette writes Delay as a stencil. Ported from
+        // `src/main/webapp/js/diagramly/sidebar/Sidebar-Flowchart.js`,
+        // Copyright (c) 2020-2025 JGraph Holdings Ltd / draw.io AG, Apache-2.0.
+        // See `THIRD_PARTY.md`.
+        "delay" => "shape=mxgraph.flowchart.delay;whiteSpace=wrap;html=1;",
         "off-page" => "shape=offPageConnector;whiteSpace=wrap;html=1;",
         "queue" => "shape=queue;whiteSpace=wrap;html=1;",
         "note" => {
