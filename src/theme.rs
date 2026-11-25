@@ -2,8 +2,8 @@
 //! that follow the system appearance, and thin SF Symbols-style line icons.
 
 use egui::{
-    Color32, CornerRadius, FontData, FontFamily, FontId, Pos2, Rect, Shadow, Stroke, Vec2, pos2,
-    vec2,
+    Color32, CornerRadius, FontData, FontFamily, FontId, Pos2, Rect, Shadow, Stroke, Vec2,
+    WidgetInfo, WidgetType, pos2, vec2,
 };
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU32, Ordering};
@@ -359,6 +359,76 @@ pub enum Icon {
     Sketch,
     Sun,
     Moon,
+}
+
+impl Icon {
+    /// Generic name for the icon when the caller has no more specific action label.
+    pub fn access_name(self) -> &'static str {
+        match self {
+            Self::Pointer => "Pointer",
+            Self::Hand => "Hand",
+            Self::Frame => "Frame",
+            Self::Rect => "Rectangle",
+            Self::Ellipse => "Ellipse",
+            Self::Line => "Line",
+            Self::Text => "Text",
+            Self::Pencil => "Pencil",
+            Self::Eraser => "Eraser",
+            Self::Ink => "Ink",
+            Self::Eye => "Show",
+            Self::EyeSlash => "Hide",
+            Self::Lock => "Lock",
+            Self::LockOpen => "Unlock",
+            Self::ChevronRight => "Expand",
+            Self::ChevronDown => "Collapse",
+            Self::ChevronUp => "Collapse",
+            Self::Question => "Keyboard shortcuts",
+            Self::Plus => "Add",
+            Self::Minus => "Remove",
+            Self::Sidebar => "Format panel",
+            Self::Export => "Export",
+            Self::Grid => "All projects",
+            Self::Trash => "Delete",
+            Self::More => "More",
+            Self::Page => "Page",
+            Self::Restore => "Restore",
+            Self::Duplicate => "Duplicate",
+            Self::SelectAll => "Select all",
+            Self::Group => "Group",
+            Self::Pen => "Pen tool",
+            Self::Polygon => "Polygon",
+            Self::Star => "Star",
+            Self::Component => "Component",
+            Self::Instance => "Instance",
+            Self::Image => "Image",
+            Self::AlignLeft => "Align left",
+            Self::AlignHCenter => "Align horizontal centers",
+            Self::AlignRight => "Align right",
+            Self::AlignJustify => "Distribute horizontally",
+            Self::AlignTop => "Align top",
+            Self::AlignVCenter => "Align vertical centers",
+            Self::AlignBottom => "Align bottom",
+            Self::DistributeH => "Distribute horizontally",
+            Self::DistributeV => "Distribute vertically",
+            Self::ToFront => "Bring to front",
+            Self::ToBack => "Send to back",
+            Self::Corners => "Corner radius",
+            Self::Wrap => "Wrap",
+            Self::ArrowRight => "Apply",
+            Self::ArrowDown => "Apply",
+            Self::SpaceBetween => "Space between",
+            Self::Undo => "Undo",
+            Self::Redo => "Redo",
+            Self::Arrow => "Arrow",
+            Self::Sticky => "Sticky note",
+            Self::Diamond => "Diamond",
+            Self::Laser => "Laser pointer",
+            Self::Library => "Library",
+            Self::Sketch => "Sketch",
+            Self::Sun => "Light theme",
+            Self::Moon => "Dark theme",
+        }
+    }
 }
 
 pub fn paint_icon(painter: &egui::Painter, rect: Rect, icon: Icon, color: Color32) {
@@ -901,6 +971,17 @@ fn arc(c: Pos2, r: f32, a0: f32, a1: f32, n: usize) -> Vec<Pos2> {
 
 /// A borderless icon button: subtle hover/pressed fill, accent fill when `selected`.
 pub fn icon_button(ui: &mut egui::Ui, icon: Icon, size: f32, selected: bool) -> egui::Response {
+    icon_button_labeled(ui, icon, size, selected, icon.access_name())
+}
+
+/// An icon button with an explicit name for screen readers.
+pub fn icon_button_labeled(
+    ui: &mut egui::Ui,
+    icon: Icon,
+    size: f32,
+    selected: bool,
+    label: &str,
+) -> egui::Response {
     let (rect, resp) = ui.allocate_exact_size(Vec2::splat(size), egui::Sense::click());
     if ui.is_rect_visible(rect) {
         let p = pal(ui);
@@ -925,5 +1006,6 @@ pub fn icon_button(ui: &mut egui::Ui, icon: Icon, size: f32, selected: bool) -> 
         let inset = (size * 0.22).round();
         paint_icon(ui.painter(), rect.shrink(inset), icon, color);
     }
+    resp.widget_info(|| WidgetInfo::labeled(WidgetType::Button, ui.is_enabled(), label));
     resp
 }

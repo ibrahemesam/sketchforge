@@ -323,7 +323,7 @@ fn theme_button(ui: &mut Ui, options: &mut crate::options::Options, dirty: &mut 
     } else {
         (Icon::Sun, "Light theme")
     };
-    if theme::icon_button(ui, icon, 24.0, false)
+    if theme::icon_button_labeled(ui, icon, 24.0, false, tip)
         .on_hover_text(tip)
         .clicked()
     {
@@ -622,7 +622,7 @@ fn top_bar(ui: &mut Ui, ed: &mut Editor, st: &mut UiState) {
             menu_bar(ui, ed);
             ui.add_space(8.0);
         }
-        if theme::icon_button(ui, theme::Icon::Grid, 26.0, false)
+        if theme::icon_button_labeled(ui, theme::Icon::Grid, 26.0, false, "All projects")
             .on_hover_text("All projects")
             .clicked()
         {
@@ -630,13 +630,15 @@ fn top_bar(ui: &mut Ui, ed: &mut Editor, st: &mut UiState) {
         }
         ui.add_space(2.0);
         let undo = ui.add_enabled_ui(ed.history.can_undo(), |ui| {
-            theme::icon_button(ui, theme::Icon::Undo, 26.0, false).on_hover_text("Undo (⌘Z)")
+            theme::icon_button_labeled(ui, theme::Icon::Undo, 26.0, false, "Undo")
+                .on_hover_text("Undo (⌘Z)")
         });
         if undo.inner.clicked() {
             ed.run(Action::Undo);
         }
         let redo = ui.add_enabled_ui(ed.history.can_redo(), |ui| {
-            theme::icon_button(ui, theme::Icon::Redo, 26.0, false).on_hover_text("Redo (⌘⇧Z)")
+            theme::icon_button_labeled(ui, theme::Icon::Redo, 26.0, false, "Redo")
+                .on_hover_text("Redo (⌘⇧Z)")
         });
         if redo.inner.clicked() {
             ed.run(Action::Redo);
@@ -646,27 +648,28 @@ fn top_bar(ui: &mut Ui, ed: &mut Editor, st: &mut UiState) {
         ui.add_space(2.0);
         let has_sel = !ed.selection.is_empty();
         let del = ui.add_enabled_ui(has_sel, |ui| {
-            theme::icon_button(ui, theme::Icon::Trash, 26.0, false).on_hover_text("Delete (Del)")
+            theme::icon_button_labeled(ui, theme::Icon::Trash, 26.0, false, "Delete")
+                .on_hover_text("Delete (Del)")
         });
         if del.inner.clicked() {
             ed.run(Action::Delete);
         }
         let dup = ui.add_enabled_ui(has_sel, |ui| {
-            theme::icon_button(ui, theme::Icon::Duplicate, 26.0, false)
+            theme::icon_button_labeled(ui, theme::Icon::Duplicate, 26.0, false, "Duplicate")
                 .on_hover_text("Duplicate (⌘D)")
         });
         if dup.inner.clicked() {
             ed.run(Action::Duplicate);
         }
         let to_front = ui.add_enabled_ui(has_sel, |ui| {
-            theme::icon_button(ui, theme::Icon::ToFront, 26.0, false)
+            theme::icon_button_labeled(ui, theme::Icon::ToFront, 26.0, false, "Bring to front")
                 .on_hover_text("Bring to front (⌘⇧])")
         });
         if to_front.inner.clicked() {
             ed.run(Action::ToFront);
         }
         let to_back = ui.add_enabled_ui(has_sel, |ui| {
-            theme::icon_button(ui, theme::Icon::ToBack, 26.0, false)
+            theme::icon_button_labeled(ui, theme::Icon::ToBack, 26.0, false, "Send to back")
                 .on_hover_text("Send to back (⌘⇧[)")
         });
         if to_back.inner.clicked() {
@@ -700,21 +703,33 @@ fn top_bar(ui: &mut Ui, ed: &mut Editor, st: &mut UiState) {
             ui.spacing_mut().item_spacing.x = 2.0;
             theme_button(ui, &mut st.options, &mut st.options_dirty);
             ui.add_space(4.0);
-            if theme::icon_button(ui, theme::Icon::Sidebar, 26.0, !st.hide_inspector)
-                .on_hover_text("Format panel (⌘⇧F)")
-                .clicked()
+            if theme::icon_button_labeled(
+                ui,
+                theme::Icon::Sidebar,
+                26.0,
+                !st.hide_inspector,
+                "Format panel",
+            )
+            .on_hover_text("Format panel (⌘⇧F)")
+            .clicked()
             {
                 st.hide_inspector = !st.hide_inspector;
             }
             ui.add_space(4.0);
-            if theme::icon_button(ui, theme::Icon::Question, 26.0, st.show_help)
-                .on_hover_text("Keyboard shortcuts")
-                .clicked()
+            if theme::icon_button_labeled(
+                ui,
+                theme::Icon::Question,
+                26.0,
+                st.show_help,
+                "Keyboard shortcuts",
+            )
+            .on_hover_text("Keyboard shortcuts")
+            .clicked()
             {
                 st.show_help = !st.show_help;
             }
             ui.add_space(8.0);
-            if theme::icon_button(ui, theme::Icon::Plus, 26.0, false)
+            if theme::icon_button_labeled(ui, theme::Icon::Plus, 26.0, false, "Zoom in")
                 .on_hover_text("Zoom in")
                 .clicked()
             {
@@ -731,7 +746,7 @@ fn top_bar(ui: &mut Ui, ed: &mut Editor, st: &mut UiState) {
             if z.on_hover_text("Zoom to fit").clicked() {
                 ed.run(Action::ZoomFit);
             }
-            if theme::icon_button(ui, theme::Icon::Minus, 26.0, false)
+            if theme::icon_button_labeled(ui, theme::Icon::Minus, 26.0, false, "Zoom out")
                 .on_hover_text("Zoom out")
                 .clicked()
             {
@@ -1232,9 +1247,15 @@ fn toolbar(ctx: &egui::Context, ed: &mut Editor, canvas: egui::Rect) {
                                     egui::Stroke::new(1.0, p.separator),
                                 );
                             }
-                            if theme::icon_button(ui, tool_icon(t), 30.0, ed.tool == t)
-                                .on_hover_text(format!("{} ({})", t.label(), t.shortcut()))
-                                .clicked()
+                            if theme::icon_button_labeled(
+                                ui,
+                                tool_icon(t),
+                                30.0,
+                                ed.tool == t,
+                                t.label(),
+                            )
+                            .on_hover_text(format!("{} ({})", t.label(), t.shortcut()))
+                            .clicked()
                             {
                                 ed.run(Action::Tool(t));
                             }
@@ -1521,6 +1542,68 @@ mod tests {
         );
         let text = tooltip_display_text("Owner: %owner%", &n, &doc);
         assert_eq!(text, "Owner: Ada", "{text}");
+    }
+
+    #[test]
+    fn icon_buttons_expose_accessible_names() {
+        let ctx = egui::Context::default();
+        ctx.enable_accesskit();
+        let mut out = ctx.run_ui(
+            egui::RawInput {
+                screen_rect: Some(egui::Rect::from_min_size(
+                    egui::Pos2::ZERO,
+                    egui::vec2(200.0, 100.0),
+                )),
+                ..Default::default()
+            },
+            |ui| {
+                crate::theme::icon_button(ui, crate::theme::Icon::Undo, 26.0, false)
+                    .on_hover_text("Undo");
+            },
+        );
+        out.textures_delta.clear();
+        let update = out
+            .platform_output
+            .accesskit_update
+            .expect("icon button should register an accessibility node");
+        let labels: Vec<String> = update
+            .nodes
+            .iter()
+            .filter_map(|(_, node)| node.label().map(str::to_string))
+            .collect();
+        assert!(
+            labels.iter().any(|label| label == "Undo"),
+            "expected an Undo label, got {labels:?}"
+        );
+    }
+
+    #[test]
+    fn icon_buttons_take_keyboard_focus() {
+        let ctx = egui::Context::default();
+        let input = || egui::RawInput {
+            screen_rect: Some(egui::Rect::from_min_size(
+                egui::Pos2::ZERO,
+                egui::vec2(200.0, 100.0),
+            )),
+            ..Default::default()
+        };
+        let mut first = ctx.run_ui(input(), |ui| {
+            crate::theme::icon_button(ui, crate::theme::Icon::Undo, 26.0, false);
+        });
+        first.textures_delta.clear();
+        let mut tab = input();
+        tab.events.push(egui::Event::Key {
+            key: egui::Key::Tab,
+            physical_key: None,
+            pressed: true,
+            repeat: false,
+            modifiers: egui::Modifiers::NONE,
+        });
+        let mut second = ctx.run_ui(tab, |ui| {
+            let r = crate::theme::icon_button(ui, crate::theme::Icon::Undo, 26.0, false);
+            assert!(r.has_focus(), "Tab should focus the icon button");
+        });
+        second.textures_delta.clear();
     }
 
     #[test]
