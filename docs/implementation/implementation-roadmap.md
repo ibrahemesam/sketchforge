@@ -535,6 +535,8 @@ documentation closeout completes the round.
 
 **User redirect, draw.io UML shapes (code committed 40aa938).** Draw.io's `shape=note2` now imports as Note and `shape=folder` imports as Package. The folder alias wins even when draw.io marks the cell as a container, so it no longer becomes a frame. Native note and package shapes export with the UML palette styles. Both integration tests failed before the fix and pass after it. THIRD_PARTY.md now lists Sidebar-UML25.js.
 
+**User redirect, draw.io floorplan shapes (code committed 03bee77).** Draw.io's `mxgraph.floorplan.*` door, window and stair variants now import as the native Door, Window and Stairs shapes. Native shapes export with the matching stencil styles, so they reimport with their native names. Both integration tests failed before the fix and pass after it. THIRD_PARTY.md now lists Sidebar-Floorplan.js.
+
 **Scope.**
 
 - A selection context resolver that classifies the current selection as document, single
