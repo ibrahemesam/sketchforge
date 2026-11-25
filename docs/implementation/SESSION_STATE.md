@@ -1,6 +1,6 @@
 # Sketch agent session state
 
-Last updated: 2026-11-25 (draw.io Person shape support, code committed 1ebf465; docs closeout follows).
+Last updated: 2026-11-25 (draw.io UML actor and class support, code committed 2ebe8f9; docs closeout follows).
 
 ## Objective
 
@@ -86,11 +86,14 @@ native shapes export with the UML palette styles. Floorplan shapes followed as 0
 shapes export with the matching stencil styles. Network shapes followed as 3b80e76, with docs as af1c008:
 `mxgraph.networks.*` server, PC and storage aliases import as native Server, Host and
 Database shapes, and native network shapes export with the matching stencil styles. Person
-support followed as 1ebf465: draw.io's mermaid person stencil imports as the native Person
-shape, and native Person exports with that stencil and perimeter. This closeout records the
-draw.io source port, the ADR-006 amendment, the BPMN aliases, the C4 properties, the SysML
-markers, the flowchart aliases, the ER flags, the UML aliases, the floorplan aliases, the
-network aliases and the mermaid person stencil.
+support followed as 1ebf465, with docs as 4446cd6: draw.io's mermaid person stencil imports
+as the native Person shape, and native Person exports with that stencil and perimeter. UML
+actor and class support followed as 2ebe8f9: `shape=umlActor` exports with the palette's
+label styles, composite cells with `attributes` and `operations` children import as Class,
+and native Class exports with the draw.io swimlane style and both children. This closeout
+records the draw.io source port, the ADR-006 amendment, the BPMN aliases, the C4 properties,
+the SysML markers, the flowchart aliases, the ER flags, the UML aliases, the floorplan
+aliases, the network aliases, the mermaid person stencil and the UML actor and class port.
 
 The full sidebar spec was implemented and verified in round 6 (see
 `.opencode/MEMORY.md`). Round 7 closed the transparent connector label gap.
