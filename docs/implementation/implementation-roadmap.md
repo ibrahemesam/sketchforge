@@ -507,6 +507,8 @@ documentation closeout completes the round.
 
 **Round 95 (code committed bacbe2f).** The sidebar eye and lock click regions now name their actions. A hidden, locked row produced no labels in the failing test. UIX-12 stays IN_PROGRESS.
 
+**Round 96 (code committed 8af5f2d).** Sidebar page rows now say Switch to <page name> in the accessibility tree. A panel render test found only Add and Collapse labels before the fix. UIX-12 stays IN_PROGRESS.
+
 **Scope.**
 
 - A selection context resolver that classifies the current selection as document, single
