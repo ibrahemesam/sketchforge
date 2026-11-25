@@ -1,6 +1,6 @@
 # Sketch agent session state
 
-Last updated: 2026-11-25 (draw.io flowchart shape support, code committed fb9c602; docs closeout follows).
+Last updated: 2026-11-25 (draw.io ER notation support, code committed 9e98c71; docs closeout follows).
 
 ## Objective
 
@@ -71,14 +71,16 @@ export were then committed as f6b7f69, with docs as 57cf906: draw.io event, task
 gateway aliases now map to native BPMN registry shapes, and native BPMN shapes export with
 draw.io styles. C4 shapes followed as e5faf5c, with docs as 7bc1afa: `c4Type` properties
 and `mxgraph.c4` aliases import as native C4 shapes, and exports write the C4 property and
-palette styles. SysML shapes followed as 3311f08: `mxgraph.sysml.port*` aliases and the
-`<<block>>` / `<<requirement>>` composite children import as native SysML shapes, and
-exports write those styles and child markers. Flowchart aliases followed as fb9c602:
-draw.io's `document2`, `manual_input`, `manual_operation`, `on-page_reference`,
-`sequential_data` and `stored_data` import as native shapes, and native flowchart shapes
-export with the matching draw.io styles. This closeout records the draw.io source port,
-the ADR-006 amendment, the BPMN aliases, the C4 properties, the SysML markers and the
-flowchart aliases.
+palette styles. SysML shapes followed as 3311f08, with docs as 4cece6c:
+`mxgraph.sysml.port*` aliases and the `<<block>>` / `<<requirement>>` composite children
+import as native SysML shapes, and exports write those styles and child markers. Flowchart
+aliases followed as fb9c602, with docs as 5420bd9: draw.io's `document2`, `manual_input`,
+`manual_operation`, `on-page_reference`, `sequential_data` and `stored_data` import as
+native shapes, and native flowchart shapes export with the matching draw.io styles. ER
+notation followed as 9e98c71: the `double=1` flag on `ext` and `rhombus` cells, plus
+underlined and dashed ellipses, import as native ER shapes, and exports write the same
+style flags. This closeout records the draw.io source port, the ADR-006 amendment, the
+BPMN aliases, the C4 properties, the SysML markers, the flowchart aliases and the ER flags.
 
 The full sidebar spec was implemented and verified in round 6 (see
 `.opencode/MEMORY.md`). Round 7 closed the transparent connector label gap.

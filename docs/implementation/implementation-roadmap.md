@@ -531,6 +531,8 @@ documentation closeout completes the round.
 
 **User redirect, draw.io flowchart shapes (code committed fb9c602).** Draw.io's `mxgraph.flowchart.document2`, `manual_input`, `manual_operation`, `on-page_reference`, `sequential_data` and `stored_data` aliases now import as native flowchart shapes. Native document, manual input, manual operation, on-page connector, data and database shapes export with the matching draw.io styles. Both integration tests failed before the fix and pass after it. THIRD_PARTY.md now lists Sidebar-Flowchart.js.
 
+**User redirect, draw.io ER notation (code committed 9e98c71).** Draw.io's `double=1` flag on `ext` and `rhombus` cells now imports as Weak Entity and Relationship. Underlined ellipses import as Key Attribute, and dashed ellipses import as Derived Attribute. Native ER shapes export with the same style flags, so all four variants round-trip. Both integration tests failed before the fix and pass after it. THIRD_PARTY.md now lists Sidebar-ER.js.
+
 **Scope.**
 
 - A selection context resolver that classifies the current selection as document, single
