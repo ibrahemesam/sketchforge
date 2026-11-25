@@ -169,10 +169,12 @@ fn tile(
     lib: &mut LibraryUi,
     id: &str,
     fp: usize,
+    label: &str,
     make: impl FnOnce() -> egui::Mesh,
 ) -> (egui::Rect, egui::Response) {
     let (rect, resp) =
         ui.allocate_exact_size(egui::vec2(TILE, TILE), egui::Sense::click_and_drag());
+    resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, true, label));
     let bg = if resp.dragged() || resp.hovered() {
         p.hover
     } else {
@@ -347,8 +349,10 @@ pub fn panel(ui: &mut Ui, ed: &mut Editor, st: &mut UiState) {
                                 let fp = item_fp(&it.item);
                                 let pinned = it.pinned;
                                 let item = it.item.clone();
-                                let (_, resp) =
-                                    tile(ui, &p, lib, &id, fp, || preview_mesh(&item, TILE));
+                                let label = format!("Insert {}", item.name);
+                                let (_, resp) = tile(ui, &p, lib, &id, fp, &label, || {
+                                    preview_mesh(&item, TILE)
+                                });
                                 let started = resp.drag_started();
                                 let clicked = resp.clicked();
                                 let hover = format!(
@@ -406,7 +410,10 @@ pub fn panel(ui: &mut Ui, ed: &mut Editor, st: &mut UiState) {
                 let fp = node_fp(&it.nodes[0]);
                 let id = it.id.clone();
                 let insert_item = it.clone();
-                let (_, resp) = tile(ui, &p, lib, &id, fp, || preview_mesh(&insert_item, TILE));
+                let label = format!("Insert {}", def.name);
+                let (_, resp) = tile(ui, &p, lib, &id, fp, &label, || {
+                    preview_mesh(&insert_item, TILE)
+                });
                 if resp.drag_started() {
                     lib.drag = Some(DragSource::Registry(def));
                 }
@@ -543,7 +550,9 @@ pub fn panel(ui: &mut Ui, ed: &mut Editor, st: &mut UiState) {
                     ui.spacing_mut().item_spacing.x = 6.0;
                     for it in row {
                         let fp = item_fp(it);
-                        let (rect, resp) = tile(ui, &p, lib, &it.id, fp, || preview_mesh(it, TILE));
+                        let label = format!("Insert {}", it.name);
+                        let (rect, resp) =
+                            tile(ui, &p, lib, &it.id, fp, &label, || preview_mesh(it, TILE));
                         let renaming = lib.renaming.as_ref().is_some_and(|(id, _)| *id == it.id);
                         if renaming {
                             let (_, name) = lib.renaming.as_mut().unwrap();
@@ -726,4 +735,48 @@ fn drag_ghost(
         }
     };
     (mesh, crect)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn library_tiles_expose_insert_actions_to_accesskit() {
+        let ctx = egui::Context::default();
+        crate::theme::install_fonts(&ctx);
+        ctx.enable_accesskit();
+        let mut ed = Editor::default();
+        let mut st = UiState {
+            library: LibraryUi {
+                query: "decision".into(),
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        let mut out = ctx.run_ui(
+            egui::RawInput {
+                screen_rect: Some(egui::Rect::from_min_size(
+                    egui::Pos2::ZERO,
+                    egui::vec2(260.0, 600.0),
+                )),
+                ..Default::default()
+            },
+            |ui| panel(ui, &mut ed, &mut st),
+        );
+        out.textures_delta.clear();
+        let update = out
+            .platform_output
+            .accesskit_update
+            .expect("library panel should register accessibility nodes");
+        let labels: Vec<String> = update
+            .nodes
+            .iter()
+            .filter_map(|(_, node)| node.label().map(str::to_string))
+            .collect();
+        assert!(
+            labels.iter().any(|label| label == "Insert Decision"),
+            "expected an Insert Decision label, got {labels:?}"
+        );
+    }
 }
