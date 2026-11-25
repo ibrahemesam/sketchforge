@@ -3325,7 +3325,11 @@ fn drawio_shape_for_registry(id: &str) -> Option<&'static str> {
         // `src/main/webapp/js/diagramly/sidebar/Sidebar-Flowchart.js`,
         // Copyright (c) 2020-2025 JGraph Holdings Ltd / draw.io AG, Apache-2.0.
         // See `THIRD_PARTY.md`.
-        "decision" => "shape=mxgraph.flowchart.decision;whiteSpace=wrap;html=1;",
+        // Draw.io's flowchart palette writes Decision with this stroke width.
+        // Ported from `src/main/webapp/js/diagramly/sidebar/Sidebar-Flowchart.js`,
+        // Copyright (c) 2020-2025 JGraph Holdings Ltd / draw.io AG, Apache-2.0.
+        // See `THIRD_PARTY.md`.
+        "decision" => "strokeWidth=2;html=1;shape=mxgraph.flowchart.decision;whiteSpace=wrap;",
         "relationship" => {
             "shape=rhombus;double=1;perimeter=rhombusPerimeter;whiteSpace=wrap;html=1;align=center;"
         }
