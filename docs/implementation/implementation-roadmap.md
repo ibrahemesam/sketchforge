@@ -499,6 +499,8 @@ documentation closeout completes the round.
 
 **Round 91 (code committed 2e0e1df).** The Layers panel order buttons now expose Send backward and Bring forward to AccessKit instead of sharing the generic Collapse name. A sidebar render test failed on the two duplicate labels before the fix. UIX-12 stays IN_PROGRESS while the broader audit, visible focus, and canvas tree remain open.
 
+**Round 92 (code committed b7b3a54).** Sticky note color swatches now expose their six hex colors as AccessKit labels instead of unnamed click targets. A swatch render test failed with no labels before the fix. UIX-12 stays IN_PROGRESS while the command audit, visible focus, and canvas tree remain open.
+
 **Scope.**
 
 - A selection context resolver that classifies the current selection as document, single

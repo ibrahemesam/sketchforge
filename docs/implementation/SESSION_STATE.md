@@ -1,6 +1,6 @@
 # Sketch agent session state
 
-Last updated: 2026-11-25 (sidebar order button names, code committed 2e0e1df).
+Last updated: 2026-11-25 (sticky note swatch names, code committed b7b3a54).
 
 ## Objective
 
@@ -49,7 +49,9 @@ every icon button an AccessKit name, with specific labels for toolbar and top-ba
 actions, and guards Tab focus. UIX-12 moved from DISCOVERED to IN_PROGRESS. Its
 docs closeout was pushed as ad44b28. Round 91 code commit 2e0e1df names the
 Layers panel order buttons Send backward and Bring forward instead of two
-Collapse labels. The round 91 docs closeout follows this commit.
+Collapse labels. Its docs closeout was pushed as af9fc01. Round 92 code commit
+b7b3a54 gives the six sticky note color swatches AccessKit hex labels. The round
+92 docs closeout follows this commit.
 
 The full sidebar spec was implemented and verified in round 6 (see
 `.opencode/MEMORY.md`). Round 7 closed the transparent connector label gap.
@@ -761,6 +763,8 @@ Round 90 (committed 14e9272) gives icon buttons AccessKit labels and specific na
 
 Round 91 (committed 2e0e1df) names the Layers panel order buttons Send backward and Bring forward. A sidebar render test failed on two Collapse labels before the fix. UIX-12 stays IN_PROGRESS.
 
+Round 92 (committed b7b3a54) names all six sticky note color swatches with their hex colors. A swatch render test failed with no labels before the fix. UIX-12 stays IN_PROGRESS.
+
 ## Blockers
 
 - No blockers. M9 collaboration remains deferred pending a server, a conflict
@@ -775,13 +779,13 @@ Round 91 (committed 2e0e1df) names the Layers panel order buttons Send backward 
 
 ## Exact next task
 
-Audit UIX-12 beyond icon buttons and sidebar order buttons. It is IN_PROGRESS,
-not VERIFIED. A concrete candidate is the Layers dialog order buttons in
-`src/ui/inspector.rs`, which still use generic chevron names. Another is visible
-focus or the absent canvas accessibility tree. Capture a failing test before any
-real code fix. Otherwise close or correct stale rows as evidence-only with cited
-HEAD identifiers and update verification/session docs. Do not restart completed
-rounds. Keep blocked/deferred items blocked. No release, tag, or PR.
+Audit UIX-12 beyond icon buttons, sidebar order buttons and sticky swatches. It
+is IN_PROGRESS, not VERIFIED. A concrete candidate is the Layers dialog order
+buttons in `src/ui/inspector.rs`, which still use generic chevron names. Another
+is visible focus or the absent canvas accessibility tree. Capture a failing test
+before any real code fix. Otherwise close or correct stale rows as evidence-only
+with cited HEAD identifiers and update verification/session docs. Do not restart
+completed rounds. Keep blocked/deferred items blocked. No release, tag, or PR.
 
 ## Commands
 
