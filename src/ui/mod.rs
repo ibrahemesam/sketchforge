@@ -1036,12 +1036,25 @@ fn layer_row(ui: &mut Ui, ed: &mut Editor, st: &mut UiState, id: NodeId, depth: 
     // Disclosure chevron.
     if !n.children.is_empty() {
         let open = !st.collapsed.contains(&id);
+        let name = if n.name.trim().is_empty() {
+            "layer"
+        } else {
+            n.name.trim()
+        };
+        let action = if open {
+            format!("Collapse {name}")
+        } else {
+            format!("Expand {name}")
+        };
         let r = sq(x, 14.0);
         let cr = ui.interact(
             r.expand(2.0),
             ui.id().with(("disclose", id)),
             egui::Sense::click(),
         );
+        cr.widget_info(|| {
+            egui::WidgetInfo::labeled(egui::WidgetType::Button, true, action.as_str())
+        });
         theme::paint_icon(
             ui.painter(),
             r.shrink(2.0),
@@ -1742,6 +1755,70 @@ mod tests {
         assert!(
             labels.iter().any(|label| label == "Select Header"),
             "expected a Select Header label, got {labels:?}"
+        );
+    }
+
+    #[test]
+    fn layer_disclosure_button_exposes_collapse_and_expand_labels_to_accesskit() {
+        let ctx = egui::Context::default();
+        theme::install_fonts(&ctx);
+        ctx.enable_accesskit();
+        let mut ed = Editor::default();
+        let mut parent_node = Node::new(
+            NodeId(1),
+            NodeKind::Rect,
+            crate::geom::Rect::new(0.0, 0.0, 200.0, 100.0),
+        );
+        parent_node.name = "Header".into();
+        let parent = ed.add_node(parent_node, None);
+        let mut child_node = Node::new(
+            NodeId(2),
+            NodeKind::Rect,
+            crate::geom::Rect::new(10.0, 10.0, 20.0, 20.0),
+        );
+        child_node.name = "Body".into();
+        let _child = ed.add_node(child_node, Some(parent));
+        let mut st = UiState::default();
+        let input = egui::RawInput {
+            screen_rect: Some(egui::Rect::from_min_size(
+                egui::Pos2::ZERO,
+                egui::vec2(260.0, 80.0),
+            )),
+            ..Default::default()
+        };
+        let mut out = ctx.run_ui(input.clone(), |ui| {
+            layer_row(ui, &mut ed, &mut st, parent, 0)
+        });
+        out.textures_delta.clear();
+        let update = out
+            .platform_output
+            .accesskit_update
+            .expect("layer row should register an accessibility node");
+        let labels: Vec<String> = update
+            .nodes
+            .iter()
+            .filter_map(|(_, node)| node.label().map(str::to_string))
+            .collect();
+        assert!(
+            labels.iter().any(|label| label == "Collapse Header"),
+            "expected a Collapse Header label, got {labels:?}"
+        );
+
+        st.collapsed.insert(parent);
+        let mut out = ctx.run_ui(input, |ui| layer_row(ui, &mut ed, &mut st, parent, 0));
+        out.textures_delta.clear();
+        let update = out
+            .platform_output
+            .accesskit_update
+            .expect("collapsed layer row should register an accessibility node");
+        let labels: Vec<String> = update
+            .nodes
+            .iter()
+            .filter_map(|(_, node)| node.label().map(str::to_string))
+            .collect();
+        assert!(
+            labels.iter().any(|label| label == "Expand Header"),
+            "expected an Expand Header label, got {labels:?}"
         );
     }
 
