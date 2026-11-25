@@ -569,6 +569,8 @@ documentation closeout completes the round.
 
 **User redirect, draw.io Off-Page palette style (code committed 550b3cc).** Native Off-Page Connector now writes draw.io's connector size and label flags and reimports as the same registry shape. The import test already passed; the export test failed before the fix and passes after it. THIRD_PARTY.md records the palette flags.
 
+**User redirect, draw.io Process palette style (code committed f0b6489).** Draw.io's rounded rectangle flags now import as native Process, and native Process writes the same flags and reimports as Process. Both tests failed before the fix and pass after it. THIRD_PARTY.md records the palette flags.
+
 **Scope.**
 
 - A selection context resolver that classifies the current selection as document, single
