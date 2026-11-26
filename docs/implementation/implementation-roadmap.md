@@ -589,6 +589,8 @@ documentation closeout completes the round.
 
 **User redirect, draw.io Pie palette style (code committed a4ca350).** Native Pie Slice now writes the basic palette style without the wrap flag before the angles and keeps the quarter wedge. The focused export test failed before the fix and passes after it. THIRD_PARTY.md records the palette style.
 
+**User redirect, draw.io flowchart storage aliases (code committed 24188a8).** Direct Data, Merge or Storage and Tape now import as native Data and Database shapes. The focused import test failed before the change and passes after it. THIRD_PARTY.md records the aliases.
+
 **Scope.**
 
 - A selection context resolver that classifies the current selection as document, single
