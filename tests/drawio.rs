@@ -909,6 +909,41 @@ fn flowchart_drawio_shapes_import_as_native_shapes() {
 }
 
 #[test]
+fn flowchart_storage_aliases_import_as_native_shapes() {
+    let xml = r#"<mxfile><diagram id="d" name="Storage"><mxGraphModel><root>
+        <mxCell id="0"/><mxCell id="1" parent="0"/>
+        <mxCell id="direct" value="Direct" vertex="1" parent="1" style="html=1;whiteSpace=wrap;shape=mxgraph.flowchart.direct_data;">
+          <mxGeometry x="0" y="0" width="160" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="tape" value="Tape" vertex="1" parent="1" style="shape=tape;whiteSpace=wrap;html=1;strokeWidth=2;size=0.19;">
+          <mxGeometry x="180" y="0" width="160" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="merge" value="Merge" vertex="1" parent="1" style="html=1;whiteSpace=wrap;shape=mxgraph.flowchart.merge_or_storage;">
+          <mxGeometry x="360" y="0" width="160" height="80" as="geometry"/>
+        </mxCell>
+      </root></mxGraphModel></diagram></mxfile>"#;
+    let (pages, report) = drawio::import_str(xml).unwrap();
+    let names: Vec<&str> = pages[0]
+        .doc
+        .nodes
+        .values()
+        .map(|n| n.name.as_str())
+        .collect();
+    assert!(names.contains(&"Data"), "{names:?}");
+    assert!(
+        names.iter().filter(|name| **name == "Database").count() == 2,
+        "{names:?}"
+    );
+    assert!(
+        report
+            .approximated
+            .iter()
+            .all(|d| !d.reason.contains("unknown draw.io shape")),
+        "{report:?}"
+    );
+}
+
+#[test]
 fn native_flowchart_shapes_export_with_drawio_styles() {
     let defs = [
         (1, "document", "Doc"),

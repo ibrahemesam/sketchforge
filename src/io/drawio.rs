@@ -1648,7 +1648,13 @@ fn leaves(name: &str) -> &str {
 fn registry_for_shape(shape: &str) -> Option<&'static str> {
     let leaf = leaves(shape).to_ascii_lowercase();
     let id = match leaf.as_str() {
-        "database" | "cylinder" | "cylinder3" | "datastore" | "internalstorage" => "database",
+        // Draw.io's flowchart palette uses `tape` for a storage shape. Ported
+        // from `src/main/webapp/js/diagramly/sidebar/Sidebar-Flowchart.js`,
+        // Copyright (c) 2020-2025 JGraph Holdings Ltd / draw.io AG, Apache-2.0.
+        // See `THIRD_PARTY.md`.
+        "database" | "cylinder" | "cylinder3" | "datastore" | "internalstorage" | "tape" => {
+            "database"
+        }
         "document" => "document",
         "note" => "note",
         "cloud" => "cloud",
@@ -1722,6 +1728,8 @@ fn flowchart_registry_for_shape(shape: &str) -> Option<&'static str> {
         "mxgraph.flowchart.manual_input" => Some("manual-input"),
         "mxgraph.flowchart.manual_operation" => Some("manual-operation"),
         "mxgraph.flowchart.on-page_reference" => Some("on-page-connector"),
+        "mxgraph.flowchart.direct_data" => Some("data"),
+        "mxgraph.flowchart.merge_or_storage" => Some("database"),
         "mxgraph.flowchart.sequential_data" => Some("data"),
         "mxgraph.flowchart.stored_data" => Some("database"),
         _ => None,
