@@ -593,6 +593,8 @@ documentation closeout completes the round.
 
 **User redirect, draw.io multi-document alias (code committed 957ca89).** The flowchart multi-document stencil now imports as a native Document. The focused import test failed before the change and passes after it. THIRD_PARTY.md records the alias.
 
+**User redirect, draw.io flowchart junction aliases (code committed af44778).** The Or and Summing Junction stencils now import as On-Page Connector, with the missing glyph reported in the import report. The focused import test failed before the change and passes after it. THIRD_PARTY.md records the aliases.
+
 **Scope.**
 
 - A selection context resolver that classifies the current selection as document, single

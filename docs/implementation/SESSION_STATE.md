@@ -1,6 +1,6 @@
 # Sketch agent session state
 
-Last updated: 2026-11-26 (draw.io multi-document alias, code committed 957ca89; docs closeout follows).
+Last updated: 2026-11-26 (draw.io flowchart junction aliases, code committed af44778; docs closeout follows).
 
 ## Objective
 
@@ -126,12 +126,13 @@ palette style without the wrap flag and reimports as Actor. Network palette wrap
 host, server, firewall and cloud shapes write draw.io's palette styles without the wrap flag. Pie palette flags followed
 as a4ca350: native Pie Slice writes the basic palette style without the wrap flag before the angles. Flowchart storage aliases followed
 as 24188a8: direct data, merge or storage and tape now import as native Data and Database shapes. Multi-document alias followed
-as 957ca89: the flowchart multi-document stencil imports as native Document. This closeout records
+as 957ca89: the flowchart multi-document stencil imports as native Document. Flowchart junction aliases followed
+as af44778: Or and Summing Junction import as On-Page Connector with a reported approximation. This closeout records
 the draw.io source port, the ADR-006 amendment, the BPMN aliases, the C4 properties,
 the SysML markers, the flowchart aliases,
 the ER flags and cardinality, the UML aliases, the floorplan aliases, the network aliases,
 the mermaid person stencil, the UML actor and class port, the basic pie stencil, the use
-case actor aliases, the hexagon alias, the Terminator stencil, the Decision stencil, the Delay stencil, the Document stencil, the Data palette flags, the Manual Input palette flags, the Manual Operation palette flags, the Preparation palette flags, the Off-Page palette flags, the Process palette flags, the Document palette flags, the Terminator palette flags, the Decision palette flags, the Delay palette flags, the Database palette flags, the On-Page palette flags, the UML Actor palette flags, the network palette wrap flags, the Pie palette flags, the flowchart storage aliases and the multi-document alias.
+case actor aliases, the hexagon alias, the Terminator stencil, the Decision stencil, the Delay stencil, the Document stencil, the Data palette flags, the Manual Input palette flags, the Manual Operation palette flags, the Preparation palette flags, the Off-Page palette flags, the Process palette flags, the Document palette flags, the Terminator palette flags, the Decision palette flags, the Delay palette flags, the Database palette flags, the On-Page palette flags, the UML Actor palette flags, the network palette wrap flags, the Pie palette flags, the flowchart storage aliases, the multi-document alias and the flowchart junction aliases.
 
 The full sidebar spec was implemented and verified in round 6 (see
 `.opencode/MEMORY.md`). Round 7 closed the transparent connector label gap.
