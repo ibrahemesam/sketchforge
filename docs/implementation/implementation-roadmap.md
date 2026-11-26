@@ -599,6 +599,8 @@ documentation closeout completes the round.
 
 **User redirect, draw.io Start stencil aliases (code committed 9ae18ec).** The Start stencils now import as native Terminator, with the missing glyph reported in the import report. The focused import test failed before the change and passes after it. THIRD_PARTY.md records the aliases.
 
+**User redirect, draw.io Predefined Process approximation (code committed a5723da).** The stencil keeps its native Process role and now reports the inner lines that native Process omits. The focused report test failed before the change and passes after it. THIRD_PARTY.md records the alias.
+
 **Scope.**
 
 - A selection context resolver that classifies the current selection as document, single
