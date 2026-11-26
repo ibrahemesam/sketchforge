@@ -2862,3 +2862,28 @@ fn flowchart_start_aliases_import_as_native_terminators() {
         "{report:?}"
     );
 }
+
+#[test]
+fn flowchart_predefined_process_reports_approximation() {
+    let xml = r#"<mxfile><diagram id="d" name="Predefined"><mxGraphModel><root>
+        <mxCell id="0"/><mxCell id="1" parent="0"/>
+        <mxCell id="pre" value="Check" vertex="1" parent="1" style="verticalLabelPosition=bottom;verticalAlign=top;html=1;shape=mxgraph.flowchart.process;whiteSpace=wrap;rounded=1;size=0.14;arcSize=6;roundedPerimeter=1;">
+          <mxGeometry x="0" y="0" width="100" height="60" as="geometry"/>
+        </mxCell>
+      </root></mxGraphModel></diagram></mxfile>"#;
+    let (pages, report) = drawio::import_str(xml).unwrap();
+    let names: Vec<&str> = pages[0]
+        .doc
+        .nodes
+        .values()
+        .map(|n| n.name.as_str())
+        .collect();
+    assert!(names.contains(&"Process"), "{names:?}");
+    assert!(
+        report
+            .approximated
+            .iter()
+            .any(|d| { d.reason == "flowchart predefined process imported as Process" }),
+        "{report:?}"
+    );
+}

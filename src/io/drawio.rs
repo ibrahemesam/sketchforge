@@ -1731,6 +1731,12 @@ fn flowchart_registry_for_shape(shape: &str) -> Option<&'static str> {
         "mxgraph.flowchart.on-page_reference" => Some("on-page-connector"),
         "mxgraph.flowchart.direct_data" => Some("data"),
         "mxgraph.flowchart.merge_or_storage" => Some("database"),
+        // The Predefined Process stencil shares the native Process role. The
+        // glyph differs, so import reports the approximation. Ported from
+        // `src/main/webapp/js/diagramly/sidebar/Sidebar-Flowchart.js`,
+        // Copyright (c) 2020-2025 JGraph Holdings Ltd / draw.io AG, Apache-2.0.
+        // See `THIRD_PARTY.md`.
+        "mxgraph.flowchart.process" => Some("process"),
         "mxgraph.flowchart.or_2" => Some("on-page-connector"),
         "mxgraph.flowchart.sequential_data" => Some("data"),
         "mxgraph.flowchart.start_1" | "mxgraph.flowchart.start_2" => Some("terminator"),
@@ -1741,8 +1747,9 @@ fn flowchart_registry_for_shape(shape: &str) -> Option<&'static str> {
 }
 
 // Draw.io's Or and Summing Junction stencils are round flowchart junctions.
-// Its Start stencils are oval or circular terminals. The native shapes keep the
-// outline but not the exact glyph. Ported from
+// Its Start stencils are oval or circular terminals, and Predefined Process
+// adds inner lines to the Process outline. The native shapes keep the role but
+// not the exact glyph. Ported from
 // `src/main/webapp/js/diagramly/sidebar/Sidebar-Flowchart.js`,
 // Copyright (c) 2020-2025 JGraph Holdings Ltd / draw.io AG, Apache-2.0.
 // See `THIRD_PARTY.md`.
@@ -1753,6 +1760,9 @@ fn flowchart_approximation(shape: Option<&str>) -> Option<String> {
         }
         "mxgraph.flowchart.start_1" | "mxgraph.flowchart.start_2" => {
             Some("flowchart start imported as Terminator".into())
+        }
+        "mxgraph.flowchart.process" => {
+            Some("flowchart predefined process imported as Process".into())
         }
         _ => None,
     }
