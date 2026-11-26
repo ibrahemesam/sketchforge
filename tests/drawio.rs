@@ -3098,3 +3098,56 @@ fn basic_polygon_stencils_import_and_export_with_drawio_aliases() {
         "{report:?}"
     );
 }
+
+#[test]
+fn basic_triangle_stencils_import_as_native_triangles() {
+    let xml = r#"<mxfile><diagram id="d" name="Basic"><mxGraphModel><root>
+        <mxCell id="0"/><mxCell id="1" parent="0"/>
+        <mxCell id="orthogonal" value="Orthogonal" vertex="1" parent="1" style="verticalLabelPosition=bottom;verticalAlign=top;html=1;shape=mxgraph.basic.orthogonal_triangle;">
+          <mxGeometry x="0" y="0" width="80" height="56" as="geometry"/>
+        </mxCell>
+        <mxCell id="acute" value="Acute" vertex="1" parent="1" style="verticalLabelPosition=bottom;verticalAlign=top;html=1;shape=mxgraph.basic.acute_triangle;dx=0.5;">
+          <mxGeometry x="90" y="0" width="80" height="56" as="geometry"/>
+        </mxCell>
+        <mxCell id="obtuse" value="Obtuse" vertex="1" parent="1" style="verticalLabelPosition=bottom;verticalAlign=top;html=1;shape=mxgraph.basic.obtuse_triangle;dx=0.25;">
+          <mxGeometry x="180" y="0" width="80" height="56" as="geometry"/>
+        </mxCell>
+      </root></mxGraphModel></diagram></mxfile>"#;
+    let (pages, report) = drawio::import_str(xml).unwrap();
+    let sides: Vec<u32> = pages[0]
+        .doc
+        .nodes
+        .values()
+        .filter_map(|n| match n.kind {
+            NodeKind::Polygon { sides, .. } => Some(sides),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(sides.len(), 3, "{sides:?}");
+    assert!(sides.iter().all(|count| *count == 3), "{sides:?}");
+    for reason in [
+        "basic orthogonal triangle imported as Triangle",
+        "basic acute triangle imported as Triangle",
+        "basic obtuse triangle imported as Triangle",
+    ] {
+        assert!(
+            report.approximated.iter().any(|d| d.reason == reason),
+            "{reason} missing from {report:?}"
+        );
+    }
+
+    let text = drawio::export(&[("Triangles", &pages[0].doc)]);
+    assert!(text.contains("triangle;whiteSpace=wrap;html=1;"), "{text}");
+    let (reimported, _) = drawio::import_str(&text).unwrap();
+    let round_trip: Vec<u32> = reimported[0]
+        .doc
+        .nodes
+        .values()
+        .filter_map(|n| match n.kind {
+            NodeKind::Polygon { sides, .. } => Some(sides),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(round_trip.len(), 3, "{round_trip:?}");
+    assert!(round_trip.iter().all(|count| *count == 3), "{round_trip:?}");
+}

@@ -2160,6 +2160,24 @@ fn build_vertex(cell: &RawCell, st: &ParsedStyle, rect: Rect) -> (Node, Option<S
             }
             "rhombus" => NodeKind::Polygon { sides: 4 },
             "triangle" => NodeKind::Polygon { sides: 3 },
+            // Draw.io's Basic palette has three triangle stencils with fixed
+            // apex positions. They keep the native Triangle role but not the
+            // exact glyph. Ported from
+            // `src/main/webapp/js/diagramly/sidebar/Sidebar-Basic.js`,
+            // Copyright (c) 2020-2025 JGraph Holdings Ltd / draw.io AG,
+            // Apache-2.0. See `THIRD_PARTY.md`.
+            "orthogonal_triangle" => {
+                approximation = Some("basic orthogonal triangle imported as Triangle".into());
+                NodeKind::Polygon { sides: 3 }
+            }
+            "acute_triangle" => {
+                approximation = Some("basic acute triangle imported as Triangle".into());
+                NodeKind::Polygon { sides: 3 }
+            }
+            "obtuse_triangle" => {
+                approximation = Some("basic obtuse triangle imported as Triangle".into());
+                NodeKind::Polygon { sides: 3 }
+            }
             "hexagon" => NodeKind::Polygon { sides: 6 },
             // Draw.io's Basic palette has Pentagon and Octagon stencils. Their
             // leaf names map to native polygons with the same side count.
