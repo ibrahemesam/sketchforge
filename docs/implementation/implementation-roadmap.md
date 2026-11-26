@@ -587,6 +587,8 @@ documentation closeout completes the round.
 
 **User redirect, draw.io network palette wrap (code committed 2b214c0).** Native host, server, firewall and cloud shapes now write draw.io's Network palette styles without the wrap flag and reimport as the same registry shapes. The focused export test failed before the fix and passes after it. THIRD_PARTY.md records the change.
 
+**User redirect, draw.io Pie palette style (code committed a4ca350).** Native Pie Slice now writes the basic palette style without the wrap flag before the angles and keeps the quarter wedge. The focused export test failed before the fix and passes after it. THIRD_PARTY.md records the palette style.
+
 **Scope.**
 
 - A selection context resolver that classifies the current selection as document, single
