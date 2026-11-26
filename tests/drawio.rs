@@ -2768,7 +2768,7 @@ fn native_network_exports_without_drawio_wrap_flag() {
         "shape=mxgraph.networks.server;fillColor=",
         "shape=mxgraph.networks.pc;fillColor=",
         "shape=mxgraph.networks.firewall;fillColor=",
-        "shape=mxgraph.networks.cloud;fillColor=",
+        "shape=mxgraph.networks.cloud;fontColor=#ffffff;fillColor=",
     ] {
         assert!(text.contains(needle), "{needle} missing from {text}");
     }
@@ -2786,4 +2786,45 @@ fn native_network_exports_without_drawio_wrap_flag() {
             "{expected} missing from {names:?}"
         );
     }
+}
+
+#[test]
+fn native_cloud_exports_with_drawio_palette_font_color() {
+    let def = drawio_rs::registry::by_id("cloud").expect("registry Cloud shape");
+    let mut node =
+        drawio_rs::registry::build(def, Rect::new(0.0, 0.0, def.size.0, def.size.1), None);
+    node.id = NodeId(21);
+    node.label = "Private cloud".into();
+    let doc = Document {
+        name: "Cloud palette export".into(),
+        nodes: [(node.id, node)].into_iter().collect(),
+        root: vec![NodeId(21)],
+        ..Document::default()
+    };
+    let items = vec![export::Item {
+        name: doc.name.clone(),
+        doc: &doc,
+        roots: doc.layered_root(),
+    }];
+    let spec = Spec {
+        format: Format::Drawio,
+        scope: Scope::AllPages,
+        ..Spec::default()
+    };
+    let out = tmp("cloud-palette-export").join("cloud.drawio");
+    export::write(&spec, &items, &out, None).unwrap();
+    let text = std::fs::read_to_string(&out).unwrap();
+    assert!(
+        text.contains("html=1;outlineConnect=0;fillColor=#CCCCCC;strokeColor=#6881B3;gradientColor=none;gradientDirection=north;strokeWidth=2;shape=mxgraph.networks.cloud;fontColor=#ffffff;"),
+        "{text}"
+    );
+
+    let (pages, _) = drawio::import_str(&text).unwrap();
+    let names: Vec<&str> = pages[0]
+        .doc
+        .nodes
+        .values()
+        .map(|n| n.name.as_str())
+        .collect();
+    assert!(names.contains(&"Cloud"), "{names:?}");
 }

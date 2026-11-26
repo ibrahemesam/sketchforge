@@ -3445,12 +3445,13 @@ fn drawio_shape_for_registry(id: &str) -> Option<&'static str> {
         "package" => {
             "shape=folder;fontStyle=1;tabWidth=80;tabHeight=30;tabPosition=left;html=1;boundedLbl=1;whiteSpace=wrap;"
         }
-        // Draw.io's network palette does not set whiteSpace=wrap. Ported from
+        // Draw.io's network palette does not set whiteSpace=wrap and writes a
+        // white label color for Cloud. Ported from
         // `src/main/webapp/js/diagramly/sidebar/Sidebar-Network.js`,
         // Copyright (c) 2020-2025 JGraph Holdings Ltd / draw.io AG, Apache-2.0.
         // See `THIRD_PARTY.md`.
         "cloud" => {
-            "html=1;outlineConnect=0;fillColor=#CCCCCC;strokeColor=#6881B3;gradientColor=none;gradientDirection=north;strokeWidth=2;shape=mxgraph.networks.cloud;"
+            "html=1;outlineConnect=0;fillColor=#CCCCCC;strokeColor=#6881B3;gradientColor=none;gradientDirection=north;strokeWidth=2;shape=mxgraph.networks.cloud;fontColor=#ffffff;"
         }
         "host" => {
             "fontColor=#0066CC;verticalAlign=top;verticalLabelPosition=bottom;labelPosition=center;align=center;html=1;outlineConnect=0;fillColor=#CCCCCC;strokeColor=#6881B3;gradientColor=none;gradientDirection=north;strokeWidth=2;shape=mxgraph.networks.pc;"
