@@ -909,6 +909,31 @@ fn flowchart_drawio_shapes_import_as_native_shapes() {
 }
 
 #[test]
+fn flowchart_multi_document_alias_imports_as_native_document() {
+    let xml = r#"<mxfile><diagram id="d" name="Multi-document"><mxGraphModel><root>
+        <mxCell id="0"/><mxCell id="1" parent="0"/>
+        <mxCell id="multi" value="Pages" vertex="1" parent="1" style="verticalLabelPosition=bottom;verticalAlign=top;html=1;shape=mxgraph.flowchart.multi-document;whiteSpace=wrap;boundedLbl=1;">
+          <mxGeometry x="0" y="0" width="160" height="80" as="geometry"/>
+        </mxCell>
+      </root></mxGraphModel></diagram></mxfile>"#;
+    let (pages, report) = drawio::import_str(xml).unwrap();
+    let names: Vec<&str> = pages[0]
+        .doc
+        .nodes
+        .values()
+        .map(|n| n.name.as_str())
+        .collect();
+    assert!(names.contains(&"Document"), "{names:?}");
+    assert!(
+        report
+            .approximated
+            .iter()
+            .all(|d| !d.reason.contains("unknown draw.io shape")),
+        "{report:?}"
+    );
+}
+
+#[test]
 fn flowchart_storage_aliases_import_as_native_shapes() {
     let xml = r#"<mxfile><diagram id="d" name="Storage"><mxGraphModel><root>
         <mxCell id="0"/><mxCell id="1" parent="0"/>

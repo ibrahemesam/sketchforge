@@ -1727,6 +1727,7 @@ fn flowchart_registry_for_shape(shape: &str) -> Option<&'static str> {
         "mxgraph.flowchart.document2" => Some("document"),
         "mxgraph.flowchart.manual_input" => Some("manual-input"),
         "mxgraph.flowchart.manual_operation" => Some("manual-operation"),
+        "mxgraph.flowchart.multi-document" => Some("document"),
         "mxgraph.flowchart.on-page_reference" => Some("on-page-connector"),
         "mxgraph.flowchart.direct_data" => Some("data"),
         "mxgraph.flowchart.merge_or_storage" => Some("database"),
