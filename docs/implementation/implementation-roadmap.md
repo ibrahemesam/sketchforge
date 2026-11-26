@@ -605,6 +605,8 @@ documentation closeout completes the round.
 
 **User redirect, draw.io Card stencil alias (code committed 404c64b).** The punched-card stencil now imports as native Data and reports the glyph change. The focused import test failed before the change and passes after it. THIRD_PARTY.md records the alias.
 
+**User redirect, draw.io Basic Star palette style (code committed 2e1d0bc).** Native Star now writes the Basic palette stencil with bottom label placement and no wrap flag. The focused round-trip test failed before the change and passes after it. THIRD_PARTY.md records the alias and palette style.
+
 **Scope.**
 
 - A selection context resolver that classifies the current selection as document, single
