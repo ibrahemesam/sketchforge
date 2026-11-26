@@ -909,6 +909,43 @@ fn flowchart_drawio_shapes_import_as_native_shapes() {
 }
 
 #[test]
+fn flowchart_junction_aliases_import_as_native_connectors() {
+    let xml = r#"<mxfile><diagram id="d" name="Junctions"><mxGraphModel><root>
+        <mxCell id="0"/><mxCell id="1" parent="0"/>
+        <mxCell id="or" value="Or" vertex="1" parent="1" style="verticalLabelPosition=bottom;verticalAlign=top;html=1;shape=mxgraph.flowchart.or_2;perimeter=ellipsePerimeter;">
+          <mxGeometry x="0" y="0" width="70" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="sum" value="Sum" vertex="1" parent="1" style="verticalLabelPosition=bottom;verticalAlign=top;html=1;shape=mxgraph.flowchart.summing_junction;perimeter=ellipsePerimeter;">
+          <mxGeometry x="90" y="0" width="70" height="70" as="geometry"/>
+        </mxCell>
+      </root></mxGraphModel></diagram></mxfile>"#;
+    let (pages, report) = drawio::import_str(xml).unwrap();
+    let names: Vec<&str> = pages[0]
+        .doc
+        .nodes
+        .values()
+        .map(|n| n.name.as_str())
+        .collect();
+    assert_eq!(
+        names
+            .iter()
+            .filter(|name| **name == "On-Page Connector")
+            .count(),
+        2,
+        "{names:?}"
+    );
+    assert_eq!(
+        report
+            .approximated
+            .iter()
+            .filter(|d| d.reason == "flowchart junction imported as On-Page Connector")
+            .count(),
+        2,
+        "{report:?}"
+    );
+}
+
+#[test]
 fn flowchart_multi_document_alias_imports_as_native_document() {
     let xml = r#"<mxfile><diagram id="d" name="Multi-document"><mxGraphModel><root>
         <mxCell id="0"/><mxCell id="1" parent="0"/>
