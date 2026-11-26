@@ -609,6 +609,8 @@ documentation closeout completes the round.
 
 **User redirect, draw.io Basic pointed stars (code committed da7a910).** The four, six and eight point Basic stencils now import as native stars and export with their own aliases. The focused round-trip test failed before the change and passes after it. THIRD_PARTY.md records the aliases.
 
+**User redirect, draw.io Basic polygon stencils (code committed 4d3cba0).** The Basic Pentagon and Octagon stencils now map to five and eight sided native polygons and export with their own aliases. The focused round-trip test failed before the change and passes after it. THIRD_PARTY.md records the stencils.
+
 **Scope.**
 
 - A selection context resolver that classifies the current selection as document, single

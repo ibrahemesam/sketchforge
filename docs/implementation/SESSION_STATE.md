@@ -1,6 +1,6 @@
 # Sketch agent session state
 
-Last updated: 2026-11-26 (draw.io Basic pointed stars, code committed da7a910; docs closeout follows).
+Last updated: 2026-11-26 (draw.io Basic polygon stencils, code committed 4d3cba0; docs closeout follows).
 
 ## Objective
 
@@ -134,12 +134,13 @@ as a5723da: Predefined Process keeps the Process role and reports its missing in
 as 2f29344: Internal Storage and Cylinder Stack keep Database and report their missing lines. Card stencil alias followed
 as 404c64b: Card imports as native Data and reports its missing glyph. Basic Star palette style followed
 as 2e1d0bc: native Star writes the Basic palette stencil and reimports without an unknown-shape report. Basic pointed stars followed
-as da7a910: the four, six and eight point Basic stencils import as native stars and keep their aliases on export. This closeout records
+as da7a910: the four, six and eight point Basic stencils import as native stars and keep their aliases on export. Basic polygon stencils followed
+as 4d3cba0: Pentagon and Octagon import as five and eight sided polygons and keep their aliases on export. This closeout records
 the draw.io source port, the ADR-006 amendment, the BPMN aliases, the C4 properties,
 the SysML markers, the flowchart aliases,
 the ER flags and cardinality, the UML aliases, the floorplan aliases, the network aliases,
 the mermaid person stencil, the UML actor and class port, the basic pie stencil, the use
-case actor aliases, the hexagon alias, the Terminator stencil, the Decision stencil, the Delay stencil, the Document stencil, the Data palette flags, the Manual Input palette flags, the Manual Operation palette flags, the Preparation palette flags, the Off-Page palette flags, the Process palette flags, the Document palette flags, the Terminator palette flags, the Decision palette flags, the Delay palette flags, the Database palette flags, the On-Page palette flags, the UML Actor palette flags, the network palette wrap flags, the Pie palette flags, the flowchart storage aliases, the multi-document alias, the flowchart junction aliases, the Cloud palette font color, the Start stencil aliases, the Predefined Process approximation, the storage stencil reports, the Card stencil alias, the Basic Star palette style and the Basic pointed star aliases.
+case actor aliases, the hexagon alias, the Terminator stencil, the Decision stencil, the Delay stencil, the Document stencil, the Data palette flags, the Manual Input palette flags, the Manual Operation palette flags, the Preparation palette flags, the Off-Page palette flags, the Process palette flags, the Document palette flags, the Terminator palette flags, the Decision palette flags, the Delay palette flags, the Database palette flags, the On-Page palette flags, the UML Actor palette flags, the network palette wrap flags, the Pie palette flags, the flowchart storage aliases, the multi-document alias, the flowchart junction aliases, the Cloud palette font color, the Start stencil aliases, the Predefined Process approximation, the storage stencil reports, the Card stencil alias, the Basic Star palette style, the Basic pointed star aliases and the Basic polygon stencil aliases.
 
 The full sidebar spec was implemented and verified in round 6 (see
 `.opencode/MEMORY.md`). Round 7 closed the transparent connector label gap.
