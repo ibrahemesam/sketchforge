@@ -1,6 +1,6 @@
 # Sketch agent session state
 
-Last updated: 2026-11-26 (draw.io Cloud palette font color, code committed 852c8d8; docs closeout follows).
+Last updated: 2026-11-26 (draw.io Start stencil aliases, code committed 9ae18ec; docs closeout follows).
 
 ## Objective
 
@@ -128,12 +128,13 @@ as a4ca350: native Pie Slice writes the basic palette style without the wrap fla
 as 24188a8: direct data, merge or storage and tape now import as native Data and Database shapes. Multi-document alias followed
 as 957ca89: the flowchart multi-document stencil imports as native Document. Flowchart junction aliases followed
 as af44778: Or and Summing Junction import as On-Page Connector with a reported approximation. Cloud palette font color followed
-as 852c8d8: native Cloud writes fontColor after the network stencil and reimports as Cloud. This closeout records
+as 852c8d8: native Cloud writes fontColor after the network stencil and reimports as Cloud. Start stencil aliases followed
+as 9ae18ec: Start stencils import as native Terminator with a reported approximation. This closeout records
 the draw.io source port, the ADR-006 amendment, the BPMN aliases, the C4 properties,
 the SysML markers, the flowchart aliases,
 the ER flags and cardinality, the UML aliases, the floorplan aliases, the network aliases,
 the mermaid person stencil, the UML actor and class port, the basic pie stencil, the use
-case actor aliases, the hexagon alias, the Terminator stencil, the Decision stencil, the Delay stencil, the Document stencil, the Data palette flags, the Manual Input palette flags, the Manual Operation palette flags, the Preparation palette flags, the Off-Page palette flags, the Process palette flags, the Document palette flags, the Terminator palette flags, the Decision palette flags, the Delay palette flags, the Database palette flags, the On-Page palette flags, the UML Actor palette flags, the network palette wrap flags, the Pie palette flags, the flowchart storage aliases, the multi-document alias, the flowchart junction aliases and the Cloud palette font color.
+case actor aliases, the hexagon alias, the Terminator stencil, the Decision stencil, the Delay stencil, the Document stencil, the Data palette flags, the Manual Input palette flags, the Manual Operation palette flags, the Preparation palette flags, the Off-Page palette flags, the Process palette flags, the Document palette flags, the Terminator palette flags, the Decision palette flags, the Delay palette flags, the Database palette flags, the On-Page palette flags, the UML Actor palette flags, the network palette wrap flags, the Pie palette flags, the flowchart storage aliases, the multi-document alias, the flowchart junction aliases, the Cloud palette font color and the Start stencil aliases.
 
 The full sidebar spec was implemented and verified in round 6 (see
 `.opencode/MEMORY.md`). Round 7 closed the transparent connector label gap.

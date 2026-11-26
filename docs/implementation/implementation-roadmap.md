@@ -597,6 +597,8 @@ documentation closeout completes the round.
 
 **User redirect, draw.io Cloud palette font color (code committed 852c8d8).** Native Cloud now writes fontColor after the network stencil, matching draw.io's palette. The focused export test failed before the fix and passes after it. THIRD_PARTY.md records the palette value.
 
+**User redirect, draw.io Start stencil aliases (code committed 9ae18ec).** The Start stencils now import as native Terminator, with the missing glyph reported in the import report. The focused import test failed before the change and passes after it. THIRD_PARTY.md records the aliases.
+
 **Scope.**
 
 - A selection context resolver that classifies the current selection as document, single
