@@ -2161,6 +2161,14 @@ fn build_vertex(cell: &RawCell, st: &ParsedStyle, rect: Rect) -> (Node, Option<S
             "rhombus" => NodeKind::Polygon { sides: 4 },
             "triangle" => NodeKind::Polygon { sides: 3 },
             "hexagon" => NodeKind::Polygon { sides: 6 },
+            // Draw.io's Basic palette has Pentagon and Octagon stencils. Their
+            // leaf names map to native polygons with the same side count.
+            // Ported from
+            // `src/main/webapp/js/diagramly/sidebar/Sidebar-Basic.js`,
+            // Copyright (c) 2020-2025 JGraph Holdings Ltd / draw.io AG,
+            // Apache-2.0. See `THIRD_PARTY.md`.
+            "pentagon" => NodeKind::Polygon { sides: 5 },
+            "octagon2" => NodeKind::Polygon { sides: 8 },
             // Draw.io's Basic palette has five-point, four-point, six-point
             // and eight-point star stencils. Their leaf names map to native
             // stars. Ported from
@@ -3072,6 +3080,17 @@ fn shape_style(n: &Node, _doc: &Document) -> String {
                 style.push_str("triangle;whiteSpace=wrap;html=1;")
             }
             NodeKind::Polygon { sides: 6, .. } => style.push_str("hexagon;whiteSpace=wrap;html=1;"),
+            // Draw.io's Basic palette writes Pentagon and Octagon with these
+            // stencils. Ported from
+            // `src/main/webapp/js/diagramly/sidebar/Sidebar-Basic.js`,
+            // Copyright (c) 2020-2025 JGraph Holdings Ltd / draw.io AG,
+            // Apache-2.0. See `THIRD_PARTY.md`.
+            NodeKind::Polygon { sides: 5, .. } => {
+                style.push_str("whiteSpace=wrap;html=1;shape=mxgraph.basic.pentagon;")
+            }
+            NodeKind::Polygon { sides: 8, .. } => style.push_str(
+                "whiteSpace=wrap;html=1;shape=mxgraph.basic.octagon2;align=center;verticalAlign=middle;dx=15;",
+            ),
             NodeKind::Polygon { .. } => style.push_str("rhombus;whiteSpace=wrap;html=1;"),
             // Draw.io's Basic palette writes stars with bottom label placement
             // and no wrap flag. It has stencils for four, five, six and eight

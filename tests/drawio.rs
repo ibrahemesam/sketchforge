@@ -3045,3 +3045,56 @@ fn basic_pointed_stars_import_and_export_with_drawio_aliases() {
         "{report:?}"
     );
 }
+
+#[test]
+fn basic_polygon_stencils_import_and_export_with_drawio_aliases() {
+    let xml = r#"<mxfile><diagram id="d" name="Basic"><mxGraphModel><root>
+        <mxCell id="0"/><mxCell id="1" parent="0"/>
+        <mxCell id="pentagon" value="Pentagon" vertex="1" parent="1" style="whiteSpace=wrap;html=1;shape=mxgraph.basic.pentagon;">
+          <mxGeometry x="0" y="0" width="80" height="72" as="geometry"/>
+        </mxCell>
+        <mxCell id="octagon" value="Octagon" vertex="1" parent="1" style="whiteSpace=wrap;html=1;shape=mxgraph.basic.octagon2;align=center;verticalAlign=middle;dx=15;">
+          <mxGeometry x="90" y="0" width="80" height="80" as="geometry"/>
+        </mxCell>
+      </root></mxGraphModel></diagram></mxfile>"#;
+    let (pages, _) = drawio::import_str(xml).unwrap();
+    let mut sides: Vec<u32> = pages[0]
+        .doc
+        .nodes
+        .values()
+        .filter_map(|n| match n.kind {
+            NodeKind::Polygon { sides, .. } => Some(sides),
+            _ => None,
+        })
+        .collect();
+    sides.sort_unstable();
+    assert_eq!(sides, vec![5, 8], "{sides:?}");
+
+    let text = drawio::export(&[("Polygons", &pages[0].doc)]);
+    for needle in [
+        "html=1;shape=mxgraph.basic.pentagon;",
+        "html=1;shape=mxgraph.basic.octagon2;",
+    ] {
+        assert!(text.contains(needle), "{needle} missing from {text}");
+    }
+
+    let (reimported, report) = drawio::import_str(&text).unwrap();
+    let mut round_trip: Vec<u32> = reimported[0]
+        .doc
+        .nodes
+        .values()
+        .filter_map(|n| match n.kind {
+            NodeKind::Polygon { sides, .. } => Some(sides),
+            _ => None,
+        })
+        .collect();
+    round_trip.sort_unstable();
+    assert_eq!(round_trip, vec![5, 8], "{round_trip:?}");
+    assert!(
+        !report
+            .approximated
+            .iter()
+            .any(|d| d.reason.contains("unknown draw.io shape")),
+        "{report:?}"
+    );
+}
