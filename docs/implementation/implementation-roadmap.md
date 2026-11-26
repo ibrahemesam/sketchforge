@@ -601,6 +601,8 @@ documentation closeout completes the round.
 
 **User redirect, draw.io Predefined Process approximation (code committed a5723da).** The stencil keeps its native Process role and now reports the inner lines that native Process omits. The focused report test failed before the change and passes after it. THIRD_PARTY.md records the alias.
 
+**User redirect, draw.io storage stencil approximations (code committed 2f29344).** Internal Storage and Cylinder Stack keep their native Database role and now report the extra lines that native Database omits. The focused report test failed before the change and passes after it. THIRD_PARTY.md records both stencils.
+
 **Scope.**
 
 - A selection context resolver that classifies the current selection as document, single
