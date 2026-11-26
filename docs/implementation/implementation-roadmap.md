@@ -591,6 +591,8 @@ documentation closeout completes the round.
 
 **User redirect, draw.io flowchart storage aliases (code committed 24188a8).** Direct Data, Merge or Storage and Tape now import as native Data and Database shapes. The focused import test failed before the change and passes after it. THIRD_PARTY.md records the aliases.
 
+**User redirect, draw.io multi-document alias (code committed 957ca89).** The flowchart multi-document stencil now imports as a native Document. The focused import test failed before the change and passes after it. THIRD_PARTY.md records the alias.
+
 **Scope.**
 
 - A selection context resolver that classifies the current selection as document, single
