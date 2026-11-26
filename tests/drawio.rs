@@ -2573,3 +2573,65 @@ fn native_actor_exports_with_drawio_palette_style() {
         .collect();
     assert!(names.contains(&"Actor"), "{names:?}");
 }
+
+#[test]
+fn native_network_exports_without_drawio_wrap_flag() {
+    let defs = [
+        (1, "server", "Mail relay"),
+        (2, "host", "Workstation"),
+        (3, "firewall", "Edge filter"),
+        (4, "cloud", "Private cloud"),
+    ];
+    let mut nodes = Vec::new();
+    let mut root = Vec::new();
+    for (id, def_id, label) in defs {
+        let def = drawio_rs::registry::by_id(def_id).expect("registry network shape");
+        let mut node =
+            drawio_rs::registry::build(def, Rect::new(0.0, 0.0, def.size.0, def.size.1), None);
+        node.id = NodeId(id);
+        node.label = label.into();
+        root.push(node.id);
+        nodes.push((node.id, node));
+    }
+    let doc = Document {
+        name: "Network palette export".into(),
+        nodes: nodes.into_iter().collect(),
+        root,
+        ..Document::default()
+    };
+    let items = vec![export::Item {
+        name: doc.name.clone(),
+        doc: &doc,
+        roots: doc.layered_root(),
+    }];
+    let spec = Spec {
+        format: Format::Drawio,
+        scope: Scope::AllPages,
+        ..Spec::default()
+    };
+    let out = tmp("network-palette-export").join("network.drawio");
+    export::write(&spec, &items, &out, None).unwrap();
+    let text = std::fs::read_to_string(&out).unwrap();
+    for needle in [
+        "shape=mxgraph.networks.server;fillColor=",
+        "shape=mxgraph.networks.pc;fillColor=",
+        "shape=mxgraph.networks.firewall;fillColor=",
+        "shape=mxgraph.networks.cloud;fillColor=",
+    ] {
+        assert!(text.contains(needle), "{needle} missing from {text}");
+    }
+
+    let (pages, _) = drawio::import_str(&text).unwrap();
+    let names: Vec<&str> = pages[0]
+        .doc
+        .nodes
+        .values()
+        .map(|n| n.name.as_str())
+        .collect();
+    for expected in ["Server", "Host", "Firewall", "Cloud"] {
+        assert!(
+            names.contains(&expected),
+            "{expected} missing from {names:?}"
+        );
+    }
+}
