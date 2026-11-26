@@ -607,6 +607,8 @@ documentation closeout completes the round.
 
 **User redirect, draw.io Basic Star palette style (code committed 2e1d0bc).** Native Star now writes the Basic palette stencil with bottom label placement and no wrap flag. The focused round-trip test failed before the change and passes after it. THIRD_PARTY.md records the alias and palette style.
 
+**User redirect, draw.io Basic pointed stars (code committed da7a910).** The four, six and eight point Basic stencils now import as native stars and export with their own aliases. The focused round-trip test failed before the change and passes after it. THIRD_PARTY.md records the aliases.
+
 **Scope.**
 
 - A selection context resolver that classifies the current selection as document, single
