@@ -1,6 +1,6 @@
 # Sketch agent session state
 
-Last updated: 2026-11-25 (draw.io UML Actor palette style, code committed c81574c; docs closeout follows).
+Last updated: 2026-11-26 (draw.io network palette wrap, code committed 2b214c0; docs closeout follows).
 
 ## Objective
 
@@ -122,12 +122,13 @@ full palette style and reimports as Delay. Database palette flags followed as ea
 native Database writes draw.io's flowchart Database stencil and reimports as Database. On-Page palette flags followed as
 b3e84b5, with docs as c0a8858: native On-Page Connector writes draw.io's palette style without the duplicate wrap flag
 and reimports as On-Page Connector. UML Actor palette flags followed as c81574c: native Actor writes draw.io's UML
-palette style without the wrap flag and reimports as Actor. This closeout records
+palette style without the wrap flag and reimports as Actor. Network palette wrap changes followed as 2b214c0: native
+host, server, firewall and cloud shapes write draw.io's palette styles without the wrap flag. This closeout records
 the draw.io source port, the ADR-006 amendment, the BPMN aliases, the C4 properties,
 the SysML markers, the flowchart aliases,
 the ER flags and cardinality, the UML aliases, the floorplan aliases, the network aliases,
 the mermaid person stencil, the UML actor and class port, the basic pie stencil, the use
-case actor aliases, the hexagon alias, the Terminator stencil, the Decision stencil, the Delay stencil, the Document stencil, the Data palette flags, the Manual Input palette flags, the Manual Operation palette flags, the Preparation palette flags, the Off-Page palette flags, the Process palette flags, the Document palette flags, the Terminator palette flags, the Decision palette flags, the Delay palette flags, the Database palette flags, the On-Page palette flags and the UML Actor palette flags.
+case actor aliases, the hexagon alias, the Terminator stencil, the Decision stencil, the Delay stencil, the Document stencil, the Data palette flags, the Manual Input palette flags, the Manual Operation palette flags, the Preparation palette flags, the Off-Page palette flags, the Process palette flags, the Document palette flags, the Terminator palette flags, the Decision palette flags, the Delay palette flags, the Database palette flags, the On-Page palette flags, the UML Actor palette flags and the network palette wrap flags.
 
 The full sidebar spec was implemented and verified in round 6 (see
 `.opencode/MEMORY.md`). Round 7 closed the transparent connector label gap.

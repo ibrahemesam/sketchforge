@@ -585,6 +585,8 @@ documentation closeout completes the round.
 
 **User redirect, draw.io UML Actor palette style (code committed c81574c).** Native Actor now writes draw.io's UML palette style without the wrap flag and reimports as the same registry shape. The focused export test failed before the fix and passes after it. THIRD_PARTY.md records the flag.
 
+**User redirect, draw.io network palette wrap (code committed 2b214c0).** Native host, server, firewall and cloud shapes now write draw.io's Network palette styles without the wrap flag and reimport as the same registry shapes. The focused export test failed before the fix and passes after it. THIRD_PARTY.md records the change.
+
 **Scope.**
 
 - A selection context resolver that classifies the current selection as document, single
