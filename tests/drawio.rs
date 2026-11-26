@@ -2988,3 +2988,60 @@ fn basic_star_imports_and_exports_with_drawio_palette_style() {
         "{report:?}"
     );
 }
+
+#[test]
+fn basic_pointed_stars_import_and_export_with_drawio_aliases() {
+    let xml = r#"<mxfile><diagram id="d" name="Basic"><mxGraphModel><root>
+        <mxCell id="0"/><mxCell id="1" parent="0"/>
+        <mxCell id="four" value="Four" vertex="1" parent="1" style="verticalLabelPosition=bottom;verticalAlign=top;html=1;shape=mxgraph.basic.4_point_star_2;dx=0.8;">
+          <mxGeometry x="0" y="0" width="80" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="six" value="Six" vertex="1" parent="1" style="verticalLabelPosition=bottom;verticalAlign=top;html=1;shape=mxgraph.basic.6_point_star;">
+          <mxGeometry x="90" y="0" width="80" height="72" as="geometry"/>
+        </mxCell>
+        <mxCell id="eight" value="Eight" vertex="1" parent="1" style="verticalLabelPosition=bottom;verticalAlign=top;html=1;shape=mxgraph.basic.8_point_star;">
+          <mxGeometry x="180" y="0" width="80" height="80" as="geometry"/>
+        </mxCell>
+      </root></mxGraphModel></diagram></mxfile>"#;
+    let (pages, _) = drawio::import_str(xml).unwrap();
+    let mut points: Vec<u32> = pages[0]
+        .doc
+        .nodes
+        .values()
+        .filter_map(|n| match n.kind {
+            NodeKind::Star { points, .. } => Some(points),
+            _ => None,
+        })
+        .collect();
+    points.sort_unstable();
+    assert_eq!(points, vec![4, 6, 8], "{points:?}");
+
+    let text = drawio::export(&[("Stars", &pages[0].doc)]);
+    for needle in [
+        "html=1;shape=mxgraph.basic.4_point_star_2;",
+        "html=1;shape=mxgraph.basic.6_point_star;",
+        "html=1;shape=mxgraph.basic.8_point_star;",
+    ] {
+        assert!(text.contains(needle), "{needle} missing from {text}");
+    }
+
+    let (reimported, report) = drawio::import_str(&text).unwrap();
+    let mut round_trip: Vec<u32> = reimported[0]
+        .doc
+        .nodes
+        .values()
+        .filter_map(|n| match n.kind {
+            NodeKind::Star { points, .. } => Some(points),
+            _ => None,
+        })
+        .collect();
+    round_trip.sort_unstable();
+    assert_eq!(round_trip, vec![4, 6, 8], "{round_trip:?}");
+    assert!(
+        !report
+            .approximated
+            .iter()
+            .any(|d| d.reason.contains("unknown draw.io shape")),
+        "{report:?}"
+    );
+}
