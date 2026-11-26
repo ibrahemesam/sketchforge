@@ -3454,8 +3454,12 @@ fn drawio_shape_for_registry(id: &str) -> Option<&'static str> {
             "verticalLabelPosition=bottom;html=1;verticalAlign=top;align=center;shape=mxgraph.floorplan.stairs;whiteSpace=wrap;"
         }
         "person" => "shape=mermaidPerson;perimeter=mermaidPersonPerimeter;whiteSpace=wrap;html=1;",
+        // Draw.io's basic palette does not set whiteSpace=wrap on Pie. Ported
+        // from `src/main/webapp/js/diagramly/sidebar/Sidebar-Basic.js`,
+        // Copyright (c) 2020-2025 JGraph Holdings Ltd / draw.io AG, Apache-2.0.
+        // See `THIRD_PARTY.md`.
         "pie-slice" => {
-            "verticalLabelPosition=bottom;verticalAlign=top;html=1;shape=mxgraph.basic.pie;startAngle=0;endAngle=0.25;whiteSpace=wrap;"
+            "verticalLabelPosition=bottom;verticalAlign=top;html=1;shape=mxgraph.basic.pie;startAngle=0;endAngle=0.25;"
         }
         "bpmn-start" => {
             "shape=mxgraph.bpmn.event;outline=standard;symbol=general;perimeter=ellipsePerimeter;aspect=fixed;whiteSpace=wrap;html=1;"

@@ -1586,6 +1586,61 @@ fn native_pie_slice_exports_with_drawio_style() {
 }
 
 #[test]
+fn native_pie_slice_exports_without_drawio_wrap_flag() {
+    let def = drawio_rs::registry::by_id("pie-slice").expect("registry Pie Slice shape");
+    let mut node =
+        drawio_rs::registry::build(def, Rect::new(0.0, 0.0, def.size.0, def.size.1), None);
+    node.id = NodeId(1);
+    node.label = "Quarter share".into();
+    let doc = Document {
+        name: "Pie palette export".into(),
+        nodes: [(node.id, node)].into_iter().collect(),
+        root: vec![NodeId(1)],
+        ..Document::default()
+    };
+    let items = vec![export::Item {
+        name: doc.name.clone(),
+        doc: &doc,
+        roots: doc.layered_root(),
+    }];
+    let spec = Spec {
+        format: Format::Drawio,
+        scope: Scope::AllPages,
+        ..Spec::default()
+    };
+    let out = tmp("pie-palette-export").join("pie.drawio");
+    export::write(&spec, &items, &out, None).unwrap();
+    let text = std::fs::read_to_string(&out).unwrap();
+    let style = text
+        .split("style=\"")
+        .nth(1)
+        .and_then(|part| part.split('"').next())
+        .expect("exported cell style");
+    assert!(
+        style.starts_with(
+            "verticalLabelPosition=bottom;verticalAlign=top;html=1;shape=mxgraph.basic.pie;startAngle=0;endAngle=0.25;fillColor="
+        ),
+        "unexpected pie style {style}"
+    );
+
+    let (pages, report) = drawio::import_str(&text).unwrap();
+    let names: Vec<&str> = pages[0]
+        .doc
+        .nodes
+        .values()
+        .map(|n| n.name.as_str())
+        .collect();
+    assert!(names.contains(&"Pie Slice"), "{names:?}");
+    assert!(
+        !report
+            .approximated
+            .iter()
+            .any(|d| d.reason.contains("pie angles")),
+        "{report:?}"
+    );
+}
+
+#[test]
 fn mermaid_use_case_actor_drawio_shapes_import_as_native_actors() {
     let xml = r#"<mxfile><diagram id="d" name="Use cases"><mxGraphModel><root>
         <mxCell id="0"/><mxCell id="1" parent="0"/>
