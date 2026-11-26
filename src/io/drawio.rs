@@ -1768,6 +1768,19 @@ fn flowchart_approximation(shape: Option<&str>) -> Option<String> {
     }
 }
 
+// Draw.io's flowchart Internal Storage and basic Cylinder Stack use a Database
+// role but add lines the native cylinder omits. Ported from
+// `src/main/webapp/js/diagramly/sidebar/Sidebar-Flowchart.js` and
+// `src/main/webapp/js/diagramly/sidebar/Sidebar-Basic.js`, Copyright (c)
+// 2020-2025 JGraph Holdings Ltd / draw.io AG, Apache-2.0. See `THIRD_PARTY.md`.
+fn storage_approximation(shape: Option<&str>) -> Option<String> {
+    match shape?.to_ascii_lowercase().as_str() {
+        "internalstorage" => Some("flowchart internal storage imported as Database".into()),
+        "cylinder3" => Some("basic cylinder stack imported as Database".into()),
+        _ => None,
+    }
+}
+
 // Draw.io's Process palette entry has no `shape` key. The rounded rectangle
 // flags identify it. Ported from
 // `src/main/webapp/js/diagramly/sidebar/Sidebar-Flowchart.js`,
@@ -2044,6 +2057,9 @@ fn build_vertex(cell: &RawCell, st: &ParsedStyle, rect: Rect) -> (Node, Option<S
         && let Some(n) = registry_vertex("process", st, rect, &value)
     {
         return (n, approximation);
+    }
+    if let Some(loss) = storage_approximation(shape) {
+        approximation = Some(loss);
     }
     let mut node = if is_group_style(st) {
         let mut n = Node::new(NodeId(0), NodeKind::Group, rect);

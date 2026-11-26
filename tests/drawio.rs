@@ -2887,3 +2887,37 @@ fn flowchart_predefined_process_reports_approximation() {
         "{report:?}"
     );
 }
+
+#[test]
+fn storage_stencils_report_database_approximations() {
+    let xml = r#"<mxfile><diagram id="d" name="Storage"><mxGraphModel><root>
+        <mxCell id="0"/><mxCell id="1" parent="0"/>
+        <mxCell id="internal" value="Cache" vertex="1" parent="1" style="shape=internalStorage;whiteSpace=wrap;html=1;dx=15;dy=15;rounded=1;arcSize=8;strokeWidth=2;roundedPerimeter=1;">
+          <mxGeometry x="0" y="0" width="70" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="stack" value="Archive" vertex="1" parent="1" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;lid=0;">
+          <mxGeometry x="90" y="0" width="60" height="80" as="geometry"/>
+        </mxCell>
+      </root></mxGraphModel></diagram></mxfile>"#;
+    let (pages, report) = drawio::import_str(xml).unwrap();
+    let names: Vec<&str> = pages[0]
+        .doc
+        .nodes
+        .values()
+        .map(|n| n.name.as_str())
+        .collect();
+    assert_eq!(
+        names.iter().filter(|name| **name == "Database").count(),
+        2,
+        "{names:?}"
+    );
+    for reason in [
+        "flowchart internal storage imported as Database",
+        "basic cylinder stack imported as Database",
+    ] {
+        assert!(
+            report.approximated.iter().any(|d| d.reason == reason),
+            "{reason} missing from {report:?}"
+        );
+    }
+}
