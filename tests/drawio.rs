@@ -2946,3 +2946,45 @@ fn flowchart_card_alias_imports_as_native_data() {
         "{report:?}"
     );
 }
+
+#[test]
+fn basic_star_imports_and_exports_with_drawio_palette_style() {
+    let xml = r#"<mxfile><diagram id="d" name="Basic"><mxGraphModel><root>
+        <mxCell id="0"/><mxCell id="1" parent="0"/>
+        <mxCell id="star" value="Star" vertex="1" parent="1" style="verticalLabelPosition=bottom;verticalAlign=top;html=1;shape=mxgraph.basic.star;">
+          <mxGeometry x="0" y="0" width="80" height="76" as="geometry"/>
+        </mxCell>
+      </root></mxGraphModel></diagram></mxfile>"#;
+    let (pages, _) = drawio::import_str(xml).unwrap();
+    let imported = pages[0]
+        .doc
+        .nodes
+        .values()
+        .find(|n| n.label == "Star")
+        .expect("imported star");
+    assert!(matches!(imported.kind, NodeKind::Star { points: 5, .. }));
+
+    let text = drawio::export(&[("Stars", &pages[0].doc)]);
+    assert!(
+        text.contains(
+            "verticalLabelPosition=bottom;verticalAlign=top;html=1;shape=mxgraph.basic.star;"
+        ),
+        "{text}"
+    );
+
+    let (reimported, report) = drawio::import_str(&text).unwrap();
+    let round_trip = reimported[0]
+        .doc
+        .nodes
+        .values()
+        .find(|n| n.label == "Star")
+        .expect("round-tripped star");
+    assert!(matches!(round_trip.kind, NodeKind::Star { points: 5, .. }));
+    assert!(
+        !report
+            .approximated
+            .iter()
+            .any(|d| d.reason.contains("unknown draw.io shape")),
+        "{report:?}"
+    );
+}

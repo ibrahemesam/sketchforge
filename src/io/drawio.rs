@@ -2161,6 +2161,11 @@ fn build_vertex(cell: &RawCell, st: &ParsedStyle, rect: Rect) -> (Node, Option<S
             "rhombus" => NodeKind::Polygon { sides: 4 },
             "triangle" => NodeKind::Polygon { sides: 3 },
             "hexagon" => NodeKind::Polygon { sides: 6 },
+            // Draw.io's Basic palette writes its Star as
+            // `shape=mxgraph.basic.star`; the leaf name is the native Star.
+            // Ported from `src/main/webapp/js/diagramly/sidebar/Sidebar-Basic.js`,
+            // Copyright (c) 2020-2025 JGraph Holdings Ltd / draw.io AG,
+            // Apache-2.0. See `THIRD_PARTY.md`.
             "star" => NodeKind::Star {
                 points: 5,
                 inner: 0.5,
@@ -3055,7 +3060,14 @@ fn shape_style(n: &Node, _doc: &Document) -> String {
             }
             NodeKind::Polygon { sides: 6, .. } => style.push_str("hexagon;whiteSpace=wrap;html=1;"),
             NodeKind::Polygon { .. } => style.push_str("rhombus;whiteSpace=wrap;html=1;"),
-            NodeKind::Star { .. } => style.push_str("shape=star;whiteSpace=wrap;html=1;"),
+            // Draw.io's Basic palette writes Star with bottom label placement
+            // and no wrap flag. Ported from
+            // `src/main/webapp/js/diagramly/sidebar/Sidebar-Basic.js`,
+            // Copyright (c) 2020-2025 JGraph Holdings Ltd / draw.io AG,
+            // Apache-2.0. See `THIRD_PARTY.md`.
+            NodeKind::Star { .. } => style.push_str(
+                "verticalLabelPosition=bottom;verticalAlign=top;html=1;shape=mxgraph.basic.star;",
+            ),
             NodeKind::Path { .. } => {
                 if let Some(def) = crate::registry::all().iter().find(|d| d.name == n.name) {
                     style.push_str(drawio_shape_for_registry(def.id).unwrap_or("rounded=0;"));
