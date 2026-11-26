@@ -1,6 +1,6 @@
 # Sketch agent session state
 
-Last updated: 2026-11-26 (draw.io flowchart junction aliases, code committed af44778; docs closeout follows).
+Last updated: 2026-11-26 (draw.io Cloud palette font color, code committed 852c8d8; docs closeout follows).
 
 ## Objective
 
@@ -127,12 +127,13 @@ host, server, firewall and cloud shapes write draw.io's palette styles without t
 as a4ca350: native Pie Slice writes the basic palette style without the wrap flag before the angles. Flowchart storage aliases followed
 as 24188a8: direct data, merge or storage and tape now import as native Data and Database shapes. Multi-document alias followed
 as 957ca89: the flowchart multi-document stencil imports as native Document. Flowchart junction aliases followed
-as af44778: Or and Summing Junction import as On-Page Connector with a reported approximation. This closeout records
+as af44778: Or and Summing Junction import as On-Page Connector with a reported approximation. Cloud palette font color followed
+as 852c8d8: native Cloud writes fontColor after the network stencil and reimports as Cloud. This closeout records
 the draw.io source port, the ADR-006 amendment, the BPMN aliases, the C4 properties,
 the SysML markers, the flowchart aliases,
 the ER flags and cardinality, the UML aliases, the floorplan aliases, the network aliases,
 the mermaid person stencil, the UML actor and class port, the basic pie stencil, the use
-case actor aliases, the hexagon alias, the Terminator stencil, the Decision stencil, the Delay stencil, the Document stencil, the Data palette flags, the Manual Input palette flags, the Manual Operation palette flags, the Preparation palette flags, the Off-Page palette flags, the Process palette flags, the Document palette flags, the Terminator palette flags, the Decision palette flags, the Delay palette flags, the Database palette flags, the On-Page palette flags, the UML Actor palette flags, the network palette wrap flags, the Pie palette flags, the flowchart storage aliases, the multi-document alias and the flowchart junction aliases.
+case actor aliases, the hexagon alias, the Terminator stencil, the Decision stencil, the Delay stencil, the Document stencil, the Data palette flags, the Manual Input palette flags, the Manual Operation palette flags, the Preparation palette flags, the Off-Page palette flags, the Process palette flags, the Document palette flags, the Terminator palette flags, the Decision palette flags, the Delay palette flags, the Database palette flags, the On-Page palette flags, the UML Actor palette flags, the network palette wrap flags, the Pie palette flags, the flowchart storage aliases, the multi-document alias, the flowchart junction aliases and the Cloud palette font color.
 
 The full sidebar spec was implemented and verified in round 6 (see
 `.opencode/MEMORY.md`). Round 7 closed the transparent connector label gap.
@@ -879,13 +880,12 @@ Round 101 (committed 0931d18) names layer disclosure buttons with their collapse
 ## Exact next task
 
 User redirected on 2026-11-25 from the UIX-12 naming rounds. UIX-12 stays
-IN_PROGRESS but is paused. Draw.io colors and the resizable sidebar are done and
-pushed. Next: widen draw.io shape support, starting with BPMN aliases such as
-`mxgraph.bpmn.event`, `mxgraph.bpmn.task2` and `mxgraph.bpmn.gateway2`, map them
-to native BPMN IDs, and write export styles. Capture a failing test before the
-fix. The user lifted the clean-room requirement for draw.io source only. Ported
-code needs a source comment and an entry in THIRD_PARTY.md. Paper assets stay
-excluded. Keep blocked/deferred items blocked. No release, tag, or PR.
+IN_PROGRESS but is paused. Draw.io colors, the resizable sidebar and the active
+shape alias and palette style ports are done. Next: keep widening draw.io shape
+parity with another palette alias or export flag. Capture a failing test before
+the fix. The user lifted the clean-room requirement for draw.io source only.
+Ported code needs a source comment and an entry in THIRD_PARTY.md. Paper assets
+stay excluded. Keep blocked/deferred items blocked. No release, tag, or PR.
 
 ## Commands
 
