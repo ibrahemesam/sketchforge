@@ -1733,6 +1733,7 @@ fn flowchart_registry_for_shape(shape: &str) -> Option<&'static str> {
         "mxgraph.flowchart.merge_or_storage" => Some("database"),
         "mxgraph.flowchart.or_2" => Some("on-page-connector"),
         "mxgraph.flowchart.sequential_data" => Some("data"),
+        "mxgraph.flowchart.start_1" | "mxgraph.flowchart.start_2" => Some("terminator"),
         "mxgraph.flowchart.stored_data" => Some("database"),
         "mxgraph.flowchart.summing_junction" => Some("on-page-connector"),
         _ => None,
@@ -1740,14 +1741,18 @@ fn flowchart_registry_for_shape(shape: &str) -> Option<&'static str> {
 }
 
 // Draw.io's Or and Summing Junction stencils are round flowchart junctions.
-// The native On-Page Connector keeps the round outline but not the glyph.
-// Ported from `src/main/webapp/js/diagramly/sidebar/Sidebar-Flowchart.js`,
+// Its Start stencils are oval or circular terminals. The native shapes keep the
+// outline but not the exact glyph. Ported from
+// `src/main/webapp/js/diagramly/sidebar/Sidebar-Flowchart.js`,
 // Copyright (c) 2020-2025 JGraph Holdings Ltd / draw.io AG, Apache-2.0.
 // See `THIRD_PARTY.md`.
-fn flowchart_junction_approximation(shape: Option<&str>) -> Option<String> {
+fn flowchart_approximation(shape: Option<&str>) -> Option<String> {
     match shape?.to_ascii_lowercase().as_str() {
         "mxgraph.flowchart.or_2" | "mxgraph.flowchart.summing_junction" => {
             Some("flowchart junction imported as On-Page Connector".into())
+        }
+        "mxgraph.flowchart.start_1" | "mxgraph.flowchart.start_2" => {
+            Some("flowchart start imported as Terminator".into())
         }
         _ => None,
     }
@@ -1961,7 +1966,7 @@ fn build_vertex(cell: &RawCell, st: &ParsedStyle, rect: Rect) -> (Node, Option<S
     if let Some(reg) = shape.and_then(flowchart_registry_for_shape)
         && let Some(n) = registry_vertex(reg, st, rect, &value)
     {
-        approximation = flowchart_junction_approximation(shape);
+        approximation = flowchart_approximation(shape);
         return (n, approximation);
     }
     if let Some(reg) = er_registry_for_shape(shape, st)

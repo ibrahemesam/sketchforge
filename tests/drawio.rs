@@ -2828,3 +2828,37 @@ fn native_cloud_exports_with_drawio_palette_font_color() {
         .collect();
     assert!(names.contains(&"Cloud"), "{names:?}");
 }
+
+#[test]
+fn flowchart_start_aliases_import_as_native_terminators() {
+    let xml = r#"<mxfile><diagram id="d" name="Starts"><mxGraphModel><root>
+        <mxCell id="0"/><mxCell id="1" parent="0"/>
+        <mxCell id="start1" value="Begin" vertex="1" parent="1" style="strokeWidth=2;html=1;shape=mxgraph.flowchart.start_1;whiteSpace=wrap;perimeter=ellipsePerimeter;">
+          <mxGeometry x="0" y="0" width="100" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="start2" value="Launch" vertex="1" parent="1" style="strokeWidth=2;html=1;shape=mxgraph.flowchart.start_2;whiteSpace=wrap;perimeter=ellipsePerimeter;">
+          <mxGeometry x="0" y="90" width="100" height="100" as="geometry"/>
+        </mxCell>
+      </root></mxGraphModel></diagram></mxfile>"#;
+    let (pages, report) = drawio::import_str(xml).unwrap();
+    let names: Vec<&str> = pages[0]
+        .doc
+        .nodes
+        .values()
+        .map(|n| n.name.as_str())
+        .collect();
+    assert_eq!(
+        names.iter().filter(|name| **name == "Terminator").count(),
+        2,
+        "{names:?}"
+    );
+    assert_eq!(
+        report
+            .approximated
+            .iter()
+            .filter(|d| d.reason == "flowchart start imported as Terminator")
+            .count(),
+        2,
+        "{report:?}"
+    );
+}
