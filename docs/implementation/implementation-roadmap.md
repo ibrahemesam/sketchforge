@@ -611,6 +611,8 @@ documentation closeout completes the round.
 
 **User redirect, draw.io Basic polygon stencils (code committed 4d3cba0).** The Basic Pentagon and Octagon stencils now map to five and eight sided native polygons and export with their own aliases. The focused round-trip test failed before the change and passes after it. THIRD_PARTY.md records the stencils.
 
+**User redirect, draw.io Basic triangle stencils (code committed 1b32fd5).** The Basic Orthogonal, Acute and Obtuse Triangle stencils now import as native triangles and report their glyph change. The focused test failed before the change and passes after it. THIRD_PARTY.md records the aliases.
+
 **Scope.**
 
 - A selection context resolver that classifies the current selection as document, single
