@@ -1724,6 +1724,12 @@ fn bpmn_registry_for_shape(shape: &str, st: &ParsedStyle) -> Option<&'static str
 // 2020-2025 JGraph Holdings Ltd / draw.io AG, Apache-2.0. See `THIRD_PARTY.md`.
 fn flowchart_registry_for_shape(shape: &str) -> Option<&'static str> {
     match shape.to_ascii_lowercase().as_str() {
+        // Draw.io's Card stencil serves the same data role as Data. The glyph
+        // differs, so import reports the approximation. Ported from
+        // `src/main/webapp/js/diagramly/sidebar/Sidebar-Flowchart.js`,
+        // Copyright (c) 2020-2025 JGraph Holdings Ltd / draw.io AG, Apache-2.0.
+        // See `THIRD_PARTY.md`.
+        "card" => Some("data"),
         "mxgraph.flowchart.document2" => Some("document"),
         "mxgraph.flowchart.manual_input" => Some("manual-input"),
         "mxgraph.flowchart.manual_operation" => Some("manual-operation"),
@@ -1747,9 +1753,9 @@ fn flowchart_registry_for_shape(shape: &str) -> Option<&'static str> {
 }
 
 // Draw.io's Or and Summing Junction stencils are round flowchart junctions.
-// Its Start stencils are oval or circular terminals, and Predefined Process
-// adds inner lines to the Process outline. The native shapes keep the role but
-// not the exact glyph. Ported from
+// Its Start stencils are oval or circular terminals, Predefined Process adds
+// inner lines to the Process outline, and Card uses a different data glyph.
+// The native shapes keep the role but not the exact glyph. Ported from
 // `src/main/webapp/js/diagramly/sidebar/Sidebar-Flowchart.js`,
 // Copyright (c) 2020-2025 JGraph Holdings Ltd / draw.io AG, Apache-2.0.
 // See `THIRD_PARTY.md`.
@@ -1764,6 +1770,7 @@ fn flowchart_approximation(shape: Option<&str>) -> Option<String> {
         "mxgraph.flowchart.process" => {
             Some("flowchart predefined process imported as Process".into())
         }
+        "card" => Some("flowchart card imported as Data".into()),
         _ => None,
     }
 }

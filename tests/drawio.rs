@@ -2921,3 +2921,28 @@ fn storage_stencils_report_database_approximations() {
         );
     }
 }
+
+#[test]
+fn flowchart_card_alias_imports_as_native_data() {
+    let xml = r#"<mxfile><diagram id="d" name="Card"><mxGraphModel><root>
+        <mxCell id="0"/><mxCell id="1" parent="0"/>
+        <mxCell id="card" value="Punched card" vertex="1" parent="1" style="verticalLabelPosition=bottom;verticalAlign=top;html=1;shape=card;whiteSpace=wrap;size=20;arcSize=12;">
+          <mxGeometry x="0" y="0" width="100" height="60" as="geometry"/>
+        </mxCell>
+      </root></mxGraphModel></diagram></mxfile>"#;
+    let (pages, report) = drawio::import_str(xml).unwrap();
+    let names: Vec<&str> = pages[0]
+        .doc
+        .nodes
+        .values()
+        .map(|n| n.name.as_str())
+        .collect();
+    assert!(names.contains(&"Data"), "{names:?}");
+    assert!(
+        report
+            .approximated
+            .iter()
+            .any(|d| d.reason == "flowchart card imported as Data"),
+        "{report:?}"
+    );
+}
